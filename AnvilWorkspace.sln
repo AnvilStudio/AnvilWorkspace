@@ -1,0 +1,50 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Editor", "Editor", "{339C0AE1-1FFF-9985-C884-D23BB4C66508}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Forge", "Forge\Forge.vcxproj", "{1884300D-8498-58BE-4D1A-FC1DB9ED54EF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dependencies", "Dependencies", "{53E47842-3FC8-3998-A828-34EB942B241A}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GLFW", "AnvilEngine\vendor\GLFW\GLFW.vcxproj", "{154B857C-0182-860D-AA6E-6C109684020F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Engine", "Engine", "{8249BEE1-6EAC-4D86-1732-863C03741909}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AnvilEngine", "AnvilEngine\AnvilEngine.vcxproj", "{D5F4603F-41AA-D934-CA9E-D30B3653D038}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		DebugG|x64 = DebugG|x64
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1884300D-8498-58BE-4D1A-FC1DB9ED54EF}.DebugG|x64.ActiveCfg = DebugG|x64
+		{1884300D-8498-58BE-4D1A-FC1DB9ED54EF}.DebugG|x64.Build.0 = DebugG|x64
+		{1884300D-8498-58BE-4D1A-FC1DB9ED54EF}.Debug|x64.ActiveCfg = Debug|x64
+		{1884300D-8498-58BE-4D1A-FC1DB9ED54EF}.Debug|x64.Build.0 = Debug|x64
+		{1884300D-8498-58BE-4D1A-FC1DB9ED54EF}.Release|x64.ActiveCfg = Release|x64
+		{1884300D-8498-58BE-4D1A-FC1DB9ED54EF}.Release|x64.Build.0 = Release|x64
+		{154B857C-0182-860D-AA6E-6C109684020F}.DebugG|x64.ActiveCfg = DebugG|x64
+		{154B857C-0182-860D-AA6E-6C109684020F}.DebugG|x64.Build.0 = DebugG|x64
+		{154B857C-0182-860D-AA6E-6C109684020F}.Debug|x64.ActiveCfg = Debug|x64
+		{154B857C-0182-860D-AA6E-6C109684020F}.Debug|x64.Build.0 = Debug|x64
+		{154B857C-0182-860D-AA6E-6C109684020F}.Release|x64.ActiveCfg = Release|x64
+		{154B857C-0182-860D-AA6E-6C109684020F}.Release|x64.Build.0 = Release|x64
+		{D5F4603F-41AA-D934-CA9E-D30B3653D038}.DebugG|x64.ActiveCfg = DebugG|x64
+		{D5F4603F-41AA-D934-CA9E-D30B3653D038}.DebugG|x64.Build.0 = DebugG|x64
+		{D5F4603F-41AA-D934-CA9E-D30B3653D038}.Debug|x64.ActiveCfg = Debug|x64
+		{D5F4603F-41AA-D934-CA9E-D30B3653D038}.Debug|x64.Build.0 = Debug|x64
+		{D5F4603F-41AA-D934-CA9E-D30B3653D038}.Release|x64.ActiveCfg = Release|x64
+		{D5F4603F-41AA-D934-CA9E-D30B3653D038}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{1884300D-8498-58BE-4D1A-FC1DB9ED54EF} = {339C0AE1-1FFF-9985-C884-D23BB4C66508}
+		{154B857C-0182-860D-AA6E-6C109684020F} = {53E47842-3FC8-3998-A828-34EB942B241A}
+		{D5F4603F-41AA-D934-CA9E-D30B3653D038} = {8249BEE1-6EAC-4D86-1732-863C03741909}
+	EndGlobalSection
+EndGlobal
