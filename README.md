@@ -1,4 +1,6 @@
-# Anvil Engine
+![Anvil Banner](AnvilEngine/AnvilBanner.png "Anvil Banner")
+
+# Anvil Engine 
 - `Anvil Engine` is built with a powerful, flexible toolset designed to empower developers in creating immersive experiences, whether you're building games, interactive simulations, or lightweight applications. <br> 
 
 - Anvil provides a solid foundation with multi-window support, a range of customizable components
@@ -11,7 +13,8 @@ Thank you for choosing Anvil Engine—let’s get started building something inc
 1. [Overview](#overview)    
 2. [Installation](#installation)
 3. [Structure](#structure)
-3. [API Documentation](#api-documentation)
+4. [Naming Convention](#naming-convention)
+5. [API Documentation](#api-documentation)
 
 ---
 
@@ -33,9 +36,27 @@ Anvil Engine is built to serve as a comprehensive toolset that grows with your p
 ## Installation
 Installation is meant to be as simple as possible. 
 
-1. clone the dev repository.<br>
-in the console:
+### Prereq
+- `c++20`
+- `Microsoft Visual Studio 2022`
 
-    ```git clone --recursive -b dev https://github.com/AnvilStudio/AnvilEngine.git```
+1. Clone the dev repository.<br>
+```git clone --recursive -b dev https://github.com/AnvilStudio/AnvilEngine.git```
+2. In the  root folder, run... <br>
+```.\vendor\premake.exe vs2022```
+3. Open the `AnvilWorkspace.sln` file
+4. Build and run!
     
+---
+
+## Structure
+
+---
+
+## Naming Convention
+
+---
+
+## API Documentation
+
 ---
