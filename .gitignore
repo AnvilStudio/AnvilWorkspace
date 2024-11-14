@@ -79,3 +79,5 @@ project.fragment.lock.json
 # Visual Studio cache and logs
 .vscode/
 .vs/
+/AnvilEngine/bin-int/Debug-windows-x86_64/AnvilEngine
+/Forge/bin-int/Debug-windows-x86_64/Forge
