@@ -57,17 +57,25 @@ the files are as follows
 
 ```
     AnvilEngine/ (static lib)
-        L include/ (client headers)
-        L src/ (main library implimentation)
+        L include/ 
+        |    L (client headers)
+        L src/ 
+        |    | (main library implimentation)
         |    L Core/
-        |        L High Level code (i.e. - App class, api - agnostic)
-        |    L Render/ (All Rendering + Renderer)
-        |    |    L Context/ (api - agnostic)
-        |    |    L Platform/ (api - specific)
-        |    |    |    L Vulkan/ (api implimentation)
+        |    |    L High Level code (i.e. - App class, api - agnostic)
+        |    L Render/ 
+        |    |    | (All Rendering + Renderer)
+        |    |    L Context/ 
+        |    |    |    L Context Class (api - agnostic)
+        |    |    L Platform/ 
+        |    |    |    | (api - specific)
+        |    |    |    L Vulkan/ 
+        |    |    |    |   L (api implimentation)
         |    |    |    L OtherAPI/
-        |    L Util/ (Engine Utility like macros/logging)
-        L vendor/ (3rd party libs like GLFW)
+        |    L Util/ 
+        |       L (Engine Utility like macros/logging)
+        L vendor/ 
+            L (3rd party libs like GLFW)
 
         |
         | Engine turns into a static lib for client to use
