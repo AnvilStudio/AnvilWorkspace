@@ -1,5 +1,7 @@
 # MSBuild log files
 *.log
+*.tlog
+*.recipe
 
 # MSBuild project files
 *.sln
@@ -81,3 +83,20 @@ project.fragment.lock.json
 .vs/
 /AnvilEngine/bin-int/Debug-windows-x86_64/AnvilEngine
 /Forge/bin-int/Debug-windows-x86_64/Forge
+AnvilEngine/bin-int/Release-windows-x86_64/AnvilEngine/AnvilEngine.lib.recipe
+AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/GLFW.lastbuildstate
+.gitignore
+AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/CL.command.1.tlog
+AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/CL.read.1.tlog
+AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/CL.write.1.tlog
+AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/GLFW.lastbuildstate
+AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/Lib-link.read.1.tlog
+AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/Lib-link.write.1.tlog
+AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/Lib.command.1.tlog
+AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/CL.command.1.tlog
+AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/CL.read.1.tlog
+AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/CL.write.1.tlog
+AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/GLFW.lastbuildstate
+AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/Lib-link.read.1.tlog
+AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/Lib-link.write.1.tlog
+AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/Lib.command.1.tlog
