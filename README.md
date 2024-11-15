@@ -51,12 +51,89 @@ Installation is meant to be as simple as possible.
 
 ## Structure
 
+Anvil follows a specific file structure known as a `Library/Application` structure.<br>
+
+the files are as follows
+
+```
+    AnvilEngine/ (static lib)
+        L include/ (client headers)
+        L src/ (main library implimentation)
+        |    L Core/
+        |        L High Level code (i.e. - App class, api - agnostic)
+        |    L Render/ (All Rendering + Renderer)
+        |    |    L Context/ (api - agnostic)
+        |    |    L Platform/ (api - specific)
+        |    |    |    L Vulkan/ (api implimentation)
+        |    |    |    L OtherAPI/
+        |    L Util/ (Engine Utility like macros/logging)
+        L vendor/ (3rd party libs like GLFW)
+
+        |
+        | Engine turns into a static lib for client to use
+        |
+        V
+
+    Client/
+        L src/  
+```
+
 ---
 
 ## Naming Convention
+
+when contributing to Anvil, you MUST follow the naming convention!
+
+
+#### Tests
+- All Tests should start with `tst_`
+
+#### Files
+- All File names should be `Upper Camel Case` like so: `MyCppFile.cpp`
+
+#### Macros
+- All Macros should start with `ANV_` and `USE_ALL_CAPS_WITH_UNDERS`
+
+#### Global
+Avoid using globals
+- All global vars should start with `g_` then be `Upper Camel Case`
+
+#### Namespace 
+rules only apply if the function is not apart of the `anv` namespace
+- All namespace functions should start with the `first 3 letters` of the namespace, underscore, then `Upper Camel Case` for the function name like so:
+``` cpp
+namespace MyNamespc
+{
+    int MYN_AddTwoNumbers();
+}
+```
+- All nested namespaces within namespace `anv` should be lowercase
+
+#### Functions
+applys to constructors and deconstructors
+- All parameter names should have an `underscore` at the beginning and be `Lower Camel Case` like so:
+`void MyFn(int _myInt);`
+
+#### Classes
+- All Class Names should follow `Upper Camel Case`
+- All non static member variables must start with `m_<VarName>`
+- All static member variables must start with `s_<StaticVarName>`
+- All public and static member Functions/Constructors/Deconstructors must be `Upper Cammel Case` like so: `public void MyFunctionIsGreat();`
+- All private member Functions/Constructors/Deconstructors should be `Lower Camel Case with Underscores` like so: `private void my_function_is_great();`
+
+#### Structs
+- All Struct names should be `Upper Camel Case` 
+- All Members should be `Lower Camel Case` like so: `int myInt;`
+- All pointer types should start with a `p` like so: `int* pMyPointer;`
+- Fns/Constr/DeConst should all be `Upper Camel Case` 
+
+#### Enums
+- All Enum names should be `Upper Camel Case`
+- All Enum Values should be `ALL_CAPS_WITH_UNDERS`
+
 
 ---
 
 ## API Documentation
 
----
+under  construction
