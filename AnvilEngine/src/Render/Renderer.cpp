@@ -1,6 +1,5 @@
 #include "Renderer.h"
 #include <Core/App.h>
-#include <Core/Profile.h>
 
 namespace anv
 {

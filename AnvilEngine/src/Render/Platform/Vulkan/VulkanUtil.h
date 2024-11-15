@@ -19,7 +19,7 @@
     }                                                                                            \
     else                                                                                         \
     {                                                                                            \
-        std::cout << "[" << __FUNCTION__ << "] >> VK CHECK RESULT PASSED\n";                     \
+        std::cout << "\033[38;5;40m[" << __FUNCTION__ << "] >> VK CHECK RESULT PASSED\033[0m\n";                     \
     }                                                                                            \
 }                                                                                                \
 

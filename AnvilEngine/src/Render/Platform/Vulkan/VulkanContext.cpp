@@ -2,7 +2,6 @@
 #include "Core/Window.h"
 #include "Core/App.h"
 #include <set>
-#include <Core/Profile.h>
 
 namespace anv {
 	VulkanContext::VulkanContext(Window* _win)
