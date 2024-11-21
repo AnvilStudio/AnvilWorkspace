@@ -3,23 +3,32 @@
 
 namespace anv
 {
-	Renderer2D::Renderer2D(RenderCreateInfo _info)
+	Renderer2D::Renderer2D(Render2DCreateInfo _info)
 		: m_RenderInfo(_info)
 	{
 		ANV_PROFILE_SCOPE();
+		RenderAPICreateInfo info;
+		m_RenderAPI = App::GetInstance()->GetMainWindow()->GetContext().InitAPI(info);
 	}
 
 	Renderer2D::~Renderer2D()
 	{
 	}
 
+	// start recording commands
+	// optional
+	// void Renderer2D::BeginScene(Cam& _cam, Scene& scene)
 	void Renderer2D::BeginFrame()
 	{
-		
+		// std::array<Queue> m_RenderQueues[3] = {}
+		// ensure render thread is ready to swap queues
+
 	}
 
 	void Renderer2D::EndFrame()
 	{
-
+		// Submit rendering cmds to the render thread
+		// Render thread will perform the work 
+		// Renderer::Submit()
 	}
 }
