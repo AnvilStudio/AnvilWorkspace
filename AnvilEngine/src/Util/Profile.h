@@ -1,5 +1,6 @@
 // Profiler.h
 #pragma once
+#include "AnvLog/include/AnvLog.h"
 #include <chrono>
 #include <iostream>
 
@@ -9,14 +10,13 @@ namespace anv
     public:
         Profiler(const char* scopeName)
             : m_ScopeName(scopeName), m_StartTime(std::chrono::high_resolution_clock::now()) {
-            std::cout << "\033[38;5;128mStarting Profile [ "<< m_ScopeName <<"]\033[0m\n";
         }
 
         ~Profiler() {
             auto endTime = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - m_StartTime).count();
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - m_StartTime).count() * .001;
             // Output the timing or store it in a profiling system
-            std::cout << "\033[38;5;128mProfile [" << m_ScopeName << "] took " << duration * .001 << "ms\033[0m\n";
+            anv_log::AnvLog::LOG_DEBUG("[PROFILE]: %s :: %.2f ms", m_ScopeName, duration);
         }
 
     private:
