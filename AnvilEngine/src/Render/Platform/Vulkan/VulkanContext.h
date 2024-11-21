@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Render/Context/Context.h"
+#include "Render/Context.h"
 #include "Util/UMacros.h"
 
 #include "VulkanUtil.h"
@@ -18,21 +18,6 @@
 
 namespace anv {
 
-    struct QueueFamilyIndices {
-        std::optional<uint32_t> graphicsFamily;
-        std::optional<uint32_t> presentFamily;
-
-        bool isComplete() {
-            return graphicsFamily.has_value() && presentFamily.has_value();;
-        }
-    };
-
-    struct SwapChainSupportDetails {
-        VkSurfaceCapabilitiesKHR capabilities;
-        std::vector<VkSurfaceFormatKHR> formats;
-        std::vector<VkPresentModeKHR> presentModes;
-    };
-
     class VulkanContext
         : public Context
     {
@@ -41,16 +26,24 @@ namespace anv {
         ~VulkanContext();
 
     public:
-        void CreateBuffer() override {};
+        VkInstance        GetInstance()       { return m_Instance;       }
+        VkSurfaceKHR      GetSurface()        { return m_Surface;        }
+        VkDevice          GetDevice()         { return m_Device;         }
+        VkPhysicalDevice  GetPhysicalDevice() { return m_PhysicalDevice; }
+        VkQueue           GetGraphicsQueue()  { return m_GraphicsQueue;  }
+        VkQueue           GetPresentQueue()   { return m_PresentQueue;   }
+        GLFWwindow*       GetWinHandle()      { return m_WinHandle; }
 
     private:
         void vkc_instance(); // instance creation
-        void vkc_surface(Window* _win); // rendering surface
+        void vkc_surface (); // rendering surface
         void vkc_physical(); // select gpu
-        void vkc_logical(); // create logical device
+        void vkc_logical (); // create logical device
 
     private:
+        _unique<Swapchain> m_Swapchain;
 
+        GLFWwindow* m_WinHandle;
         VkInstance m_Instance;
         VkSurfaceKHR m_Surface;
         VkDevice m_Device;
@@ -58,12 +51,12 @@ namespace anv {
         VkQueue m_GraphicsQueue;
         VkQueue m_PresentQueue;
         
-        const _vec(const char*) m_DeviceExtensions = {
+        const _vec<const char*> m_DeviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME
         };
 
     #ifdef DEBUG
-        vk_util::VKCDebugInfo m_DebugInfo;
+        vk_util::VKDebugInfo m_DebugInfo;
     #endif // DEBUG
     };
 }
