@@ -6,69 +6,106 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 
-// validates that a VK API call returns VK_SUCCESS. Otherwise, throws an error
-#define VK_CHECK_RESULT(f, msg) {                                                                \
+// validates that a VK API call returns VK_SUCCESS. otherwise, throws an error
+#define ANV_VK_CHECK_RESULT(f, msg) {                                                            \
     VkResult res = (f);                                                                          \
     if (res != VK_SUCCESS) {                                                                     \
-        throw std::runtime_error(                                                                \
-            std::string("Vulkan Error: ") + std::to_string(res) +                                \
+            auto fmt = std::string("Vulkan Error: ") + std::to_string(res) +                     \
             "\nFile: " + __FILE__ +                                                              \
             "\nFunction: " + __FUNCTION__ +                                                      \
             "\nLine: " + std::to_string(__LINE__) +                                              \
-            std::string(" : ") + std::string(msg));                                              \
+            std::string(" : ") + std::string(msg);                                               \
+            ANV_LOG_FATAL("== VK CHECK RESULT FAILED ==\n%s", fmt.c_str())                       \
+                                                                                                 \
     }                                                                                            \
     else                                                                                         \
     {                                                                                            \
-        std::cout << "\033[38;5;40m[" << __FUNCTION__ << "] >> VK CHECK RESULT PASSED\033[0m\n";                     \
+        ANV_LOG_INFO("[%s]: VK CHECK RESULT PASSED", __FUNCTION__)                               \
     }                                                                                            \
 }                                                                                                \
 
 namespace anv
 {
 
-    struct QueueFamilyIndices;
-    struct SwapChainSupportDetails;
-
 namespace vk_util {
-        struct VKCDebugInfo
-        {
-            VkDebugUtilsMessengerEXT debugMessenger;
 
-            // Validation Layers
-            inline static _vec(const char*) Layers = {
-                "VK_LAYER_KHRONOS_validation",
-            };
+    struct QueueFamilyIndices {
+        std::optional<uint32_t> graphicsFamily;
+        std::optional<uint32_t> presentFamily;
 
-            inline static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
-                VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                VkDebugUtilsMessageTypeFlagsEXT messageType,
-                const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-                void* pUserData) {
+        bool isComplete() {
+            return graphicsFamily.has_value() && presentFamily.has_value();;
+        }
+    };
 
-                std::cerr << "Validation Layer: " << pCallbackData->pMessage << std::endl;
-                return VK_FALSE;
-            }
+    struct SwapchainSupportDetails {
+        VkSurfaceCapabilitiesKHR capabilities;
+        std::vector<VkSurfaceFormatKHR> formats;
+        std::vector<VkPresentModeKHR> presentModes;
+    };
 
-            VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator);
+    struct VKDebugInfo
+    {
+        VkDebugUtilsMessengerEXT debugMessenger;
 
-            void DestroyDebugUtilsMessengerEXT(VkInstance instance, const VkAllocationCallbacks* pAllocator);
+        // Validation Layers
+        inline static _vec<const char*> Layers = {
+            "VK_LAYER_KHRONOS_validation",
         };
 
-        // Retrieves the list of required Vulkan instance extensions.
-        _vec(const char*) VKUtil_GetRequiredExtensions();
+        inline static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
+            VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+            VkDebugUtilsMessageTypeFlagsEXT messageType,
+            const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+            void* pUserData) {
 
-        // Check if this device supports validation layers
-        bool VKUtil_CheckValidationSupport();
+            std::cerr << "Validation Layer: " << pCallbackData->pMessage << std::endl;
+            return VK_FALSE;
+        }
 
-        bool VkUtil_CheckDeviceExtensionSupport(VkPhysicalDevice _device, const _vec(const char*) _extensions);
+        VkResult CreateDebugUtilsMessengerEXT
+        (VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, 
+            const VkAllocationCallbacks* pAllocator);
 
-        VkPhysicalDevice VKUtil_FindSuitableDevice(_vec(VkPhysicalDevice) _devices, 
-            VkSurfaceKHR _surface, const _vec(const char*) _extensions);
+        void DestroyDebugUtilsMessengerEXT
+        (VkInstance instance, const VkAllocationCallbacks* pAllocator);
+    };
 
-        QueueFamilyIndices VKUtil_FindQueueFamilies(VkPhysicalDevice _device, VkSurfaceKHR _surface);
+    // Retrieves the list of required Vulkan instance extensions.
+    _vec<const char*> 
+        vku_GetRequiredExtensions();
 
-        SwapChainSupportDetails VkUtil_QuerySwapChainSupport(VkPhysicalDevice _device, VkSurfaceKHR _surface);
+    // Check if this device supports validation layers
+    bool 
+        vku_CheckValidationSupport();
 
-        VkSurfaceFormatKHR VKUtil_ChooseSwapSurfaceFormat(const _vec(VkSurfaceFormatKHR) _availableFormats);
+    bool 
+        vku_CheckDeviceExtensionSupport
+        (VkPhysicalDevice _device, const _vec<const char*> _extensions);
+
+    VkPhysicalDevice 
+        vku_FindSuitableDevice
+        (_vec<VkPhysicalDevice> _devices, 
+        VkSurfaceKHR _surface, const _vec<const char*> _extensions);
+
+    QueueFamilyIndices 
+        vku_FindQueueFamilies
+        (VkPhysicalDevice _device, VkSurfaceKHR _surface);
+
+    SwapchainSupportDetails 
+        vku_QuerySwapChainSupport
+        (VkPhysicalDevice _device, VkSurfaceKHR _surface);
+
+    VkSurfaceFormatKHR 
+        vku_ChooseSwapSurfaceFormat
+        (const _vec<VkSurfaceFormatKHR>& _availableFormats);
+
+    VkPresentModeKHR 
+        vku_ChooseSwapPresentMode
+        (const _vec<VkPresentModeKHR>& availablePresentModes);
+
+    VkExtent2D 
+        vku_ChooseSwapExtent
+        (const VkSurfaceCapabilitiesKHR& _capabilities, GLFWwindow* _window);
 }
 }

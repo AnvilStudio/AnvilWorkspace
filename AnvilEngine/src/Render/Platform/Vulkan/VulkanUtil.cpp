@@ -1,32 +1,36 @@
 
 #include "VulkanUtil.h"
 #include "VulkanContext.h"
+#include "VulkanSwapChain.h"
 #include <map>
 #include <set>
+#include <cstdint> // Necessary for uint32_t
+#include <limits> // Necessary for std::numeric_limits
+#include <algorithm> // Necessary for std::clamp
 
 namespace anv::vk_util
 {
-	VkResult VKCDebugInfo::CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator)
+	VkResult VKDebugInfo::CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator)
     {
         auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
         return func ? func(instance, pCreateInfo, pAllocator, &debugMessenger) : VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 
 
-    void VKCDebugInfo::DestroyDebugUtilsMessengerEXT(VkInstance instance, const VkAllocationCallbacks* pAllocator)
+    void VKDebugInfo::DestroyDebugUtilsMessengerEXT(VkInstance instance, const VkAllocationCallbacks* pAllocator)
     {
         auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
         if (func) func(instance, debugMessenger, pAllocator);
     }
 
 
-    _vec(const char*) VKUtil_GetRequiredExtensions()
+    _vec<const char*> vku_GetRequiredExtensions()
     {
         uint32_t glfwExtensionCount = 0;
         const char** glfwExtensions;
         glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-        std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+        _vec<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
 #ifdef DEBUG
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -36,15 +40,15 @@ namespace anv::vk_util
     }
 
 
-    bool VKUtil_CheckValidationSupport()
+    bool vku_CheckValidationSupport()
     {
         uint32_t layerCount;
         vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
-        _vec(VkLayerProperties) availableLayers(layerCount);
+        _vec<VkLayerProperties> availableLayers(layerCount);
         vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-        for (const char* layerName : VKCDebugInfo::Layers) {
+        for (const char* layerName : VKDebugInfo::Layers) {
             bool layerFound = false;
 
             for (const auto& layerProperties : availableLayers) {
@@ -60,12 +64,12 @@ namespace anv::vk_util
         }
     }
 
-    bool VkUtil_CheckDeviceExtensionSupport(VkPhysicalDevice _device, const _vec(const char*) _extensions)
+    bool vku_CheckDeviceExtensionSupport(VkPhysicalDevice _device, const _vec<const char*> _extensions)
     {
         uint32_t extensionCount;
         vkEnumerateDeviceExtensionProperties(_device, nullptr, &extensionCount, nullptr);
 
-        std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+        _vec<VkExtensionProperties> availableExtensions(extensionCount);
         vkEnumerateDeviceExtensionProperties(_device, nullptr, &extensionCount, availableExtensions.data());
 
         std::set<std::string> requiredExtensions(_extensions.begin(), _extensions.end());
@@ -77,7 +81,7 @@ namespace anv::vk_util
         return requiredExtensions.empty();
     }
 
-    VkPhysicalDevice VKUtil_FindSuitableDevice(_vec(VkPhysicalDevice) _devices, VkSurfaceKHR _surface, const _vec(const char*) _extensions)
+    VkPhysicalDevice vku_FindSuitableDevice(_vec<VkPhysicalDevice> _devices, VkSurfaceKHR _surface, const _vec<const char*> _extensions)
     {
         std::map<int, VkPhysicalDevice> gpu_map{};
 
@@ -101,7 +105,7 @@ namespace anv::vk_util
                 continue;
             }
 
-            QueueFamilyIndices indices = VKUtil_FindQueueFamilies(device, _surface);
+            QueueFamilyIndices indices = vku_FindQueueFamilies(device, _surface);
 
             if (!indices.isComplete())
             {
@@ -109,7 +113,7 @@ namespace anv::vk_util
                 continue;
             }
 
-            bool ext_supported = VkUtil_CheckDeviceExtensionSupport(device, _extensions);
+            bool ext_supported = vku_CheckDeviceExtensionSupport(device, _extensions);
             if (!ext_supported)
             {
                 score = -1; // swap chain extension needs support
@@ -118,7 +122,7 @@ namespace anv::vk_util
 
             bool swapChainAdequate = false;
 
-            SwapChainSupportDetails swapChainSupport = VkUtil_QuerySwapChainSupport(device, _surface);
+            SwapchainSupportDetails swapChainSupport = vku_QuerySwapChainSupport(device, _surface);
             swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 
             if (!swapChainAdequate)
@@ -128,7 +132,8 @@ namespace anv::vk_util
             }
 
             gpu_map[score] = device;
-            std::cout << "GPU: " << deviceProperties.deviceName << "\n\tScore: " << score << '\n';
+            std::string gpu_info = "GPU: " + std::string(deviceProperties.deviceName) + "\n\tScore: " + std::to_string(score);
+            ANV_LOG_INFO(gpu_info)
         }
 
         int final = 0;
@@ -143,14 +148,14 @@ namespace anv::vk_util
         return gpu_map[final];
     }
 
-    QueueFamilyIndices VKUtil_FindQueueFamilies(VkPhysicalDevice _device, VkSurfaceKHR _surface)
+    QueueFamilyIndices vku_FindQueueFamilies(VkPhysicalDevice _device, VkSurfaceKHR _surface)
     {
         QueueFamilyIndices indices;
 
         uint32_t queueFamilyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(_device, &queueFamilyCount, nullptr);
 
-        _vec(VkQueueFamilyProperties) queueFamilies(queueFamilyCount);
+        _vec<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
         vkGetPhysicalDeviceQueueFamilyProperties(_device, &queueFamilyCount, queueFamilies.data());
 
         int i = 0;
@@ -178,9 +183,9 @@ namespace anv::vk_util
         return indices;
     }
 
-    SwapChainSupportDetails VkUtil_QuerySwapChainSupport(VkPhysicalDevice _device, VkSurfaceKHR _surface)
+    SwapchainSupportDetails vku_QuerySwapChainSupport(VkPhysicalDevice _device, VkSurfaceKHR _surface)
     {
-        SwapChainSupportDetails details;
+        SwapchainSupportDetails details;
 
 
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_device, _surface, &details.capabilities);
@@ -205,7 +210,7 @@ namespace anv::vk_util
         return details;
     }
 
-    VkSurfaceFormatKHR VKUtil_ChooseSwapSurfaceFormat(const _vec(VkSurfaceFormatKHR) _availableFormats)
+    VkSurfaceFormatKHR vku_ChooseSwapSurfaceFormat(const _vec<VkSurfaceFormatKHR>& _availableFormats)
     {
         for (const auto& availableFormat : _availableFormats) {
             if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
@@ -215,5 +220,36 @@ namespace anv::vk_util
 
         // else
         return _availableFormats[0];
+    }
+
+    VkPresentModeKHR vku_ChooseSwapPresentMode(const _vec<VkPresentModeKHR>& _availablePresentModes) {
+        for (const auto& availablePresentMode : _availablePresentModes) {
+            // tripple buffering support > FIFO
+            if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+                return availablePresentMode;
+            }
+        }
+
+        return VK_PRESENT_MODE_FIFO_KHR;
+    }
+
+    VkExtent2D vku_ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& _capabilities, GLFWwindow* _window) {
+        if (_capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+            return _capabilities.currentExtent;
+        }
+        else {
+            int width, height;
+            glfwGetFramebufferSize(_window, &width, &height);
+
+            VkExtent2D actualExtent = {
+                static_cast<uint32_t>(width),
+                static_cast<uint32_t>(height)
+            };
+
+            actualExtent.width  = std::clamp(actualExtent.width,  _capabilities.minImageExtent.width,  _capabilities.maxImageExtent.width);
+            actualExtent.height = std::clamp(actualExtent.height, _capabilities.minImageExtent.height, _capabilities.maxImageExtent.height);
+
+            return actualExtent;
+        }
     }
 }
