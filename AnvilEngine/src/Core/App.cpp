@@ -1,13 +1,28 @@
 #include "App.h"
 
+
 namespace anv {
-
-
 
 	App::App()
 	{
 		if (m_This == nullptr)
 			m_This = this;
+
+		// init logging
+		{
+			anv_log::LogCreateInfo info
+			{
+				.logFilePath = "AnvLogs.log",
+				.timeFormat = "%I:%M:%S",
+				.consoleOutput = true,
+				.fileOutput = true
+			};
+
+			anv_log::AnvLog::Init(info);
+		}
+
+		ANV_PROFILE_SCOPE()
+
 
 		WindowCreateInfo i{
 		.width = 800,
@@ -25,6 +40,21 @@ namespace anv {
 	{
 		if (m_This == nullptr)
 			m_This = this;
+
+		// init logging
+		{
+			anv_log::LogCreateInfo info
+			{
+				.logFilePath = "AnvLogs.log",
+				.timeFormat = "%I:%M:%S",
+				.consoleOutput = true,
+				.fileOutput = true
+			};
+
+			anv_log::AnvLog::Init(info);
+		}
+
+		ANV_PROFILE_SCOPE()
 
 		m_AppWin = new Window(_info.WindowCreateInfo);
 
