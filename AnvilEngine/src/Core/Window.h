@@ -7,7 +7,7 @@
 * Graphics API abstraction and modularity.
 **/
 
-#include "../Render/Context/Context.h"
+#include "../Render/Context.h"
 #include <string>
 
 struct GLFWwindow;
@@ -31,16 +31,12 @@ namespace anv {
 		void OnUpdate();
 		bool ShouldClose();
 
+		GLFWwindow* GetNativeWindow() { return m_WinPtr; }
 		Context& GetContext();
-		Swapchain& GetSwapChain();
 
 	private:
-		GLFWwindow* m_WinPtr   = nullptr;
-		
-		_unique(Context)   m_Context = nullptr;
-		_unique(Swapchain) m_Swapchain = nullptr;
-		
-		friend class VulkanContext;
+		GLFWwindow*        m_WinPtr  = nullptr;
+		_shared<Context>   m_Context = nullptr;	
 	};
 
 }

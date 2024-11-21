@@ -43,9 +43,5 @@ namespace anv {
 	{
 		return *m_Context;
 	}
-	Swapchain& Window::GetSwapChain()
-	{
-		return *m_Swapchain;
-	}
 
 }
