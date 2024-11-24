@@ -1,6 +1,8 @@
 #include "VulkanContext.h"
 #include "Core/Window.h"
 #include "Core/App.h"
+#include "VulkanSwapchain.h"
+
 #include <set>
 
 namespace anv {
@@ -18,11 +20,12 @@ namespace anv {
 	VulkanContext::~VulkanContext()
 	{
 		ANV_PROFILE_SCOPE();
+		m_Swapchain->OnDestroy(); // destroy image views
+		vkDestroyDevice(m_Device, nullptr);
+		vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 #ifdef DEBUG
 		m_DebugInfo.DestroyDebugUtilsMessengerEXT(m_Instance, nullptr);
 #endif
-		vkDestroyDevice(m_Device, nullptr);
-		vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 		vkDestroyInstance(m_Instance, nullptr);
 	}
 
