@@ -5,6 +5,10 @@
 #include <stdexcept>
 
 namespace anv {
+	_shared<Window> Window::Create(WindowCreateInfo _info)
+	{
+		return std::make_shared<Window>(_info);
+	}
 
 	Window::Window(WindowCreateInfo _info)
 	{
@@ -39,9 +43,9 @@ namespace anv {
 		return glfwWindowShouldClose(m_WinPtr);
 	}
 
-	Context& Window::GetContext()
+	_shared<Context> Window::GetContext()
 	{
-		return *m_Context;
+		return m_Context;
 	}
 
 }

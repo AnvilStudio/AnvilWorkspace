@@ -25,6 +25,8 @@ namespace anv {
 	class Window
 	{
 	public:
+		static _shared<Window> Create(WindowCreateInfo _info);
+
 		Window(WindowCreateInfo _info);
 		~Window();
 
@@ -32,7 +34,7 @@ namespace anv {
 		bool ShouldClose();
 
 		GLFWwindow* GetNativeWindow() { return m_WinPtr; }
-		Context& GetContext();
+		_shared<Context> GetContext();
 
 	private:
 		GLFWwindow*        m_WinPtr  = nullptr;
