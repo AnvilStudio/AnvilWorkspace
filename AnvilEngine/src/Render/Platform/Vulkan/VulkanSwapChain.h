@@ -18,20 +18,23 @@ namespace anv
 		VkFormat   GetFormat() { return m_ImageFormat; }
 		VkExtent2D GetExtent() { return m_Extent; }
 
+		void OnDestroy() override;
 
 	private:
 		void querey_support();
 		void create_vk_swapchain();
+		void create_image_views();
 
 	private:
 		vk_util::
 		SwapchainSupportDetails m_SupportDetails;
 
-		VulkanContext* m_VkContext;
-		VkSwapchainKHR m_Swapchain;
-		_vec<VkImage>  m_SwapchainImages;
-		VkFormat       m_ImageFormat;
-		VkExtent2D     m_Extent;
+		VulkanContext*    m_VkContext;
+		VkSwapchainKHR    m_Swapchain;
+		_vec<VkImage>     m_SwapchainImages;
+		_vec<VkImageView> m_ImageViews;
+		VkFormat          m_ImageFormat;
+		VkExtent2D        m_Extent;
 	};
 }
 

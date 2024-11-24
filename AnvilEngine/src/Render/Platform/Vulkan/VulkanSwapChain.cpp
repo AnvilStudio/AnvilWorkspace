@@ -11,11 +11,20 @@ namespace anv
 		m_VkContext = _ctx->GetNativeContextAs<VulkanContext>();
 		querey_support();
 		create_vk_swapchain();
+		create_image_views();
 	}
 
 	VulkanSwapchain::~VulkanSwapchain()
 	{
 		vkDestroySwapchainKHR(m_VkContext->GetDevice(), m_Swapchain, nullptr);
+	}
+
+	void VulkanSwapchain::OnDestroy()
+	{
+		for (auto iView : m_ImageViews)
+		{
+			vkDestroyImageView(m_VkContext->GetDevice(), iView, nullptr);
+		}
 	}
 
 	void VulkanSwapchain::querey_support()
@@ -72,5 +81,37 @@ namespace anv
 		vkGetSwapchainImagesKHR(m_VkContext->GetDevice(), m_Swapchain, &imageCount, m_SwapchainImages.data());
 		m_ImageFormat = surfaceFormat.format;
 		m_Extent = extent;
+	}
+
+	void VulkanSwapchain::create_image_views()
+	{
+		m_ImageViews.resize(m_SwapchainImages.size());
+
+		// create image view for every image
+		// NOTE: could make images and image views a vec of std::pair<VkImage, VkImageView>
+		for (size_t i = 0; i < m_SwapchainImages.size(); i++)
+		{
+			VkImageViewCreateInfo ivInfo{};
+			ivInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			ivInfo.image = m_SwapchainImages[i];
+			ivInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			ivInfo.format = m_ImageFormat;
+
+			// R, G, B, A channel routing
+			ivInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+			ivInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+			ivInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+			ivInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+			// describe pourpose, what part of the image to access
+			// color target, no mipmap levels, one layer
+			ivInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			ivInfo.subresourceRange.baseMipLevel = 0;
+			ivInfo.subresourceRange.levelCount = 1;
+			ivInfo.subresourceRange.baseArrayLayer = 0;
+			ivInfo.subresourceRange.layerCount = 1;
+
+			ANV_VK_CHECK_RESULT(vkCreateImageView(m_VkContext->GetDevice(), &ivInfo, nullptr, &m_ImageViews[i]), "Failed to create image view!");
+		}
 	}
 }
