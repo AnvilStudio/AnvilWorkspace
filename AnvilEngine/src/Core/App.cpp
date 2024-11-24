@@ -1,5 +1,5 @@
 #include "App.h"
-
+#include <Util/CrashHandler/CrashHandler.h>	
 
 namespace anv {
 
@@ -30,10 +30,11 @@ namespace anv {
 		.name = "My Window"
 		};
 
-		m_AppWin = new Window(i);
+		m_AppWin = Window::Create(i);
 
 		// Setup should happen after App setup
 		OnSetup();
+		ANV_LOG_INFO("==========================================\n============= SETUP COMPLETE =============\n==========================================")
 	}
 
 	App::App(AppCreateInfo _info)
@@ -56,8 +57,12 @@ namespace anv {
 
 		ANV_PROFILE_SCOPE()
 
-		m_AppWin = new Window(_info.WindowCreateInfo);
+		m_AppWin = Window::Create(_info.WindowCreateInfo);
 
+		Render2DCreateInfo r_info{};
+		r_info.pTarget = m_AppWin;
+
+		m_Renderer = new Renderer2D(r_info);
 		OnSetup();
 	}
 
@@ -66,7 +71,6 @@ namespace anv {
 		OnDestroy();
 
 		// Everything should be deleted before the app itself gets deletes
-		delete m_AppWin;
 	}
 
 	void App::Run()
@@ -85,7 +89,7 @@ namespace anv {
 		return m_This;
 	}
 
-	Window* App::GetMainWindow()
+	_shared<Window> App::GetMainWindow()
 	{
 		return m_AppWin;
 	}

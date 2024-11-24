@@ -1,5 +1,5 @@
 #pragma once
-
+#include "../Render/Renderer.h"
 #include "Window.h"
 #include <string>
 
@@ -24,7 +24,7 @@ namespace anv
 		void Run();
 
 		static App* GetInstance();
-		Window* GetMainWindow();
+		_shared<Window> GetMainWindow();
 
 	public:
 		virtual void OnSetup()   {};
@@ -32,8 +32,9 @@ namespace anv
 		virtual void OnDestroy() {};
 
 	private:
-		inline static App* m_This = nullptr;
-		Window* m_AppWin;
+		inline static App* m_This  = nullptr;
+		_shared<Window> m_AppWin   = nullptr;
+		Renderer2D*     m_Renderer = nullptr;
 	};
 
 }
