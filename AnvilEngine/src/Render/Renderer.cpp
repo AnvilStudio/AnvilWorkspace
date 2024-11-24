@@ -1,4 +1,5 @@
 #include "Renderer.h"
+#include "Shader.h"
 #include <Core/App.h>
 
 namespace anv
@@ -8,7 +9,9 @@ namespace anv
 	{
 		ANV_PROFILE_SCOPE();
 		RenderAPICreateInfo info;
-		m_RenderAPI = App::GetInstance()->GetMainWindow()->GetContext().InitAPI(info);
+		m_RenderAPI = _info.pTarget->GetContext()->InitAPI(info);
+
+		auto v = Shader::Create(_info.shaderPath + "/shader.glsl", _info.pTarget->GetContext());
 	}
 
 	Renderer2D::~Renderer2D()

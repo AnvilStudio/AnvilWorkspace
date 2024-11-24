@@ -59,7 +59,25 @@ namespace vk_util {
             const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
             void* pUserData) {
 
-            std::cerr << "Validation Layer: " << pCallbackData->pMessage << std::endl;
+            switch (messageSeverity)
+            {
+            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+                ANV_LOG_INFO("== VK VERBOSE ==\n%s", pCallbackData->pMessage)
+                break;
+            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+                ANV_LOG_INFO("== VK INFO ==\n%s", pCallbackData->pMessage)
+                break;
+            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+                ANV_LOG_WARN("== VK VALIDATION LAYER WARNING ==\n%s", pCallbackData->pMessage)
+                break;
+            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+                ANV_LOG_ERROR("== VK VALIDATION LAYER ERROR ==\n%s", pCallbackData->pMessage)
+                break;
+            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT:
+                break;
+            default:
+                break;
+            }
             return VK_FALSE;
         }
 

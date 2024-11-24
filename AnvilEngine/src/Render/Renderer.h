@@ -110,8 +110,8 @@ namespace anv {
         RenderingPipeline pipeline = RenderingPipeline::TWD;
 
         // Asset paths
-        std::string shaderPath = "assets/shaders/";
-        std::string texturePath = "assets/textures/";
+        std::string shaderPath = "shaders/";
+        std::string texturePath = "textures/";
 
         // Shadows
         //int shadowMapResolution = 1024;

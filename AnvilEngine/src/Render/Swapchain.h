@@ -10,5 +10,7 @@ namespace  anv
 	{
 	public:
 		static _unique<Swapchain> Create(Context* _ctx);
+
+		virtual void OnDestroy() = 0;
 	};
 }

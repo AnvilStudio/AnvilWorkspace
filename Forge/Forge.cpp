@@ -6,8 +6,13 @@ class Forge : public anv::App
 public:
 	Forge(anv::AppCreateInfo _info);
 
-	void OnSetup()   override {};
-	void OnUpdate()  override {};
+	void OnSetup()   override 
+	{
+		ANV_LOG_INFO("hello!");
+	};
+	void OnUpdate()  override {
+		ANV_LOG_INFO("hello!")
+	};
 	void OnDestroy() override {};
 
 };
