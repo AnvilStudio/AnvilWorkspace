@@ -102,4 +102,3 @@ AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/Lib-link.w
 AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/Lib.command.1.tlog
 /Setup
 *.hint
-/AnvilEngine/src/Util/AnvLog
