@@ -1,5 +1,6 @@
 #include "Renderer.h"
 #include "Shader.h"
+#include "GraphicsPipeline.h"
 #include <Core/App.h>
 
 namespace anv
@@ -12,6 +13,12 @@ namespace anv
 		m_RenderAPI = _info.pTarget->GetContext()->InitAPI(info);
 
 		auto v = Shader::Create(_info.shaderPath + "/shader.glsl", _info.pTarget->GetContext());
+		auto p = GraphicsPipeline::Create(_info.pTarget->GetContext());
+		p->SetShaderStages(v);
+		p->SetVertexInputLayout({});
+		p->SetRasterizationSettings({});
+		p->SetColorBlendSettings({});
+		p->Build();
 	}
 
 	Renderer2D::~Renderer2D()

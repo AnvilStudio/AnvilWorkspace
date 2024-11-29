@@ -15,7 +15,7 @@ namespace anv {
     };
 
     enum class RenderingPipeline {
-        FWD, // Forward
+        FWD, // Forward+
         DFR, // Differed
         TWD  // 2D
     };
