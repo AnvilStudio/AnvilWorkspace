@@ -33,8 +33,8 @@ namespace anv {
 		m_AppWin = Window::Create(i);
 
 		// Setup should happen after App setup
-		OnSetup();
 		ANV_LOG_INFO("==========================================\n============= SETUP COMPLETE =============\n==========================================")
+		OnSetup();
 	}
 
 	App::App(AppCreateInfo _info)
@@ -59,6 +59,7 @@ namespace anv {
 
 		m_AppWin = Window::Create(_info.WindowCreateInfo);
 
+		// TODO: prototyping...
 		Render2DCreateInfo r_info{};
 		r_info.pTarget = m_AppWin;
 

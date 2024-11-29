@@ -9,11 +9,13 @@ namespace uuid
 {
     struct EntityUUID
     {
+        // probably needs to be a uint32_t
         std::string uuid = "";
     };
 
     struct AssetUUID
     {
+        // probably needs to be a uint32_tm
         std::string uuid = "";
     };
 

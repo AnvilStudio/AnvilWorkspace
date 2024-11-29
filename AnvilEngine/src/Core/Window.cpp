@@ -14,14 +14,14 @@ namespace anv {
 	{
 		if (!glfwInit())
 		{
-			throw std::runtime_error("Failed to init GLFW!");
+			ANV_LOG_FATAL("Failed to initialize glfw!")
 		}
 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // create a window with no context
 		m_WinPtr = glfwCreateWindow(_info.width, _info.height, _info.name.c_str(), NULL, NULL);
 
 		if (!m_WinPtr)
-			throw std::runtime_error("Window Creation Failed!");
+			ANV_LOG_FATAL("Failed to Create window: %s!", _info.name.c_str())
 
 		m_Context = Context::Create(this); // Create and initialize a rendering context
 	}
@@ -35,7 +35,6 @@ namespace anv {
 	void Window::OnUpdate()
 	{
 		glfwPollEvents();
-
 	}
 
 	bool Window::ShouldClose()
