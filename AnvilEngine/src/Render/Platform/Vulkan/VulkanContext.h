@@ -26,13 +26,14 @@ namespace anv {
         ~VulkanContext();
 
     public:
-        VkInstance        GetInstance()       { return m_Instance;       }
-        VkSurfaceKHR      GetSurface()        { return m_Surface;        }
-        VkDevice          GetDevice()         { return m_Device;         }
-        VkPhysicalDevice  GetPhysicalDevice() { return m_PhysicalDevice; }
-        VkQueue           GetGraphicsQueue()  { return m_GraphicsQueue;  }
-        VkQueue           GetPresentQueue()   { return m_PresentQueue;   }
-        GLFWwindow*       GetWinHandle()      { return m_WinHandle; }
+        VkInstance        GetInstance()       { return m_Instance;        } 
+        VkSurfaceKHR      GetSurface()        { return m_Surface;         }
+        VkDevice          GetDevice()         { return m_Device;          }
+        VkPhysicalDevice  GetPhysicalDevice() { return m_PhysicalDevice;  }
+        VkQueue           GetGraphicsQueue()  { return m_GraphicsQueue;   }
+        VkQueue           GetPresentQueue()   { return m_PresentQueue;    }
+        GLFWwindow*       GetWinHandle()      { return m_WinHandle;       }
+        Swapchain*        GetSwapchain()      { return m_Swapchain.get(); }
 
     private:
         void vkc_instance(); // instance creation

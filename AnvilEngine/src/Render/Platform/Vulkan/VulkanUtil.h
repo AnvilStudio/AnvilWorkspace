@@ -73,8 +73,6 @@ namespace vk_util {
             case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
                 ANV_LOG_ERROR("== VK VALIDATION LAYER ERROR ==\n%s", pCallbackData->pMessage)
                 break;
-            case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT:
-                break;
             default:
                 break;
             }

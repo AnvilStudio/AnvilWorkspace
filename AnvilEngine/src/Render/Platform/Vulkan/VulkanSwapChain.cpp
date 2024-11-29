@@ -77,6 +77,8 @@ namespace anv
 
 		ANV_VK_CHECK_RESULT(vkCreateSwapchainKHR(m_VkContext->GetDevice(), &createInfo, nullptr, &m_Swapchain),
 			"Failed to create Swapchain!")
+
+		// Create Frame Buffers
 		m_SwapchainImages.resize(imageCount);
 		vkGetSwapchainImagesKHR(m_VkContext->GetDevice(), m_Swapchain, &imageCount, m_SwapchainImages.data());
 		m_ImageFormat = surfaceFormat.format;

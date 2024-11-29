@@ -107,7 +107,7 @@ namespace anv
 
 		if (vresult.GetCompilationStatus() != shaderc_compilation_status_success)
 		{
-			ANV_LOG_ERROR("Failed to compile vertex shader: %s", m_Name.c_str())
+			ANV_LOG_ERROR("Failed to compile vertex shader: %s\nMessage: %s", m_Name.c_str(), vresult.GetErrorMessage().c_str())
 		}
 		else
 		{
@@ -117,7 +117,7 @@ namespace anv
 
 		if (fresult.GetCompilationStatus() != shaderc_compilation_status_success)
 		{
-			ANV_LOG_ERROR("Failed to compile fragment shader: %s", m_Name.c_str())
+			ANV_LOG_ERROR("Failed to compile fragment shader: %s\nMessage: %s", m_Name.c_str(), fresult.GetErrorMessage().c_str())
 		}
 		else
 		{

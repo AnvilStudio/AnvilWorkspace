@@ -16,7 +16,10 @@ namespace anv
 		~VulkanSwapchain();
 
 		VkFormat   GetFormat() { return m_ImageFormat; }
-		VkExtent2D GetExtent() { return m_Extent; }
+		SwapExtent GetExtent() override
+		{
+			return {(float)m_Extent.width, (float)m_Extent.height};
+		}
 
 		void OnDestroy() override;
 

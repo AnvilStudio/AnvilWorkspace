@@ -39,8 +39,8 @@ namespace anv {
 		appInfo.apiVersion = VK_API_VERSION_1_0;
 		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 		appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-		appInfo.pApplicationName = "AndroidApp";
-		appInfo.pEngineName = "AndroidApp";
+		appInfo.pApplicationName = "Anvil";
+		appInfo.pEngineName = "Anvil";
 
 		VkInstanceCreateInfo info{
 			.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
