@@ -14,6 +14,11 @@ namespace anv{
 		{
 
 		}
+
+		uuid::AssetUUID GetAssetID()
+		{
+			return m_Uuid;
+		}
 		
 	private:
 		uuid::AssetUUID m_Uuid{};
