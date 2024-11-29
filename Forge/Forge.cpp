@@ -8,10 +8,9 @@ public:
 
 	void OnSetup()   override 
 	{
-		ANV_LOG_INFO("hello!");
+		ANV_LOG_INFO("hello from forge!");
 	};
 	void OnUpdate()  override {
-		ANV_LOG_INFO("hello!")
 	};
 	void OnDestroy() override {};
 
