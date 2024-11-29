@@ -41,6 +41,7 @@ project "AnvilEngine"
         {
             "GLFW",
             "vulkan-1",
+            "shaderc_combinedd"
         }
 
 
