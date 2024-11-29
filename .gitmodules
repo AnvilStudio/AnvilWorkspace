@@ -1,0 +1,4 @@
+[submodule "AnvilEngine/src/Util/AnvilEngine/src/Util"]
+	path = AnvilEngine/src/Util/AnvilEngine/src/Util
+	url = https://github.com/AnvilStudio/AnvLog.git
+	branch = libonly

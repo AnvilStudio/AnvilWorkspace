@@ -2,7 +2,7 @@
 #include "Profile.h"
 #include <memory>
 #include <vector>
-#include "AnvLog/include/AnvLog.h"
+#include "AnvLog/AnvLog.h"
 
 namespace anv
 {
@@ -28,5 +28,5 @@ using _unique = std::unique_ptr<_ty>;
 #define ANV_LOG_DEBUG(fmt, ...) anv_log::AnvLog::LOG_DEBUG(fmt, __VA_ARGS__);
 #define ANV_LOG_WARN(fmt, ...) anv_log::AnvLog::LOG_WARN (fmt, __VA_ARGS__);
 #define ANV_LOG_ERROR(fmt, ...) anv_log::AnvLog::LOG_ERROR(fmt, __VA_ARGS__);
-#define ANV_LOG_FATAL(fmt, ...) anv_log::AnvLog::LOG_FATAL(fmt, __VA_ARGS__);
+#define ANV_LOG_FATAL(fmt, ...) anv_log::AnvLog::LOG_FATAL(__FUNCTION__, fmt, __VA_ARGS__);
 }

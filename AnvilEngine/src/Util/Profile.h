@@ -1,6 +1,6 @@
 // Profiler.h
 #pragma once
-#include "AnvLog/include/AnvLog.h"
+#include "AnvLog/AnvLog.h"
 #include <chrono>
 #include <iostream>
 
@@ -15,8 +15,9 @@ namespace anv
         ~Profiler() {
             auto endTime = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - m_StartTime).count() * .001;
-            // Output the timing or store it in a profiling system
-            anv_log::AnvLog::LOG_DEBUG("[PROFILE]: %s :: %.2f ms", m_ScopeName, duration);
+
+            anv_log::AnvLog::LOG_CUST(anv_log::TermColor::TC_CYAN, anv_log::LogLevel::LL_NONE, 
+                "[PROFILE]: %s :: %.2f ms", m_ScopeName, duration);
         }
 
     private:
