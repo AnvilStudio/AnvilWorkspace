@@ -21,6 +21,7 @@ using _unique = std::unique_ptr<_ty>;
 
 // profile a specific scope
 #define ANV_PROFILE_SCOPE() Profiler _profile_scope(__FUNCTION__);
+#define ANV_PROFILE_SCOPE_NAME(scope) Profiler _profile_scope(scope);
 
 // Logging
 // #define ANV_LOG_INIT(info) anv_log::AnvLog::Init(info);
