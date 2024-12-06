@@ -51,16 +51,15 @@ namespace anv
 
 	void VulkanShader::pre_process()
 	{
-		ANV_LOG_DEBUG("PreProcessing Shader: % s", m_Name.c_str())
+		ANV_LOG_DEBUG("Pre-Processing Shader: % s", m_Name.c_str())
+
 		ShaderType ty = ShaderType::NONE;
 		std::unordered_map<ShaderType, std::string> shaders = {};
 		std::stringstream shade_s{};
 
 		for (auto& str : m_SrcCode)
 		{
-			/// <summary>
 			/// separate vert/frag shaders
-			/// </summary>
 			if (str.find("#type") != std::string::npos)
 			{
 				if (ty != ShaderType::NONE) {
@@ -96,15 +95,25 @@ namespace anv
 	void VulkanShader::compile_to_spv()
 	{
 		ANV_PROFILE_SCOPE()
-		ANV_LOG_DEBUG("Compiling Shader: %s", m_Name.c_str())
+		ANV_LOG_INFO("Compiling Shader: %s", m_Name.c_str())
 		shaderc::Compiler compiler;
 		shaderc::CompileOptions options;
 
 		options.SetOptimizationLevel(shaderc_optimization_level_performance);
 
-		shaderc::SpvCompilationResult vresult = compiler.CompileGlslToSpv(m_VertCode.first, shaderc_vertex_shader, m_Name.c_str(), options);
-		shaderc::SpvCompilationResult fresult = compiler.CompileGlslToSpv(m_FragCode.first, shaderc_vertex_shader, m_Name.c_str(), options);
+		// compile and profile
+		shaderc::SpvCompilationResult vresult = {};
+		{
+			ANV_PROFILE_SCOPE_NAME("\tVertex Shader")
+			vresult = compiler.CompileGlslToSpv(m_VertCode.first, shaderc_vertex_shader, m_Name.c_str(), options);
+		}
+		shaderc::SpvCompilationResult fresult = {};
+		{
+			ANV_PROFILE_SCOPE_NAME("\tFragment Shader")
+			fresult = compiler.CompileGlslToSpv(m_FragCode.first, shaderc_vertex_shader, m_Name.c_str(), options);
+		}
 
+		// Check comp status
 		if (vresult.GetCompilationStatus() != shaderc_compilation_status_success)
 		{
 			ANV_LOG_ERROR("Failed to compile vertex shader: %s\nMessage: %s", m_Name.c_str(), vresult.GetErrorMessage().c_str())
