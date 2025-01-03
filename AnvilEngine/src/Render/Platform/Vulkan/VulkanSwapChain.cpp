@@ -16,7 +16,6 @@ namespace anv
 
 	VulkanSwapchain::~VulkanSwapchain()
 	{
-		vkDestroySwapchainKHR(m_VkContext->GetDevice(), m_Swapchain, nullptr);
 	}
 
 	void VulkanSwapchain::OnDestroy()
@@ -25,6 +24,8 @@ namespace anv
 		{
 			vkDestroyImageView(m_VkContext->GetDevice(), iView, nullptr);
 		}
+
+		vkDestroySwapchainKHR(m_VkContext->GetDevice(), m_Swapchain, nullptr);
 	}
 
 	void VulkanSwapchain::querey_support()

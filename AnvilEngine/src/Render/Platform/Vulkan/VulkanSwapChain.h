@@ -1,6 +1,6 @@
 #pragma once
 #include "../../Swapchain.h"
-#include "VulkanContext.h"
+#include "VulkanUtil.h"
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -8,11 +8,14 @@ namespace anv
 {
 	class Context;
 
+	class VulkanContext;
+
 	class VulkanSwapchain
 		: public Swapchain
 	{
 	public:
 		VulkanSwapchain(Context* _ctx);
+		VulkanSwapchain() = default;
 		~VulkanSwapchain();
 
 		VkFormat   GetFormat() { return m_ImageFormat; }
@@ -20,7 +23,6 @@ namespace anv
 		{
 			return {(float)m_Extent.width, (float)m_Extent.height};
 		}
-
 		void OnDestroy() override;
 
 	private:
@@ -29,8 +31,7 @@ namespace anv
 		void create_image_views();
 
 	private:
-		vk_util::
-		SwapchainSupportDetails m_SupportDetails;
+		vk_util::SwapchainSupportDetails m_SupportDetails;
 
 		VulkanContext*    m_VkContext;
 		VkSwapchainKHR    m_Swapchain;
