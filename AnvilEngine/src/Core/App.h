@@ -34,7 +34,6 @@ namespace anv
 	private:
 		inline static App* m_This  = nullptr;
 		_shared<Window> m_AppWin   = nullptr;
-		Renderer2D*     m_Renderer = nullptr;
 	};
 
 }

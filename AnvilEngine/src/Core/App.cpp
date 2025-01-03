@@ -1,5 +1,4 @@
-#include "App.h"
-#include <Util/CrashHandler/CrashHandler.h>	
+#include "App.h"	
 
 namespace anv {
 
@@ -15,7 +14,8 @@ namespace anv {
 				.logFilePath = "AnvLogs.log",
 				.timeFormat = "%I:%M:%S",
 				.consoleOutput = true,
-				.fileOutput = true
+				.fileOutput = true,
+				.abortOnError = false
 			};
 
 			anv_log::AnvLog::Init(info);
@@ -33,7 +33,6 @@ namespace anv {
 		m_AppWin = Window::Create(i);
 
 		// Setup should happen after App setup
-		ANV_LOG_INFO("==========================================\n============= SETUP COMPLETE =============\n==========================================")
 		OnSetup();
 	}
 
@@ -46,10 +45,11 @@ namespace anv {
 		{
 			anv_log::LogCreateInfo info
 			{
-				.logFilePath = "AnvLogs.log",
+				.logFilePath = "logs.alog",
 				.timeFormat = "%I:%M:%S",
 				.consoleOutput = true,
-				.fileOutput = true
+				.fileOutput = true,
+				.abortOnError = false
 			};
 
 			anv_log::AnvLog::Init(info);
@@ -63,21 +63,24 @@ namespace anv {
 		Render2DCreateInfo r_info{};
 		r_info.pTarget = m_AppWin;
 
-		m_Renderer = new Renderer2D(r_info);
+		Renderer2D::Init(r_info);
+
+		// Jump to client side setup
 		OnSetup();
 	}
 
 	App::~App()
 	{
 		OnDestroy();
-
-		// Everything should be deleted before the app itself gets deletes
+		// Everything should be deleted before the app itself gets deleted
+		Renderer2D::Shutdown();
 	}
 
 	void App::Run()
 	{
 		while (!m_AppWin->ShouldClose())
 		{
+			// Polls input
 			m_AppWin->OnUpdate();
 
 			// OnUpdate should hapen after input polling
