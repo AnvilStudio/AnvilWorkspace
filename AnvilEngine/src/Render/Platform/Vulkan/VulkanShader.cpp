@@ -1,6 +1,10 @@
 #include "VulkanShader.h"
 #include "VulkanUtil.h"
 #include <shaderc/shaderc.hpp>
+#include <filesystem>
+
+// TODO: Add a settings file to cache the already compiled shader src code path.
+// That way, next time the app opens, the shader wont have to re-compile
 
 namespace anv
 {
@@ -21,11 +25,35 @@ namespace anv
 		vkDestroyShaderModule(m_VkContext->GetDevice(), m_FModule, nullptr);
 	}
 
+	_vec<VkPipelineShaderStageCreateInfo> VulkanShader::GetShaderStages()
+	{
+		VkPipelineShaderStageCreateInfo vstageInfo{};
+		vstageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		vstageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		vstageInfo.module = m_VModule;
+		vstageInfo.pName = "main";
+
+		VkPipelineShaderStageCreateInfo fstageInfo{};
+		fstageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		fstageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		fstageInfo.module = m_FModule;
+		fstageInfo.pName = "main";
+
+		return { vstageInfo, fstageInfo };
+	}
+
 	void VulkanShader::set_name()
 	{
+
+		// Get the parent path to store the SPIR-V
+		std::filesystem::path path(m_Name);
+		m_FilePath = path.parent_path().string(); 
+
+		// Set name
 		size_t lastSlash = m_Name.find_last_of("/\\");
 		std::string fileName = m_Name.substr(lastSlash + 1);
 		m_Name = fileName;
+
 	}
 
 	void VulkanShader::load(std::string& _file)
@@ -110,7 +138,7 @@ namespace anv
 		shaderc::SpvCompilationResult fresult = {};
 		{
 			ANV_PROFILE_SCOPE_NAME("\tFragment Shader")
-			fresult = compiler.CompileGlslToSpv(m_FragCode.first, shaderc_vertex_shader, m_Name.c_str(), options);
+			fresult = compiler.CompileGlslToSpv(m_FragCode.first, shaderc_fragment_shader, m_Name.c_str(), options);
 		}
 
 		// Check comp status
@@ -133,7 +161,49 @@ namespace anv
 			ANV_LOG_INFO("Compiled Fragment Shader: %s", m_Name.c_str())
 			m_FragCode.second = { fresult.begin(), fresult.end() };
 		}
+
+		save_files();
 	}
+	
+	void VulkanShader::save_files()
+	{
+		// Construct paths for vertex and fragment shader SPIR-V files
+		std::string vpath = std::string(m_FilePath + m_Name + ".v.spv");
+		std::string fpath = std::string(m_FilePath + m_Name + ".f.spv");
+
+		// Open output file streams
+		std::ofstream vspvf(vpath, std::ios::binary); // Vertex shader
+		std::ofstream fspvf(fpath, std::ios::binary); // Fragment shader
+
+		// Check if the vertex shader file stream is open
+		if (!vspvf.is_open())
+		{
+			ANV_LOG_WARN("Failed to write compiled vertex SPIR-V shader %s to file %s", m_Name.c_str(), vpath.c_str());
+		}
+
+		// Check if the fragment shader file stream is open
+		if (!fspvf.is_open())
+		{
+			ANV_LOG_WARN("Failed to write compiled fragment SPIR-V shader %s to file %s", m_Name.c_str(), fpath.c_str());
+		}
+
+		// Write vertex shader code to the file
+		for (uint32_t& op : m_VertCode.second)
+		{
+			vspvf.write(reinterpret_cast<const char*>(&op), sizeof(uint32_t));
+		}
+
+		// Write fragment shader code to the file
+		for (uint32_t& op : m_FragCode.second)
+		{
+			fspvf.write(reinterpret_cast<const char*>(&op), sizeof(uint32_t));
+		}
+
+		// Close the file streams
+		vspvf.close();
+		fspvf.close();
+	}
+
 
 	void VulkanShader::create_module()
 	{
