@@ -17,6 +17,12 @@ namespace anv
 	public:
 		static Ref<Shader> Create(const std::string& _shaderPath, _shared<Context> _ctx);
 
+		template<typename T>
+		inline T* GetAs()
+		{
+			return dynamic_cast<T*>(this);
+		}
+
 	private:
 		static inline std::unordered_map<std::string, Ref<Shader>> s_ShaderCache;
 	};

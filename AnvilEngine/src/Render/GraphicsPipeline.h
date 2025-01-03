@@ -1,5 +1,6 @@
 #pragma once
 #include "../Core/Reference.h"
+#include "RenderPass.h"
 #include "Shader.h"
 
 namespace anv
@@ -14,7 +15,7 @@ namespace anv
 	};
 
 	struct VertexInputLayout {
-		std::vector<VertexAttribute> attributes; // List of attributes
+		_vec<VertexAttribute> attributes; // List of attributes
 		uint32_t binding;                        // Vertex buffer binding index
 
 		void AddAttribute(const std::string& name, uint32_t location, uint32_t offset, uint32_t size, uint32_t stride, bool normalized = false) {
@@ -46,7 +47,7 @@ namespace anv
 		bool logicOpEnable = false;        // Enable logic operations
 		uint32_t logicOp = 0;              // Logic operation (if enabled)
 		float blendConstants[4] = { 0, 0, 0, 0 }; // Blend constants for equations
-		std::vector<BlendAttachment> attachments; // Blend settings per attachment
+		_vec<BlendAttachment> attachments; // Blend settings per attachment
 
 		void AddAttachment(const BlendAttachment& attachment) {
 			attachments.push_back(attachment);
@@ -70,6 +71,8 @@ namespace anv
 		virtual void SetVertexInputLayout(VertexInputLayout* _layout)         = 0;
 		virtual void SetRasterizationSettings(RasterizationSettings* _raster) = 0;
 		virtual void SetColorBlendSettings(ColorBlendSettings* _colbld)       = 0;
+		virtual void SetRenderPass(RenderPass* _rps)                          = 0; 
 		virtual void Build() = 0;
+		virtual void Destroy() = 0;
 	};
 }

@@ -16,10 +16,6 @@ namespace anv {
 		}
     }
 
-	Context::Context()
-	{
-	}
-
 	_shared<RenderAPI> Context::InitAPI(RenderAPICreateInfo _info)
 	{
 		m_API = RenderAPI::Create(_info);

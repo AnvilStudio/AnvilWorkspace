@@ -1,4 +1,5 @@
 #pragma once
+#include "Banner.h"
 #include <iostream>
 #include <cstdarg>
 #include <string>
@@ -45,14 +46,19 @@ namespace anv_log
 
 	struct LogCreateInfo
 	{
-		std::string logFilePath = "AnvLog.log";
-		std::string timeFormat = "%I:%M:%S";
-		bool		consoleOutput = true;
-		bool		fileOutput = false;
+		std::string fileBanner  = ANV_STD_LOG_BANNER; // Set the banner at the beginning of the file
+		std::string logFilePath = "AnvLog.log";       // Set the path of the log file
+		std::string timeFormat  = "%I:%M:%S";         // Set the time format
+		bool		consoleOutput = true;             // Set if you want standard console output
+		bool		fileOutput    = false;            // Set if you want file output
+		bool        abortOnError   = false;            // Program abort if Error is logged
 	};
 
 	struct File;
 
+
+	// a general pourpose logging class that 
+	// can be used anywhere within the codebase.
 	class AnvLog
 	{
 	public:
@@ -68,12 +74,14 @@ namespace anv_log
 
 		static std::string GetTime();
 
-	private:
 		static std::string formatString(const std::string& format, va_list args);
+	private:
 		static std::string level_to_string(const LogLevel _lev);
 		static std::string color_to_string(const TermColor _col);
 
 		static inline std::shared_ptr<File> m_File = nullptr;
 		static inline LogCreateInfo m_CreationInfo = {};
+
+		friend struct File;
 	};
 }

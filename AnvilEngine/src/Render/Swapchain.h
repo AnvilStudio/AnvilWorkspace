@@ -1,5 +1,4 @@
 #pragma once
-
 #include "../Util/UMacros.h"
 
 namespace  anv

@@ -40,12 +40,11 @@ project "AnvilEngine"
         links
         {
             "GLFW",
-            "vulkan-1",
+            "vulkan-1", -- TODO: Add OS switch
             "shaderc_combinedd"
         }
 
-
-        buildoptions { "/MP" }
+        buildoptions { "/MP" } -- windows only
 
         filter "configurations:DebugG"
             defines {

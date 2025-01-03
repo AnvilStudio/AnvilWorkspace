@@ -17,7 +17,7 @@ namespace anv {
 	public:
 		static _shared<Context> Create(Window* _win);
 		
-		Context();
+		virtual ~Context() = default;
 
 		_shared<RenderAPI> InitAPI(RenderAPICreateInfo _info);
 

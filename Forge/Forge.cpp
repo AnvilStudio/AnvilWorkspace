@@ -10,8 +10,10 @@ public:
 	{
 		ANV_LOG_INFO("hello from forge!");
 	};
+
 	void OnUpdate()  override {
 	};
+
 	void OnDestroy() override {};
 
 };

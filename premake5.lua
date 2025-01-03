@@ -6,7 +6,7 @@ workspace "AnvilWorkspace"
 
     configurations 
     {
-        "DebugG",
+        "DebugG", -- graphics debugging
         "Debug",
         "Release"
     }
@@ -26,7 +26,7 @@ workspace "AnvilWorkspace"
     group "Engine"
         include "AnvilEngine/Anvil.lua"
     group ""
-
+ 
     group "Editor"
         include "Forge/Forge.lua"
     group ""

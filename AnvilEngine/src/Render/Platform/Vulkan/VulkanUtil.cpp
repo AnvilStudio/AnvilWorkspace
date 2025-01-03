@@ -62,6 +62,8 @@ namespace anv::vk_util
                 return false;
             }
         }
+
+        return true;
     }
 
     bool vku_CheckDeviceExtensionSupport(VkPhysicalDevice _device, const _vec<const char*> _extensions)
@@ -100,8 +102,9 @@ namespace anv::vk_util
 
             score += deviceProperties.limits.maxImageDimension2D;
 
+            // Geometry shader is a bonus!
             if (!deviceFeatures.geometryShader) {
-                score = -1; // Geometry shader is needed
+                score += 1000; 
                 continue;
             }
 

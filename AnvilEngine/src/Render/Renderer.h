@@ -1,10 +1,22 @@
+///////////////////////////////////////////////////////////////////
+//                                                               //
+// Renderer.h - The base class prototype for 2D and 3D rendering //
+//                                                               //
+// This file serves as a prototype for the Renderer2D and        //
+// Renderer3D classes. It defines core rendering functions and   //
+// interfaces that can be extended for different rendering       //
+// backends (e.g., Vulkan, OpenGL, DirectX, Metal, etc.).        //
+//                                                               //
+// TODO (Alba): Implement Metal renderer.                        //
+///////////////////////////////////////////////////////////////////
+
 #pragma once
 
-#include "Context.h"
-#pragma once
 #include "../Util/UMacros.h"
-#include "Swapchain.h"
+#include "../Core/QueueChain.h"
 #include "Context.h"
+#include "Swapchain.h"
+#include "GraphicsPipeline.h"
 
 #include <string>
 
@@ -123,21 +135,23 @@ namespace anv {
     class Renderer2D
     {
     public:
-        Renderer2D(Render2DCreateInfo _info);
-        ~Renderer2D();
 
         // API //
-        void BeginFrame();
-        void EndFrame();
+        static void Init(Render2DCreateInfo _info);
+        static void Shutdown();
+        static void BeginFrame();
+        static void EndFrame();
 
-        //void DrawQuad(VertexBuffer& _vb, IndexBuffer& _ib);
-        //void DrawQuadWithMaterial(Material& _mat, VertexBuffer& _vb, IndexBuffer& _ib);
-        //void DrawQuadWithTexture(Texture& _text, VertexBuffer& _vb, IndexBuffer& _ib);
+        //static void DrawQuad(VertexBuffer& _vb, IndexBuffer& _ib);
+        //static void DrawQuadWithMaterial(Material& _mat, VertexBuffer& _vb, IndexBuffer& _ib);
+        //static void DrawQuadWithTexture(Texture& _text, VertexBuffer& _vb, IndexBuffer& _ib);
+        //static void Submit();
 
     private:
-        _shared<RenderAPI>  m_RenderAPI;
-        Render2DCreateInfo& m_RenderInfo;
-        // RenderQueue*  m_CmdQueue
-        // RenderThread* m_RenderThread
+        inline static _shared<RenderAPI>        m_RenderAPI = nullptr;
+        inline static Ref<GraphicsPipeline>     m_Pipeline  = nullptr;
+        inline static Render2DCreateInfo        m_RenderCreateInfo {};
+        
+        inline static QueueChain m_RenderCmdChain = QueueChain();
     };
 }
