@@ -2,12 +2,11 @@
 
 #include "Render/Context.h"
 #include "Util/UMacros.h"
-
 #include "VulkanUtil.h"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-
+#include "VulkanSwapChain.h"
 #include <string>
 #include <sstream>
 #include <stdexcept>
@@ -17,6 +16,8 @@
 
 
 namespace anv {
+
+    class VulkanSwapChain;
 
     class VulkanContext
         : public Context
@@ -33,7 +34,7 @@ namespace anv {
         VkQueue           GetGraphicsQueue()  { return m_GraphicsQueue;   }
         VkQueue           GetPresentQueue()   { return m_PresentQueue;    }
         GLFWwindow*       GetWinHandle()      { return m_WinHandle;       }
-        Swapchain*        GetSwapchain()      { return m_Swapchain.get(); }
+        VulkanSwapchain&  GetSwapchain()      { return m_Swapchain;       }
 
     private:
         void vkc_instance(); // instance creation
@@ -42,12 +43,12 @@ namespace anv {
         void vkc_logical (); // create logical device
 
     private:
-        _unique<Swapchain> m_Swapchain;
-
-        GLFWwindow* m_WinHandle;
-        VkInstance m_Instance;
-        VkSurfaceKHR m_Surface;
-        VkDevice m_Device;
+        // switched to a raw vulkan swapchain
+        VulkanSwapchain  m_Swapchain;
+        GLFWwindow*      m_WinHandle;
+        VkInstance       m_Instance;
+        VkSurfaceKHR     m_Surface;
+        VkDevice         m_Device;
         VkPhysicalDevice m_PhysicalDevice;
         VkQueue m_GraphicsQueue;
         VkQueue m_PresentQueue;

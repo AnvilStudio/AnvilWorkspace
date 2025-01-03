@@ -14,13 +14,13 @@ namespace anv {
 		vkc_surface   (); // rendering surface
 		vkc_physical  (); // select gpu
 		vkc_logical   (); // create logical device
-		m_Swapchain = Swapchain::Create(this);
+		m_Swapchain = VulkanSwapchain(this);
 	}
 
 	VulkanContext::~VulkanContext()
 	{
 		ANV_PROFILE_SCOPE();
-		m_Swapchain->OnDestroy(); // destroy image views
+		m_Swapchain.OnDestroy(); // destroy image views
 		vkDestroyDevice(m_Device, nullptr);
 		vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 #ifdef DEBUG
