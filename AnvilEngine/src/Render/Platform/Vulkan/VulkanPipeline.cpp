@@ -1,4 +1,6 @@
 #include "VulkanPipeline.h"
+#include "VulkanShader.h"
+#include "VulkanRenderPass.h"
 
 namespace anv
 {
@@ -11,8 +13,8 @@ namespace anv
 		// Set Viewport
 
 		VkExtent2D scExtent = { 
-			(float)m_VkContext->GetSwapchain()->GetExtent().width,
-			(float)m_VkContext->GetSwapchain()->GetExtent().height 
+			m_VkContext->GetSwapchain().GetExtent().width,
+			m_VkContext->GetSwapchain().GetExtent().height 
 		};
 
 		m_CreateInfo.viewport = {};
@@ -50,12 +52,15 @@ namespace anv
 
 	VulkanPipeline::~VulkanPipeline()
 	{
-		vkDestroyPipelineLayout(m_VkContext->GetDevice(), m_PipelineLayout, nullptr);
+		//vkDestroyPipelineLayout(m_VkContext->GetDevice(), m_PipelineLayout, nullptr);
 	}
 
 	void VulkanPipeline::SetShaderStages(Ref<Shader> _shader)
 	{
-
+		auto vkshaders = _shader->GetAs<VulkanShader>()->GetShaderStages();
+		m_CreateInfo.stages.resize(vkshaders.size());
+		m_CreateInfo.stages[0] = vkshaders[0];
+		m_CreateInfo.stages[1] = vkshaders[1];
 	}
 
 	void VulkanPipeline::SetVertexInputLayout(VertexInputLayout* _layout)
@@ -142,8 +147,29 @@ namespace anv
 		ANV_LOG_DEBUG("Set Pipeline Color Blend");
 	}
 
+    void VulkanPipeline::SetRenderPass(RenderPass* _rps)
+    {
+		m_RenderPass = _rps->GetAs<VulkanRenderPass>()->GetRaw();
+    }
+
 	void VulkanPipeline::Build()
 	{
-		ANV_LOG_DEBUG("Built Pipeline");
+		VkGraphicsPipelineCreateInfo* info = m_CreateInfo.BuildInfo();
+		info->sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		info->layout = m_PipelineLayout;
+		info->renderPass = m_RenderPass;
+		info->pDepthStencilState = nullptr;
+		info->subpass = 0;
+		info->basePipelineHandle = VK_NULL_HANDLE;
+		info->basePipelineIndex = -1;
+
+		ANV_VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VkContext->GetDevice(), VK_NULL_HANDLE, 1, info, nullptr, &m_Pipeline),
+			"Failed to create Vk graphics pipeline")
+	}
+
+	void VulkanPipeline::Destroy()
+	{
+		vkDestroyPipeline(m_VkContext->GetDevice(), m_Pipeline, nullptr);
+		vkDestroyPipelineLayout(m_VkContext->GetDevice(), m_PipelineLayout, nullptr);
 	}
 }
