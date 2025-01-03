@@ -11,7 +11,7 @@ namespace anv {
 		{
 			anv_log::LogCreateInfo info
 			{
-				.logFilePath = "AnvLogs.log",
+				.logFilePath = "logs.alog",
 				.timeFormat = "%I:%M:%S",
 				.consoleOutput = true,
 				.fileOutput = true,
