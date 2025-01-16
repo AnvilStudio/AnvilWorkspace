@@ -55,15 +55,15 @@ namespace anv
 		//vkDestroyPipelineLayout(m_VkContext->GetDevice(), m_PipelineLayout, nullptr);
 	}
 
-	void VulkanPipeline::SetShaderStages(Ref<Shader> _shader)
+	void VulkanPipeline::SetShaderStages(const Ref<Shader> _shader)
 	{
-		auto vkshaders = _shader->GetAs<VulkanShader>()->GetShaderStages();
+		auto vkshaders = _shader.As<VulkanShader>()->GetShaderStages();
 		m_CreateInfo.stages.resize(vkshaders.size());
 		m_CreateInfo.stages[0] = vkshaders[0];
 		m_CreateInfo.stages[1] = vkshaders[1];
 	}
 
-	void VulkanPipeline::SetVertexInputLayout(VertexInputLayout* _layout)
+	void VulkanPipeline::SetVertexInputLayout(const VertexInputLayout* _layout)
 	{
 		m_CreateInfo.vertexInputInfo = {};
 		m_CreateInfo.vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -75,7 +75,7 @@ namespace anv
 		ANV_LOG_DEBUG("Set Pipeline Vertex Input");
 	}
 
-	void VulkanPipeline::SetRasterizationSettings(RasterizationSettings* _raster)
+	void VulkanPipeline::SetRasterizationSettings(const RasterizationSettings* _raster)
 	{
 		m_CreateInfo.rasterizer = {};
 		m_CreateInfo.rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -103,7 +103,7 @@ namespace anv
 		ANV_LOG_DEBUG("Set Pipeline rasterization");
 	}
 
-	void VulkanPipeline::SetColorBlendSettings(ColorBlendSettings* _colbld)
+	void VulkanPipeline::SetColorBlendSettings(const ColorBlendSettings* _colbld)
 	{
 		m_CreateInfo.colorBlendAttachment = {};
 		m_CreateInfo.colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -147,9 +147,9 @@ namespace anv
 		ANV_LOG_DEBUG("Set Pipeline Color Blend");
 	}
 
-    void VulkanPipeline::SetRenderPass(RenderPass* _rps)
+	void VulkanPipeline::SetRenderPass(const Ref<RenderPass> _rps)
     {
-		m_RenderPass = _rps->GetAs<VulkanRenderPass>()->GetRaw();
+		m_RenderPass = _rps.As<VulkanRenderPass>()->GetRaw();
     }
 
 	void VulkanPipeline::Build()

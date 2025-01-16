@@ -51,11 +51,11 @@ namespace anv
 		VulkanPipeline(_shared<Context> _ctx);
 		~VulkanPipeline();
 
-		void SetShaderStages(Ref<Shader> _shader)                     override;
-		void SetVertexInputLayout(VertexInputLayout* _layout)         override;
-		void SetRasterizationSettings(RasterizationSettings* _raster) override;
-		void SetColorBlendSettings(ColorBlendSettings* _colbld)       override;
-		void SetRenderPass(RenderPass* _rps)                          override;
+		void SetShaderStages(const Ref<Shader> _shader)                     override;
+		void SetVertexInputLayout(const VertexInputLayout* _layout)         override;
+		void SetRasterizationSettings(const RasterizationSettings* _raster) override;
+		void SetColorBlendSettings(const ColorBlendSettings* _colbld)       override;
+		void SetRenderPass(const Ref<RenderPass> _rps)                          override;
 		void Build() override;
 		void Destroy() override;
 
