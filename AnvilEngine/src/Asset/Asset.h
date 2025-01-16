@@ -19,7 +19,11 @@ namespace anv{
 		{
 			return m_Uuid;
 		}
-		
+	
+	private:
+		// TODO: Impl serializer
+		virtual void OnSerialize(/*Writer* _serializer*/) {};
+
 	private:
 		uuid::AssetUUID m_Uuid{};
 	};
