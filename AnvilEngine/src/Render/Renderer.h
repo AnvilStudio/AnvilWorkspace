@@ -96,16 +96,19 @@ namespace anv {
         int width = 1920;
         int height = 1080;
         bool vsyncEnabled = true;
+        // 0 - Unlimited F.R.
         int targetFrameRate = 60;
 
         // Anti-Aliasing
+        bool enableMSAA = false;
         int msaaSamples = 4;
 
         // Swapchain
         int swapchainImageCount = 3;
 
         // Depth and Stencil
-        bool enableDepthBuffer = true;
+        // Not Set Up!
+        bool enableDepthBuffer = false;
         int depthBits = 24;
         int stencilBits = 8;
 
@@ -116,14 +119,17 @@ namespace anv {
         bool offscreenRendering = false;
 
         // Debug
-        bool enableDebugMode = true;
+        bool enableDebugMode = false;
 
         // Rendering Pipeline
         RenderingPipeline pipeline = RenderingPipeline::TWD;
 
         // Asset paths
-        std::string shaderPath = "shaders/";
-        std::string texturePath = "textures/";
+        std::string assetPath   = "assets";
+
+        // AnvEngine specific assets
+        std::string shaderPath  = "assets/com.anvstu.engine/shaders";
+        std::string texturePath = "assets/com.anvstu.engine/textures";
 
         // Shadows
         //int shadowMapResolution = 1024;
@@ -142,10 +148,14 @@ namespace anv {
         static void BeginFrame();
         static void EndFrame();
 
-        //static void DrawQuad(VertexBuffer& _vb, IndexBuffer& _ib);
-        //static void DrawQuadWithMaterial(Material& _mat, VertexBuffer& _vb, IndexBuffer& _ib);
-        //static void DrawQuadWithTexture(Texture& _text, VertexBuffer& _vb, IndexBuffer& _ib);
-        //static void Submit();
+        //static void CmdDrawQuad(VertexBuffer& _vb, IndexBuffer& _ib);
+        //static void CmdDrawQuadWithMaterial(Material& _mat, VertexBuffer& _vb, IndexBuffer& _ib);
+        //static void CmdDrawQuadWithTexture(Texture& _text, VertexBuffer& _vb, IndexBuffer& _ib);
+        //static void CmdSubmit();
+
+    private:
+        void set_pipeline();
+        void set_shaders();
 
     private:
         inline static _shared<RenderAPI>        m_RenderAPI = nullptr;
