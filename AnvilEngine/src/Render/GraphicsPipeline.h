@@ -67,11 +67,11 @@ namespace anv
 	public:
 		static Ref<GraphicsPipeline> Create(_shared<Context> _ctx);
 
-		virtual void SetShaderStages(Ref<Shader> _shader)                     = 0;
-		virtual void SetVertexInputLayout(VertexInputLayout* _layout)         = 0;
-		virtual void SetRasterizationSettings(RasterizationSettings* _raster) = 0;
-		virtual void SetColorBlendSettings(ColorBlendSettings* _colbld)       = 0;
-		virtual void SetRenderPass(RenderPass* _rps)                          = 0; 
+		virtual void SetShaderStages(const Ref<Shader> _shader)                     = 0;
+		virtual void SetVertexInputLayout(const VertexInputLayout* _layout)         = 0;
+		virtual void SetRasterizationSettings(const RasterizationSettings* _raster) = 0;
+		virtual void SetColorBlendSettings(const ColorBlendSettings* _colbld)       = 0;
+		virtual void SetRenderPass(const Ref<RenderPass> _rps) = 0;
 		virtual void Build() = 0;
 		virtual void Destroy() = 0;
 	};
