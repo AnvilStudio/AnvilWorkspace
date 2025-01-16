@@ -104,3 +104,4 @@ AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.tlog/Lib.comman
 *.hint
 /AnvilEngine/src/Util/AnvilEngine/src/Util
 /Forge/logs.alog
+/AnvilEngine/vendor/GLFW/bin-int/Debug-windows-x86_64/GLFW/GLFW.tlog/CL.command.1.tlog
