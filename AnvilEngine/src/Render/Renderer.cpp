@@ -39,7 +39,7 @@ namespace anv
 		m_Pipeline->SetVertexInputLayout({});
 		m_Pipeline->SetRasterizationSettings({});
 		m_Pipeline->SetColorBlendSettings({});
-		m_Pipeline->SetRenderPass(renderpass.get());
+		m_Pipeline->SetRenderPass(renderpass);
 		m_Pipeline->Build();
 		// =========
 
