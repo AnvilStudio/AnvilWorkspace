@@ -15,9 +15,7 @@ workspace "AnvilWorkspace"
     print("Vulkan SDK: ", VULKAN_SDK)
     outdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
     ROOTDIR = os.getcwd() .. "/"
-    print("Root Directory: ", root_dir)
---    vendor_dir = root_dir .. "Anvil/include/"
---    print("Vendor Directory: ", vendor_dir)
+    print("Root Directory: ", ROOTDIR)
 
     group "Dependencies"
         include "AnvilEngine/vendor/GLFW/glfw.lua"
