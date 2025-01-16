@@ -1,5 +1,6 @@
 #pragma once
 #include "../Util/UMacros.h"
+#include "../Core/Reference.h"
 #include "Context.h"
 
 namespace anv
@@ -65,9 +66,10 @@ namespace anv
 	};
 
 	class RenderPass
+		: public RefCounter
 	{
 	public:
-		static _shared<RenderPass> Create(RenderPassCreateInfo& _createinfo, _shared<Context> _ctx);
+		static Ref<RenderPass> Create(RenderPassCreateInfo& _createinfo, _shared<Context> _ctx);
 
 		//virtual void AddAttachment(RenderPassCreateInfo::Attachment _new_att) = 0;
 		//virtual void SetOutput(Framebuffer& _fb);
@@ -76,7 +78,7 @@ namespace anv
 		virtual void Build() = 0;
 
 		template<typename T>
-		inline T* GetAs()
+		inline T* GetAs() const 
 		{
 			return dynamic_cast<T*>(this);
 		}
