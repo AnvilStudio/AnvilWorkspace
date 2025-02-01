@@ -41,7 +41,7 @@ Installation is meant to be as simple as possible.
 - `Microsoft Visual Studio 2022`
 
 1. Clone the dev repository.<br>
-```git clone --recursive -b dev https://github.com/AnvilStudio/AnvilEngine.git```
+```git clone --recursive -b dev https://github.com/AnvilStudio/AnvilWorkspace.git```
 2. In the  root folder, run... <br>
 ```.\vendor\premake.exe vs2022```
 3. Open the `AnvilWorkspace.sln` file
