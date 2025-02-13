@@ -9,18 +9,20 @@ namespace anv
 	void Renderer2D::Init(Render2DCreateInfo _info)
 	{
 		ANV_PROFILE_SCOPE();
+		m_RenderCreateInfo = _info;
 		RenderAPICreateInfo info;
 		m_RenderAPI = _info.pTarget->GetContext()->InitAPI(info);
 
 		RenderPassCreateInfo rpinfo{};
-		RenderPassCreateInfo::Attachment col_att{};
-		col_att.type        = RenderPassCreateInfo::Attachment::AttType::ATT_TY_COLOR;      // drawing colors
-		col_att.loadOp      = RenderPassCreateInfo::Attachment::LoadOp::LOAD_OP_UNDEF;    // we dont care about the data before
-		col_att.storeOp     = RenderPassCreateInfo::Attachment::StoreOp::STORE_OP_STORE; // save the image
-		col_att.beginLayout = RenderPassCreateInfo::Attachment::ImgLayout::IMG_LAYOUT_UNDEF;   // dont care about the layout bc its cleared anyway
-		col_att.endLayout   = RenderPassCreateInfo::Attachment::ImgLayout::IMG_LAYOUT_COLOR_ATT; // going to a colored image
-
-		rpinfo.attachments.push_back(col_att);
+		rpinfo.d_name = "GeometryPass";
+		
+		RenderPass::Attachment colatt;
+		colatt.type = RenderPass::Attachment::Type::ATT_TY_COLOR;
+		colatt.loadOp = RenderPass::Attachment::LoadOp::LOAD_OP_UNDEF;
+		colatt.storeOp = RenderPass::Attachment::StoreOp::STORE_OP_STORE;
+		colatt.beginLayout = RenderPass::Attachment::ImgLayout::IMG_LAYOUT_UNDEF;
+		colatt.endLayout = RenderPass::Attachment::ImgLayout::IMG_LAYOUT_COLOR_ATT;
+		rpinfo.attachments.push_back(colatt);
 
 		RenderPassCreateInfo::SubpassInfo rpspinfo{
 			.colorAttachments = {0},     // ref the first color attach
@@ -29,8 +31,8 @@ namespace anv
 
 		rpinfo.subpasses.push_back(rpspinfo);
 
-		auto renderpass = RenderPass::Create(rpinfo, _info.pTarget->GetContext());
-		renderpass->Build();
+		m_RenderPass = RenderPass::Create(rpinfo, _info.pTarget->GetContext());
+		m_RenderPass->Build();
 
 		// == TMP ==
 		auto v = Shader::Create(_info.shaderPath + "/shader.glsl", _info.pTarget->GetContext());
@@ -39,9 +41,11 @@ namespace anv
 		m_Pipeline->SetVertexInputLayout({});
 		m_Pipeline->SetRasterizationSettings({});
 		m_Pipeline->SetColorBlendSettings({});
-		m_Pipeline->SetRenderPass(renderpass);
+		m_Pipeline->SetRenderPass(m_RenderPass);
 		m_Pipeline->Build();
 		// =========
+
+		create_frame_buffers();
 
 		// Start the render thread
 		m_RenderCmdChain.Start();
@@ -52,7 +56,7 @@ namespace anv
 		// Stop the render thread
 		m_RenderCmdChain.Stop();
 
-		m_Pipeline->Destroy();
+		//m_Pipeline->Destroy();
 	}
 
 	// start recording commands & begin render pass
@@ -78,5 +82,16 @@ namespace anv
 
 		// back -> middle, middle -> front, front -> back
 		m_RenderCmdChain.Swap();
+	}
+
+	void Renderer2D::create_frame_buffers()
+	{
+		ANV_PROFILE_SCOPE()
+		m_FrameBuffers.resize(m_RenderCreateInfo.swapchainImageCount);
+		auto image_views = m_RenderCreateInfo.pTarget->GetContext()->GetSwapchain()->GetImageViews();
+		for (int i = 0; i < image_views.size(); i++)
+		{
+			m_FrameBuffers[i] = Framebuffer::Create(m_RenderCreateInfo.pTarget->GetContext(), image_views[i], m_RenderPass);
+		}
 	}
 }

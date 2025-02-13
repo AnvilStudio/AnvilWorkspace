@@ -14,29 +14,28 @@ namespace anv
 		: public Swapchain
 	{
 	public:
-		VulkanSwapchain(Context* _ctx);
+		VulkanSwapchain(_shared<Context> _ctx);
 		VulkanSwapchain() = default;
-		~VulkanSwapchain();
+		virtual ~VulkanSwapchain() override;
 
 		VkFormat   GetFormat() { return m_ImageFormat; }
 		SwapExtent GetExtent() override
 		{
-			return {(float)m_Extent.width, (float)m_Extent.height};
+			return {m_Extent.width, m_Extent.height};
 		}
-		void OnDestroy() override;
+		void Reset() override;
+		void OnDestroy(VkDevice _dev);
+
+		_vec<Ref<Image2D>> GetImages() { return m_Images; }
 
 	private:
-		void querey_support();
+		void query_support();
 		void create_vk_swapchain();
-		void create_image_views();
 
 	private:
 		vk_util::SwapchainSupportDetails m_SupportDetails;
 
-		VulkanContext*    m_VkContext;
 		VkSwapchainKHR    m_Swapchain;
-		_vec<VkImage>     m_SwapchainImages;
-		_vec<VkImageView> m_ImageViews;
 		VkFormat          m_ImageFormat;
 		VkExtent2D        m_Extent;
 	};

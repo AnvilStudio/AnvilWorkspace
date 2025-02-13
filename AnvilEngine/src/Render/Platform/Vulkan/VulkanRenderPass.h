@@ -19,10 +19,11 @@ namespace anv
 
 		VkRenderPass GetRaw();
 
+		_vec<VkAttachmentDescription> GetAttachments();
+
 	private:
 		void init_render_pass(RenderPassCreateInfo _rpinfo);
-		void parse_attachment(RenderPassCreateInfo::Attachment* _att, VkAttachmentDescription* _desc);
-		void parse_layouts(RenderPassCreateInfo::Attachment* _att, VkAttachmentDescription* _desc);
+
 	private:
 		VkRenderPass   m_RenderPass;
 		VulkanContext* m_VkContext;

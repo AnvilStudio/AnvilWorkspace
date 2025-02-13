@@ -19,6 +19,7 @@
 #include "GraphicsPipeline.h"
 
 #include <string>
+#include "Framebuffer.h"
 
 namespace anv {
 
@@ -148,18 +149,23 @@ namespace anv {
         static void BeginFrame();
         static void EndFrame();
 
+        static Render2DCreateInfo GetSettings() { return m_RenderCreateInfo; }
+
         //static void CmdDrawQuad(VertexBuffer& _vb, IndexBuffer& _ib);
         //static void CmdDrawQuadWithMaterial(Material& _mat, VertexBuffer& _vb, IndexBuffer& _ib);
         //static void CmdDrawQuadWithTexture(Texture& _text, VertexBuffer& _vb, IndexBuffer& _ib);
         //static void CmdSubmit();
 
     private:
-        void set_pipeline();
-        void set_shaders();
+        static void create_frame_buffers();
+        static void set_pipeline();
+        static void set_shaders();
 
     private:
         inline static _shared<RenderAPI>        m_RenderAPI = nullptr;
+        inline static _vec<Ref<Framebuffer>>    m_FrameBuffers {};
         inline static Ref<GraphicsPipeline>     m_Pipeline  = nullptr;
+        inline static Ref<RenderPass>           m_RenderPass = nullptr;
         inline static Render2DCreateInfo        m_RenderCreateInfo {};
         
         inline static QueueChain m_RenderCmdChain = QueueChain();

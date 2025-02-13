@@ -24,6 +24,7 @@ namespace anv {
 			ANV_LOG_FATAL("Failed to Create window: %s!", _info.name.c_str())
 
 		m_Context = Context::Create(this); // Create and initialize a rendering context
+		m_Context->CreateSwapchain();   
 	}
 
 	Window::~Window()

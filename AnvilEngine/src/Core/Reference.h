@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @file Ref.h
+ * @file Reference.h
  * @brief Smart reference counting utility for managing shared object lifetimes.
  *
  * This file provides two classes, `RefCounter` and `Ref<T>`, for implementing

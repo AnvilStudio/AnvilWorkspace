@@ -12,7 +12,7 @@ namespace anv
 		: m_Name(_path)
 	{
 		ANV_PROFILE_SCOPE()
-		m_VkContext = _ctx->GetNativeContextAs<VulkanContext>();
+		m_VkContext = _ctx->GetAs<VulkanContext>();
 		load(_path);
 		pre_process();
 		compile_to_spv();
@@ -21,6 +21,8 @@ namespace anv
 
 	VulkanShader::~VulkanShader()
 	{
+		ANV_PROFILE_SCOPE()
+
 		vkDestroyShaderModule(m_VkContext->GetDevice(), m_VModule, nullptr);
 		vkDestroyShaderModule(m_VkContext->GetDevice(), m_FModule, nullptr);
 	}

@@ -72,6 +72,7 @@ namespace anv {
 	App::~App()
 	{
 		OnDestroy();
+
 		// Everything should be deleted before the app itself gets deleted
 		Renderer2D::Shutdown();
 	}

@@ -7,26 +7,43 @@
 
 namespace anv {
 	VulkanContext::VulkanContext(Window* _win)
-		: m_WinHandle(_win->GetNativeWindow())
+		: Context(_win)
 	{
 		ANV_PROFILE_SCOPE();
+
 		vkc_instance  (); // instance creation
 		vkc_surface   (); // rendering surface
 		vkc_physical  (); // select gpu
 		vkc_logical   (); // create logical device
-		m_Swapchain = VulkanSwapchain(this);
 	}
 
 	VulkanContext::~VulkanContext()
 	{
 		ANV_PROFILE_SCOPE();
-		m_Swapchain.OnDestroy(); // destroy image views
+
+
+		m_Swapchain.Reset();
+
+		//if (m_CmdPool != VK_NULL_HANDLE)
+		//{
+		//	vkDestroyCommandPool(m_Device, m_CmdPool, nullptr);
+		//}
+
 		vkDestroyDevice(m_Device, nullptr);
+
 		vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
+
 #ifdef DEBUG
+		// Destroy the Debug messenger
 		m_DebugInfo.DestroyDebugUtilsMessengerEXT(m_Instance, nullptr);
 #endif
+
 		vkDestroyInstance(m_Instance, nullptr);
+	}
+
+	void VulkanContext::CreateSwapchain()
+	{
+		m_Swapchain = Ref<VulkanSwapchain>::Create(shared_from_this());
 	}
 
 	// == Privates
@@ -88,6 +105,11 @@ namespace anv {
 
 		debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 #ifdef DEBUG_G
+
+		// add api dump layer
+		info.enabledLayerCount = static_cast<uint32_t>(m_DebugInfo.Layers.size()) + 1;
+		m_DebugInfo.Layers.push_back("VK_LAYER_LUNARG_api_dump");
+		info.ppEnabledLayerNames = m_DebugInfo.Layers.data();
 
 		debugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT 
 			| VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
@@ -188,6 +210,21 @@ namespace anv {
 		// Retreve queue handles
 		vkGetDeviceQueue(m_Device, indices.graphicsFamily.value(), 0, &m_GraphicsQueue);
 		vkGetDeviceQueue(m_Device, indices.presentFamily.value(), 0, &m_PresentQueue);
+	}
+
+	void VulkanContext::vkc_create_cmd_pool()
+	{
+		ANV_PROFILE_SCOPE();
+
+		vk_util::QueueFamilyIndices qFamilyIndices = vk_util::vku_FindQueueFamilies(m_PhysicalDevice, m_Surface);
+
+		VkCommandPoolCreateInfo cpinfo{};
+		cpinfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		cpinfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		cpinfo.queueFamilyIndex = qFamilyIndices.graphicsFamily.value();
+
+		ANV_VK_CHECK_RESULT(vkCreateCommandPool(m_Device, &cpinfo, nullptr, &m_CmdPool),
+			"Failed to create a VkCommandPool!");
 	}
 
 }

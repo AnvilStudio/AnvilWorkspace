@@ -255,4 +255,211 @@ namespace anv::vk_util
             return actualExtent;
         }
     }
+
+    void vku_ToVulkanAttachmentDescription(RenderPass::Attachment* _att, VkAttachmentDescription* _desc)
+    {
+        switch (_att->type)
+        {
+            // Color attachment
+        case RenderPass::Attachment::Type::ATT_TY_COLOR:
+            // load ops
+            switch (_att->loadOp)
+            {
+            case RenderPass::Attachment::LoadOp::LOAD_OP_CLEAR:
+                _desc->loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+                break;
+            case RenderPass::Attachment::LoadOp::LOAD_OP_LOAD:
+                _desc->loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+                break;
+            case RenderPass::Attachment::LoadOp::LOAD_OP_UNDEF:
+                _desc->loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                break;
+            case RenderPass::Attachment::LoadOp::LOAD_OP_MAX_ENUM:
+                _desc->loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                ANV_LOG_WARN("Vk Render Pass \"%s\" attachment %i has an unusable load op (MAX_ENUM)\nSetting to clear op", _att->d_rp_name, _att->d_index)
+                    break;
+            default:
+                ANV_LOG_ERROR("Vk Render Pass \"%s\" attachment %i has an unknown load op", _att->d_rp_name, _att->d_index)
+                    break;
+            }
+
+            // store ops
+            switch (_att->storeOp)
+            {
+            case RenderPass::Attachment::StoreOp::STORE_OP_STORE:
+                _desc->storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+                break;
+            case RenderPass::Attachment::StoreOp::STORE_OP_UNDEF:
+                _desc->storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+                break;
+            case RenderPass::Attachment::StoreOp::STORE_OP_MAX_ENUM:
+                _desc->storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+                ANV_LOG_WARN("Vk Render Pass \"%s\" attachment %i has an unusable store op (MAX_ENUM)\nSetting to undef op", _att->d_rp_name, _att->d_index)
+                    break;
+            default:
+                ANV_LOG_ERROR("Vk Render Pass \"%s\" attachment %i has an unknown store op", _att->d_rp_name, _att->d_index)
+                    break;
+            }
+            break;
+
+            // Depth Attachment
+        case RenderPass::Attachment::Type::ATT_TY_DEPTH:
+            // load ops
+            switch (_att->loadOp)
+            {
+            case RenderPass::Attachment::LoadOp::LOAD_OP_CLEAR:
+                _desc->loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+                break;
+            case RenderPass::Attachment::LoadOp::LOAD_OP_LOAD:
+                _desc->loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+                break;
+            case RenderPass::Attachment::LoadOp::LOAD_OP_UNDEF:
+                _desc->loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                break;
+            case RenderPass::Attachment::LoadOp::LOAD_OP_MAX_ENUM:
+                _desc->loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                ANV_LOG_WARN("Vk Render Pass \"%s\" attachment %i has an unusable load op (MAX_ENUM)\nSetting to clear op", _att->d_rp_name, _att->d_index)
+                    break;
+            default:
+                ANV_LOG_ERROR("Vk Render Pass \"%s\" attachment %i has an unknown load op", _att->d_rp_name, _att->d_index)
+                    break;
+            }
+
+            // store ops 
+            switch (_att->storeOp)
+            {
+            case RenderPass::Attachment::StoreOp::STORE_OP_STORE:
+                _desc->storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+                break;
+            case RenderPass::Attachment::StoreOp::STORE_OP_UNDEF:
+                _desc->storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+                break;
+            case RenderPass::Attachment::StoreOp::STORE_OP_MAX_ENUM:
+                _desc->storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+                ANV_LOG_WARN("Vk Render Pass \"%s\" attachment %i has an unusable store op (MAX_ENUM)\nSetting to undef op", _att->d_rp_name, _att->d_index)
+                    break;
+            default:
+                ANV_LOG_ERROR("Vk Render Pass \"%s\" attachment %i has an unknown store op", _att->d_rp_name, _att->d_index)
+                    break;
+            }
+            break;
+        }
+    }
+
+    void vku_ToRenderPassLayout(RenderPass::Attachment* _att, VkAttachmentDescription* _desc)
+    {
+        switch (_att->beginLayout)
+        {
+        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_COLOR_ATT:
+            _desc->initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            break;
+        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_PRES:
+            _desc->initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            break;
+        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_MEMCPY_DST:
+            _desc->initialLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            break;
+        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_UNDEF:
+            _desc->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            break;
+        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_MAX_ENUM:
+            ANV_LOG_WARN("Vk render pass \"%s\" %i has an unusable begining layout (MAX_ENUM)\nSetting to undef", _att->d_rp_name, _att->d_index)
+                _desc->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            break;
+        default:
+            ANV_LOG_ERROR("Vk render pass \"%s\" %i has an unknown begining layout", _att->d_rp_name, _att->d_index);
+            break;
+        }
+
+        switch (_att->endLayout)
+        {
+        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_COLOR_ATT:
+            _desc->finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            break;
+        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_PRES:
+            _desc->finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            break;
+        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_MEMCPY_DST:
+            _desc->finalLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            break;
+        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_UNDEF:
+            _desc->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            break;
+        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_MAX_ENUM:
+            ANV_LOG_WARN("Vk render pass \"%s\" %i has an unusable final layout (MAX_ENUM)\nSetting to undef", _att->d_rp_name, _att->d_index)
+                _desc->finalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            break;
+        default:
+            ANV_LOG_ERROR("Vk render pass \"%s\" %i has an unknown final layout", _att->d_rp_name, _att->d_index);
+            break;
+        }
+    }
+    VkFormat vku_ToImageFormat(Image2D::Format _fmt)
+    {
+        switch (_fmt)
+        {
+        case anv::Image2D::Format::UNDEF:
+            ANV_LOG_ERROR("Image fmt set to UNDEF... setting as R8G8B8A8_UNorm")
+            return VK_FORMAT_R8G8B8A8_UNORM;
+            break;
+        case anv::Image2D::Format::R8G8B8A8_UNorm:
+            return VK_FORMAT_R8G8B8A8_UNORM;
+            break;
+        case anv::Image2D::Format::R8G8B8A8_SRGB:
+            return VK_FORMAT_R8G8B8A8_SRGB;
+            break;
+        case anv::Image2D::Format::B8G8R8A8_UNorm:
+            return VK_FORMAT_B8G8R8A8_UNORM;
+            break;
+        case anv::Image2D::Format::B8G8R8A8_SRGB:
+            return VK_FORMAT_B8G8R8A8_SRGB;
+            break;
+        case anv::Image2D::Format::D24_UNorm_S8_UInt:
+            return VK_FORMAT_D24_UNORM_S8_UINT;
+            break;
+        case anv::Image2D::Format::D32_SFloat:
+            return VK_FORMAT_D32_SFLOAT;
+            break;
+        case anv::Image2D::Format::D32_SFloat_S8_UInt:
+            return VK_FORMAT_D32_SFLOAT_S8_UINT;
+            break;
+        case anv::Image2D::Format::R16G16B16A16_SFloat:
+            return VK_FORMAT_R16G16B16A16_SFLOAT;
+            break;
+        case anv::Image2D::Format::R32G32B32A32_SFloat:
+            return VK_FORMAT_R32G32B32A32_SFLOAT;
+            break;
+        default:
+            ANV_LOG_ERROR("Image fmt set to ???... setting as R8G8B8A8_UNorm")
+            return VK_FORMAT_R8G8B8A8_UNORM;
+            break;
+        }
+    }
+    Image2D::Format vku_ToEngineImgFormat(VkFormat _fmt)
+    {
+        switch (_fmt)
+        {
+        case VK_FORMAT_R8G8B8A8_UNORM:
+            return anv::Image2D::Format::R8G8B8A8_UNorm;
+        case VK_FORMAT_R8G8B8A8_SRGB:
+            return anv::Image2D::Format::R8G8B8A8_SRGB;
+        case VK_FORMAT_B8G8R8A8_UNORM:
+            return anv::Image2D::Format::B8G8R8A8_UNorm;
+        case VK_FORMAT_B8G8R8A8_SRGB:
+            return anv::Image2D::Format::B8G8R8A8_SRGB;
+        case VK_FORMAT_D24_UNORM_S8_UINT:
+            return anv::Image2D::Format::D24_UNorm_S8_UInt;
+        case VK_FORMAT_D32_SFLOAT:
+            return anv::Image2D::Format::D32_SFloat;
+        case VK_FORMAT_D32_SFLOAT_S8_UINT:
+            return anv::Image2D::Format::D32_SFloat_S8_UInt;
+        case VK_FORMAT_R16G16B16A16_SFLOAT:
+            return anv::Image2D::Format::R16G16B16A16_SFloat;
+        case VK_FORMAT_R32G32B32A32_SFLOAT:
+            return anv::Image2D::Format::R32G32B32A32_SFloat;
+        default:
+            ANV_LOG_WARN("Unknown VkFormat provided... defaulting to anv::Image2D::Format::UNDEF")
+                return anv::Image2D::Format::UNDEF;
+        }
+    }
 }

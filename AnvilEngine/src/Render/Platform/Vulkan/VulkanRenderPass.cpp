@@ -1,14 +1,16 @@
 #include "VulkanRenderPass.h"
 
 anv::VulkanRenderPass::VulkanRenderPass(RenderPassCreateInfo _rpinfo, _shared<Context> _ctx)
+	: RenderPass(_rpinfo.d_name), m_VkContext(_ctx->GetAs<VulkanContext>())
 {
-	m_VkContext = _ctx->GetNativeContextAs<VulkanContext>();
-
+	m_VkContext = _ctx->GetAs<VulkanContext>();
 	init_render_pass(_rpinfo);
 }
 
 anv::VulkanRenderPass::~VulkanRenderPass()
 {
+	ANV_PROFILE_SCOPE()
+
 	vkDestroyRenderPass(m_VkContext->GetDevice(), m_RenderPass, nullptr);
 }
 
@@ -20,6 +22,7 @@ void anv::VulkanRenderPass::Build()
 	_vec<VkAttachmentReference> color{};
 	_vec<VkAttachmentReference> depth{};
 
+	// Create color attachment refs
 	for (auto& att : m_Descriptions)
 	{
 		VkAttachmentReference attRef = {};
@@ -28,6 +31,7 @@ void anv::VulkanRenderPass::Build()
 		color.push_back(attRef);
 	}
 
+	// Create depth attachment refs
 	_vec<VkAttachmentDescription> result;
 	result.reserve(m_Descriptions.size()); // Reserve space to avoid multiple reallocations
 	for (const auto& pair : m_Descriptions) {
@@ -45,6 +49,7 @@ void anv::VulkanRenderPass::Build()
 	rpinfo.subpassCount =1;
 	rpinfo.pSubpasses = &subpass;
 
+	ANV_LOG_INFO("Creating Vk render pass \"%s\"", m_DName.c_str())
 	ANV_VK_CHECK_RESULT(vkCreateRenderPass(m_VkContext->GetDevice(), &rpinfo, nullptr, &m_RenderPass), 
 		"Failed to create Vk render pass")
 }
@@ -52,6 +57,17 @@ void anv::VulkanRenderPass::Build()
 VkRenderPass anv::VulkanRenderPass::GetRaw()
 {
 	return m_RenderPass;
+}
+
+anv::_vec<VkAttachmentDescription> anv::VulkanRenderPass::GetAttachments()
+{
+	_vec<VkAttachmentDescription> descr;
+	for (auto desc : m_Descriptions)
+	{
+		descr.push_back(desc.first);
+	}
+
+	return descr;
 }
 
 void anv::VulkanRenderPass::init_render_pass(RenderPassCreateInfo _rpinfo)
@@ -63,152 +79,13 @@ void anv::VulkanRenderPass::init_render_pass(RenderPassCreateInfo _rpinfo)
 		attachment.d_index = d_att_index;
 
 		VkAttachmentDescription desc = {};
-		desc.format = m_VkContext->GetSwapchain().GetFormat();
+		desc.format = m_VkContext->GetSwapchain()->GetFormat();
 		desc.samples = VK_SAMPLE_COUNT_1_BIT;
-		parse_attachment(&attachment, &desc);
-		parse_layouts(&attachment, &desc);
+		vk_util::vku_ToVulkanAttachmentDescription(&attachment, &desc);
+		vk_util::vku_ToRenderPassLayout(&attachment, &desc);
 
 		m_Descriptions.push_back(std::make_pair(desc, d_att_index));
 		d_att_index++;
-	}
-}
-
-void anv::VulkanRenderPass::parse_attachment(RenderPassCreateInfo::Attachment* _att, VkAttachmentDescription* _desc)
-{
-	switch (_att->type)
-	{
-	// Color attachment
-	case RenderPassCreateInfo::Attachment::AttType::ATT_TY_COLOR:
-		// load ops
-		switch (_att->loadOp)
-		{
-		case RenderPassCreateInfo::Attachment::LoadOp::LOAD_OP_CLEAR:
-			_desc->loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			break;
-		case RenderPassCreateInfo::Attachment::LoadOp::LOAD_OP_LOAD:
-			_desc->loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-			break;
-		case RenderPassCreateInfo::Attachment::LoadOp::LOAD_OP_UNDEF:
-			_desc->loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			break;
-		case RenderPassCreateInfo::Attachment::LoadOp::LOAD_OP_MAX_ENUM:
-			_desc->loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			ANV_LOG_WARN("Vk Render Pass attachment %i has an unusable load op (MAX_ENUM)\nSetting to clear op", _att->d_index)
-				break;
-		default:
-			ANV_LOG_ERROR("Vk Render Pass attachment %i has an unknown load op", _att->d_index)
-				break;
-		}
-
-		// store ops
-		switch (_att->storeOp)
-		{
-		case RenderPassCreateInfo::Attachment::StoreOp::STORE_OP_STORE:
-			_desc->storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			break;
-		case RenderPassCreateInfo::Attachment::StoreOp::STORE_OP_UNDEF:
-			_desc->storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			break;
-		case RenderPassCreateInfo::Attachment::StoreOp::STORE_OP_MAX_ENUM:
-			_desc->storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			ANV_LOG_WARN("Vk Render Pass attachment %i has an unusable store op (MAX_ENUM)\nSetting to undef op", _att->d_index)
-				break;
-		default:
-			ANV_LOG_ERROR("Vk Render Pass attachment %i has an unknown store op", _att->d_index)
-				break;
-		}
-		break;
-
-	// Depth Attachment
-	case RenderPassCreateInfo::Attachment::AttType::ATT_TY_DEPTH:
-		// load ops
-		switch (_att->loadOp)
-		{
-		case RenderPassCreateInfo::Attachment::LoadOp::LOAD_OP_CLEAR:
-			_desc->loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			break;
-		case RenderPassCreateInfo::Attachment::LoadOp::LOAD_OP_LOAD:
-			_desc->loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-			break;
-		case RenderPassCreateInfo::Attachment::LoadOp::LOAD_OP_UNDEF:
-			_desc->loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			break;
-		case RenderPassCreateInfo::Attachment::LoadOp::LOAD_OP_MAX_ENUM:
-			_desc->loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			ANV_LOG_WARN("Vk Render Pass attachment %i has an unusable load op (MAX_ENUM)\nSetting to clear op", _att->d_index)
-				break;
-		default:
-			ANV_LOG_ERROR("Vk Render Pass attachment %i has an unknown load op", _att->d_index)
-				break;
-		}
-
-		// store ops 
-		switch (_att->storeOp)
-		{
-		case RenderPassCreateInfo::Attachment::StoreOp::STORE_OP_STORE:
-			_desc->storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			break;
-		case RenderPassCreateInfo::Attachment::StoreOp::STORE_OP_UNDEF:
-			_desc->storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			break;
-		case RenderPassCreateInfo::Attachment::StoreOp::STORE_OP_MAX_ENUM:
-			_desc->storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			ANV_LOG_WARN("Vk Render Pass attachment %i has an unusable store op (MAX_ENUM)\nSetting to undef op", _att->d_index)
-			break;
-		default:
-			ANV_LOG_ERROR("Vk Render Pass attachment %i has an unknown store op", _att->d_index)
-			break;
-		}
-		break;
-	}
-}
-
-void anv::VulkanRenderPass::parse_layouts(RenderPassCreateInfo::Attachment* _att, VkAttachmentDescription* _desc)
-{
-	switch (_att->beginLayout)
-	{
-	case RenderPassCreateInfo::Attachment::ImgLayout::IMG_LAYOUT_COLOR_ATT:
-		_desc->initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		break;
-	case RenderPassCreateInfo::Attachment::ImgLayout::IMG_LAYOUT_PRES:
-		_desc->initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-		break;
-	case RenderPassCreateInfo::Attachment::ImgLayout::IMG_LAYOUT_MEMCPY_DST:
-		_desc->initialLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		break;
-	case RenderPassCreateInfo::Attachment::ImgLayout::IMG_LAYOUT_UNDEF:
-		_desc->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		break;
-	case RenderPassCreateInfo::Attachment::ImgLayout::IMG_LAYOUT_MAX_ENUM:
-		ANV_LOG_WARN("Vk render pass %i has an unusable begining layout (MAX_ENUM)\nSetting to undef", _att->d_index)
-		_desc->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		break;
-	default:
-		ANV_LOG_ERROR("Vk render pass %i has an unknown begining layout", _att->d_index);
-		break;
-	}
-
-	switch (_att->endLayout)
-	{
-	case RenderPassCreateInfo::Attachment::ImgLayout::IMG_LAYOUT_COLOR_ATT:
-		_desc->finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		break;
-	case RenderPassCreateInfo::Attachment::ImgLayout::IMG_LAYOUT_PRES:
-		_desc->finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-		break;
-	case RenderPassCreateInfo::Attachment::ImgLayout::IMG_LAYOUT_MEMCPY_DST:
-		_desc->finalLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		break;
-	case RenderPassCreateInfo::Attachment::ImgLayout::IMG_LAYOUT_UNDEF:
-		_desc->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		break;
-	case RenderPassCreateInfo::Attachment::ImgLayout::IMG_LAYOUT_MAX_ENUM:
-		ANV_LOG_WARN("Vk render pass %i has an unusable final layout (MAX_ENUM)\nSetting to undef", _att->d_index)
-			_desc->finalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		break;
-	default:
-		ANV_LOG_ERROR("Vk render pass %i has an unknown final layout", _att->d_index);
-		break;
 	}
 }
 

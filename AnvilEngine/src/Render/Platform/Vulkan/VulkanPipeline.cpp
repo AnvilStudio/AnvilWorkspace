@@ -5,16 +5,17 @@
 namespace anv
 {
 	VulkanPipeline::VulkanPipeline(_shared<Context> _ctx)
+		: GraphicsPipeline(_ctx)
 	{
 		ANV_PROFILE_SCOPE()
 		// Get the native Vk Context;
-		m_VkContext = _ctx->GetNativeContextAs<VulkanContext>();
+		m_VkContext = _ctx->GetAs<VulkanContext>();
 
 		// Set Viewport
 
 		VkExtent2D scExtent = { 
-			m_VkContext->GetSwapchain().GetExtent().width,
-			m_VkContext->GetSwapchain().GetExtent().height 
+			m_VkContext->GetSwapchain()->GetExtent().width,
+			m_VkContext->GetSwapchain()->GetExtent().height 
 		};
 
 		m_CreateInfo.viewport = {};
@@ -52,7 +53,10 @@ namespace anv
 
 	VulkanPipeline::~VulkanPipeline()
 	{
-		//vkDestroyPipelineLayout(m_VkContext->GetDevice(), m_PipelineLayout, nullptr);
+		ANV_PROFILE_SCOPE()
+
+		vkDestroyPipeline(m_VkContext->GetDevice(), m_Pipeline, nullptr);
+		vkDestroyPipelineLayout(m_VkContext->GetDevice(), m_PipelineLayout, nullptr);
 	}
 
 	void VulkanPipeline::SetShaderStages(const Ref<Shader> _shader)
@@ -165,11 +169,5 @@ namespace anv
 
 		ANV_VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VkContext->GetDevice(), VK_NULL_HANDLE, 1, info, nullptr, &m_Pipeline),
 			"Failed to create Vk graphics pipeline")
-	}
-
-	void VulkanPipeline::Destroy()
-	{
-		vkDestroyPipeline(m_VkContext->GetDevice(), m_Pipeline, nullptr);
-		vkDestroyPipelineLayout(m_VkContext->GetDevice(), m_PipelineLayout, nullptr);
 	}
 }

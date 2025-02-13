@@ -17,4 +17,9 @@ namespace anv
 			break;
 		}
     }
+
+	RenderPass::RenderPass(std::string _dname)
+		: m_DName(_dname)
+	{
+	}
 }

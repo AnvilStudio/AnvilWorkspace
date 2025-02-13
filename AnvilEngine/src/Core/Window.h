@@ -14,8 +14,6 @@ struct GLFWwindow;
 
 namespace anv {
 
-	class Swapchain;
-
 	struct WindowCreateInfo
 	{
 		int width, height;
@@ -37,8 +35,8 @@ namespace anv {
 		_shared<Context> GetContext();
 
 	private:
-		GLFWwindow*        m_WinPtr  = nullptr;
-		_shared<Context>   m_Context = nullptr;	
+		GLFWwindow*        m_WinPtr    = nullptr;
+		_shared<Context>   m_Context   = nullptr;
 	};
 
 }

@@ -20,11 +20,13 @@ namespace anv {
     class VulkanSwapChain;
 
     class VulkanContext
-        : public Context
+        : public Context, public std::enable_shared_from_this<VulkanContext>
     {
     public:
         VulkanContext(Window* _win);
-        ~VulkanContext();
+        ~VulkanContext() override;
+
+        void CreateSwapchain() override;
 
     public:
         VkInstance        GetInstance()       { return m_Instance;        } 
@@ -34,21 +36,24 @@ namespace anv {
         VkQueue           GetGraphicsQueue()  { return m_GraphicsQueue;   }
         VkQueue           GetPresentQueue()   { return m_PresentQueue;    }
         GLFWwindow*       GetWinHandle()      { return m_WinHandle;       }
-        VulkanSwapchain&  GetSwapchain()      { return m_Swapchain;       }
+
+        // Returned as a VkSwapchain because
+        // We're in the abstract class.
+        Ref<VulkanSwapchain>    
+        GetSwapchain() { return m_Swapchain; }
 
     private:
         void vkc_instance(); // instance creation
         void vkc_surface (); // rendering surface
         void vkc_physical(); // select gpu
         void vkc_logical (); // create logical device
+        void vkc_create_cmd_pool();
 
     private:
-        // switched to a raw vulkan swapchain
-        VulkanSwapchain  m_Swapchain;
-        GLFWwindow*      m_WinHandle;
+        VkDevice         m_Device;
         VkInstance       m_Instance;
         VkSurfaceKHR     m_Surface;
-        VkDevice         m_Device;
+        VkCommandPool    m_CmdPool;
         VkPhysicalDevice m_PhysicalDevice;
         VkQueue m_GraphicsQueue;
         VkQueue m_PresentQueue;

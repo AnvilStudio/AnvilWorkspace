@@ -1,6 +1,28 @@
+///////////////////////////////////////////////////////////////////////////////////////////////
+//  VulkanUtil.h                                                                             //
+//  Utility functions and structures for Vulkan API abstraction and validation.              //
+//                                                                                           //
+//  This header file provides a set of utility functions, structures, and macros             //
+//  to simplify the use of Vulkan API. It includes:                                          //
+//  - Validation layer setup and debug utilities.                                            //
+//  - Swapchain support queries and configuration.                                           //
+//  - Vulkan resource conversion utilities for render passes and image formats.              //
+//  - Macros for error checking and logging Vulkan API results.                              //
+//                                                                                           //
+//  Key Features:                                                                            //
+//  - Simplifies validation layer integration using debug callbacks.                         //
+//  - Provides helper functions for selecting suitable physical devices, queue families,     //
+//    and swapchain configurations.                                                          //
+//  - Converts abstract engine resources (e.g., `RenderPass::Attachment`, `Image2D::Format`) //
+//    into Vulkan-compatible structures.                                                     //
+///////////////////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
 
 #include "Util/UMacros.h"
+
+#include "Render/Image.h"
+#include "Render/RenderPass.h"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -123,5 +145,12 @@ namespace vk_util {
     VkExtent2D 
         vku_ChooseSwapExtent
         (const VkSurfaceCapabilitiesKHR& _capabilities, GLFWwindow* _window);
+
+    void vku_ToVulkanAttachmentDescription(RenderPass::Attachment* _att, VkAttachmentDescription* _desc);
+
+    void vku_ToRenderPassLayout(RenderPass::Attachment* _att, VkAttachmentDescription* _desc);
+
+    VkFormat vku_ToImageFormat(Image2D::Format _fmt);
+    Image2D::Format vku_ToEngineImgFormat(VkFormat _fmt);
 }
 }

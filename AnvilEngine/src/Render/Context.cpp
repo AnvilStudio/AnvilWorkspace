@@ -1,6 +1,8 @@
 #include "Context.h"
-#include "Render/Platform/Vulkan/VulkanContext.h"
 #include "Core/Window.h"
+#include "Render/Platform/Vulkan/VulkanContext.h"
+
+#include <GLFW/glfw3.h>
 
 namespace anv {
     _shared<Context> Context::Create(Window* _win)
@@ -15,6 +17,12 @@ namespace anv {
 			break;
 		}
     }
+
+	Context::Context(Window* _win)
+		: m_WinHandle(_win->GetNativeWindow())
+	{
+
+	}
 
 	_shared<RenderAPI> Context::InitAPI(RenderAPICreateInfo _info)
 	{

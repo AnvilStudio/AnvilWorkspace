@@ -65,7 +65,13 @@ namespace anv
 	class GraphicsPipeline : public RefCounter
 	{
 	public:
+		ANV_NO_DSCRD
 		static Ref<GraphicsPipeline> Create(_shared<Context> _ctx);
+
+		GraphicsPipeline(_shared<Context> _ctx) 
+			: m_Context(_ctx) {}
+
+		virtual ~GraphicsPipeline() = default;
 
 		virtual void SetShaderStages(const Ref<Shader> _shader)                     = 0;
 		virtual void SetVertexInputLayout(const VertexInputLayout* _layout)         = 0;
@@ -73,6 +79,8 @@ namespace anv
 		virtual void SetColorBlendSettings(const ColorBlendSettings* _colbld)       = 0;
 		virtual void SetRenderPass(const Ref<RenderPass> _rps) = 0;
 		virtual void Build() = 0;
-		virtual void Destroy() = 0;
+		
+	private:
+		_shared<Context> m_Context;
 	};
 }

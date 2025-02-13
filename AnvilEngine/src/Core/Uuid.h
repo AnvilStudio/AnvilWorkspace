@@ -13,9 +13,9 @@ namespace uuid
         std::string uuid = "";
     };
 
-    struct AssetUUID
+    struct AssetUUID 
     {
-        // probably needs to be a uint32_tm
+        // probably needs to be a uint32_t
         std::string uuid = "";
     };
 

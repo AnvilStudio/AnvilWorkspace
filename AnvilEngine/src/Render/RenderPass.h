@@ -5,14 +5,20 @@
 
 namespace anv
 {
-	struct RenderPassCreateInfo
+	struct RenderPassCreateInfo;
+
+	class RenderPass
+		: public RefCounter
 	{
+	public:
+
 		struct Attachment
 		{
+		public:
 			// Attachment type
-			enum class AttType {
+			enum class Type {
 				ATT_TY_UNDEF,
-				ATT_TY_COLOR, 
+				ATT_TY_COLOR,
 				ATT_TY_DEPTH, // depth stencil
 			};
 
@@ -42,34 +48,25 @@ namespace anv
 				IMG_LAYOUT_MAX_ENUM    // null/default value
 			};
 
-			AttType type;
+			Type type;
 			ImgLayout beginLayout = ImgLayout::IMG_LAYOUT_MAX_ENUM;
 			ImgLayout endLayout   = ImgLayout::IMG_LAYOUT_MAX_ENUM;
-			LoadOp  loadOp  = LoadOp::LOAD_OP_MAX_ENUM;
-			StoreOp storeOp = StoreOp::STORE_OP_MAX_ENUM;
+			LoadOp  loadOp        = LoadOp::LOAD_OP_MAX_ENUM;
+			StoreOp storeOp       = StoreOp::STORE_OP_MAX_ENUM;
 
-		// debug index
+			// debug index
+			int d_index = -1;
+			const char* d_rp_name;
 		private:
-			int d_index = 0;
 			friend class RenderPass;
 			friend class VulkanRenderPass;
 		};
 
-		struct SubpassInfo {
-			std::vector<int> colorAttachments;       // Indices of color attachments
-			int depthStencilAttachment = -1;         // Index of depth/stencil attachment
-		};
-
-		std::vector<Attachment> attachments;    // Attachments for the render pass
-		std::vector<SubpassInfo> subpasses;        // Subpasses in the render pass
-
-	};
-
-	class RenderPass
-		: public RefCounter
-	{
-	public:
+		ANV_NO_DSCRD
 		static Ref<RenderPass> Create(RenderPassCreateInfo& _createinfo, _shared<Context> _ctx);
+
+		RenderPass(std::string _dname);
+		RenderPass() = default;
 
 		//virtual void AddAttachment(RenderPassCreateInfo::Attachment _new_att) = 0;
 		//virtual void SetOutput(Framebuffer& _fb);
@@ -77,11 +74,27 @@ namespace anv
 		virtual void End()   = 0;
 		virtual void Build() = 0;
 
+		
 		template<typename T>
+		ANV_DEPRECATE("GetAs() is no longer needed... use As() for ref counted classes")
 		inline T* GetAs() const 
 		{
 			return dynamic_cast<T*>(this);
 		}
+
+		std::string m_DName;
+	};
+
+	struct RenderPassCreateInfo
+	{
+		struct SubpassInfo {
+			std::vector<int> colorAttachments;       // Indices of color attachments
+			int depthStencilAttachment = -1;         // Index of depth/stencil attachment
+		};
+
+		std::vector<RenderPass::Attachment> attachments;    // Attachments for the render pass
+		std::vector<SubpassInfo> subpasses;        // Subpasses in the render pass
+		const char* d_name;
 	};
     
 }

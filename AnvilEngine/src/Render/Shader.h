@@ -16,6 +16,7 @@ namespace anv
 	class Shader : public Asset
 	{
 	public:
+		ANV_NO_DSCRD
 		static Ref<Shader> Create(const std::string& _shaderPath, _shared<Context> _ctx);
 
 		template<typename T>

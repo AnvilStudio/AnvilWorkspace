@@ -20,6 +20,7 @@ namespace anv
 	class RenderAPI
 	{
 	public:
+		ANV_NO_DSCRD
 		static _shared<RenderAPI> Create(RenderAPICreateInfo _info);
 
 		static GraphicsAPI GetAPI() { return s_API; }
