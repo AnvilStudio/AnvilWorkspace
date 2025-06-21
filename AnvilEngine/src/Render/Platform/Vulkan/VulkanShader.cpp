@@ -65,7 +65,7 @@ namespace anv
 
 		if (!shader_file.is_open())
 		{
-			ANV_LOG_ERROR("Failed to open shader file: %s", _file)
+			ANV_LOG_ERROR("Failed to open shader file: %s", _file.c_str())
 			return;
 		}
 		

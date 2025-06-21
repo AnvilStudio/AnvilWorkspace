@@ -27,17 +27,23 @@ namespace anv::vk_util
     _vec<const char*> vku_GetRequiredExtensions()
     {
         uint32_t glfwExtensionCount = 0;
-        const char** glfwExtensions;
-        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+        const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
         _vec<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
-#ifdef DEBUG
+    #ifdef DEBUG
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-#endif // DEBUG
+    #endif
+
+    #ifdef __APPLE__
+        // Required on macOS with MoltenVK
+        extensions.push_back("VK_KHR_portability_enumeration");
+        extensions.push_back("VK_MVK_macos_surface");
+    #endif
 
         return extensions;
     }
+
 
 
     bool vku_CheckValidationSupport()
@@ -153,6 +159,9 @@ namespace anv::vk_util
 
     QueueFamilyIndices vku_FindQueueFamilies(VkPhysicalDevice _device, VkSurfaceKHR _surface)
     {
+
+        ANV_ASSERT(_device != VK_NULL_HANDLE, "vku_FindQueueFamilies: _device is null!");
+        
         QueueFamilyIndices indices;
 
         uint32_t queueFamilyCount = 0;

@@ -18,4 +18,11 @@
 # endif
 
 
+# ifdef __APPLE__
+	# define PLATFORM_APPLE 1 // Apple platform (MacOS, iOS, etc.)
+	# ifndef PLATFORM_MACOS
+		# define PLATFORM_MACOS 1 // MacOS
+	#endif
+# endif
+
 // TODO (Alba): Impl Apple platform detection. (Follow a similar format of windows)

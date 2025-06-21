@@ -15,36 +15,42 @@ project "AnvilEngine"
 
         }
 
-        print("Install Dir: ", INSTALL_DIR)
-
         files
         {
-            "src/**.cpp",
-            "src/**.h",
-            "include/**.h"
+            "./src/**.cpp",
+            "./src/**.h",
+            "./include/**.h"
         }
 
         includedirs
         {
-            "src/",
-            "vendor/GLFW/include",
-            "%{VULKAN_SDK}/include"
+            "./src/",
+            "./vendor/GLFW/include",
+            "%{VULKAN_SDK}"
         }
 
         libdirs 
         {
             "vendor/GLFW/".. outdir .."/GLFW",
-            "%{VULKAN_SDK}/Lib",
+            "%{VULKAN_LIB}",
         }
 
-        links
-        {
-            "GLFW",
-            "vulkan-1", -- TODO: Add OS switch
-            "shaderc_combinedd"
-        }
+        filter "system:windows"
+            links
+            {
+                "GLFW",
+                "vulkan-1",
+                "shaderc_combinedd"
+            }
 
-        buildoptions { "/MP" } -- windows only
+        filter "system:macosx"
+            links
+            {
+                "GLFW",
+                "vulkan",
+                "shaderc_combined"
+            }
+
 
         filter "configurations:DebugG"
             defines {
@@ -52,15 +58,34 @@ project "AnvilEngine"
                 "DEBUG_G" -- Graphics
             }
             symbols "on"
-            linkoptions { "/SUBSYSTEM:CONSOLE" }
+
+            filter { "system:windows" }
+                linkoptions { "/SUBSYSTEM:CONSOLE" }
+                buildoptions { "/MP" } -- windows only
+
+            filter { "system:macosx" }
+                linkoptions { "-Wl,-rpath,@loader_path" } -- macOS rpath for shared libraries
 
 
         filter "configurations:Debug"
             defines "DEBUG"
             symbols "on"
-            linkoptions { "/SUBSYSTEM:CONSOLE" }
+
+            filter { "system:windows" }
+                linkoptions { "/SUBSYSTEM:CONSOLE" }
+                buildoptions { "/MP" } -- windows only
+
+            filter { "system:macosx" }
+                linkoptions { "-Wl,-rpath,@loader_path" } -- macOS rpath for shared libraries
+
 
         filter "configurations:Release"
             defines "RELEASE"
             optimize "on"
-            linkoptions { "/SUBSYSTEM:WINDOWS" }
+        
+            filter { "system:windows" }
+                    linkoptions { "/SUBSYSTEM:WINDOWS" }
+                    buildoptions { "/MP" } -- windows only
+
+            filter { "system:macosx" }
+                linkoptions { "-Wl,-rpath,@loader_path" } -- macOS rpath for shared libraries
