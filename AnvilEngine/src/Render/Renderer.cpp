@@ -48,15 +48,17 @@ namespace anv
 		create_frame_buffers();
 
 		// Start the render thread
-		m_RenderCmdChain.Start();
+		m_RenderCmdChain = new QueueChain();
+		m_RenderCmdChain->Start();
 	}
 
 	void Renderer2D::Shutdown()
 	{
 		// Stop the render thread
-		m_RenderCmdChain.Stop();
+		
+		delete m_RenderCmdChain;
 
-		//m_Pipeline->Destroy();
+		//m_Pipeline->Destroy()
 	}
 
 	// start recording commands & begin render pass
@@ -74,14 +76,11 @@ namespace anv
 	{
 		// end render pass 
 
-		// Notify the render thread that the main thread is done
-		m_RenderCmdChain.NotifyMainDone();
+		// Swap CmdBuffers
+		m_RenderCmdChain->Swap();
 
 		// Wait for the render thread to finish processing the front queue
-		m_RenderCmdChain.WaitForProcessComplete();
-
-		// back -> middle, middle -> front, front -> back
-		m_RenderCmdChain.Swap();
+		m_RenderCmdChain->WaitForProcessComplete();
 	}
 
 	void Renderer2D::create_frame_buffers()

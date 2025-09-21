@@ -3,7 +3,7 @@
 #include "../src/Core/Macros.h"
 #include "Anvil.h"   
 
-extern anv::App* CreateApp();
+extern anv::App* CreateApp(int arg_c = 0, char* arg_v[] = nullptr);
 
 #ifdef PLATFORM_WIN64
 #ifdef DEBUG
@@ -37,7 +37,7 @@ int WinMain()
 #else // Platform ?
 int main(int arg_c, char* arg_v[])
 {
-    anv::App* app = CreateApp();
+    anv::App* app = CreateApp(arg_c, arg_v);
 
     app->Run();
 

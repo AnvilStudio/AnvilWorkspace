@@ -12,6 +12,9 @@ namespace anv {
 		case GraphicsAPI::VK:
 			return std::make_shared<VulkanContext>(_win);
 			break;
+		case GraphicsAPI::MTL:
+			ANV_LOG_ERROR("Graphics API not supported! Using Vulkan")
+			break;
 		default:
 			ANV_LOG_ERROR("Graphics API not supported! Using Vulkan")
 			break;

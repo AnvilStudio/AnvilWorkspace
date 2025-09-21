@@ -28,7 +28,7 @@ ifeq ($(origin AR), default)
   AR = ar
 endif
 RESCOMP = windres
-INCLUDES += -Isrc -Ivendor/GLFW/include -I/usr/local/include/vulkan
+INCLUDES += -Isrc -Ivendor/GLFW/include -Ivendor/glm -I/usr/local/include/vulkan
 FORCE_INCLUDE +=
 ALL_CPPFLAGS += $(CPPFLAGS) -MD -MP $(DEFINES) $(INCLUDES)
 ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
@@ -47,7 +47,7 @@ OBJDIR = bin-int/DebugG-macosx-x86_64/AnvilEngine
 DEFINES += -DDEBUG -DDEBUG_G
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -w
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -w -std=c++20
-LIBS += vendor/GLFW/bin/DebugG-macosx-x86_64/GLFW/libGLFW.a -lvulkan -lshaderc_combined
+LIBS += vendor/GLFW/bin/DebugG-macosx-x86_64/GLFW/libGLFW.a -lvulkan -lshaderc_combined -lMoltenVK
 LDDEPS += vendor/GLFW/bin/DebugG-macosx-x86_64/GLFW/libGLFW.a
 ALL_LDFLAGS += $(LDFLAGS) -Lvendor/GLFW/DebugG-macosx-x86_64/GLFW -L/usr/local/lib -m64 -Wl,-rpath,@loader_path
 
@@ -58,7 +58,7 @@ OBJDIR = bin-int/Debug-macosx-x86_64/AnvilEngine
 DEFINES += -DDEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -w
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -w -std=c++20
-LIBS += vendor/GLFW/bin/Debug-macosx-x86_64/GLFW/libGLFW.a -lvulkan -lshaderc_combined
+LIBS += vendor/GLFW/bin/Debug-macosx-x86_64/GLFW/libGLFW.a -lvulkan -lshaderc_combined -lMoltenVK
 LDDEPS += vendor/GLFW/bin/Debug-macosx-x86_64/GLFW/libGLFW.a
 ALL_LDFLAGS += $(LDFLAGS) -Lvendor/GLFW/Debug-macosx-x86_64/GLFW -L/usr/local/lib -m64 -Wl,-rpath,@loader_path
 
@@ -69,7 +69,7 @@ OBJDIR = bin-int/Release-macosx-x86_64/AnvilEngine
 DEFINES += -DRELEASE
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -w
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -O2 -w -std=c++20
-LIBS += vendor/GLFW/bin/Release-macosx-x86_64/GLFW/libGLFW.a -lvulkan -lshaderc_combined
+LIBS += vendor/GLFW/bin/Release-macosx-x86_64/GLFW/libGLFW.a -lvulkan -lshaderc_combined -lMoltenVK
 LDDEPS += vendor/GLFW/bin/Release-macosx-x86_64/GLFW/libGLFW.a
 ALL_LDFLAGS += $(LDFLAGS) -Lvendor/GLFW/Release-macosx-x86_64/GLFW -L/usr/local/lib -m64 -Wl,-rpath,@loader_path
 

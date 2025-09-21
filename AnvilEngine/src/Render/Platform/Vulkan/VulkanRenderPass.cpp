@@ -10,7 +10,12 @@ anv::VulkanRenderPass::VulkanRenderPass(RenderPassCreateInfo _rpinfo, _shared<Co
 anv::VulkanRenderPass::~VulkanRenderPass()
 {
 	ANV_PROFILE_SCOPE()
-
+	ANV_LOG_INFO("Destroying Vulkan Render Pass \"%s\"", m_DName.c_str())
+	if (!m_VkContext || !m_VkContext->GetDevice())
+	{
+		ANV_LOG_ERROR("Vulkan context or device is null, cannot destroy render pass \"%s\"!", m_DName.c_str());
+		return;
+	}
 	vkDestroyRenderPass(m_VkContext->GetDevice(), m_RenderPass, nullptr);
 }
 

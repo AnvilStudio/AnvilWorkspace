@@ -1,4 +1,5 @@
 #include "App.h"	
+#include <filesystem>
 
 namespace anv {
 
@@ -36,10 +37,22 @@ namespace anv {
 		OnSetup();
 	}
 
-	App::App(AppCreateInfo _info)
+	App::App(AppCreateInfo _info, int arg_c, char* arg_v[])
 	{
 		if (m_This == nullptr)
 			m_This = this;
+
+		// Navigate to project directory
+		for (int i = 0; i < arg_c; i++)
+		{
+			std::string arg = std::string(arg_v[i]);
+			if (arg == "-projectPath" && i + 1 < arg_c)
+			{
+				m_ProjPath = arg_v[i + 1];
+				NavigateToProjectDir(m_ProjPath);
+				break;
+			}
+		}
 
 		// init logging
 		{
@@ -47,6 +60,7 @@ namespace anv {
 			{
 				.logFilePath = "logs.alog",
 				.timeFormat = "%I:%M:%S",
+				.logFilePath = m_ProjPath,
 				.consoleOutput = true,
 				.fileOutput = true,
 				.abortOnError = false
@@ -71,6 +85,7 @@ namespace anv {
 
 	App::~App()
 	{
+		ANV_PROFILE_SCOPE()
 		OnDestroy();
 
 		// Everything should be deleted before the app itself gets deleted
@@ -97,5 +112,18 @@ namespace anv {
 	_shared<Window> App::GetMainWindow()
 	{
 		return m_AppWin;
+	}
+
+	void App::NavigateToProjectDir(std::string path)
+	{
+		if (std::filesystem::exists(path) && std::filesystem::is_directory(path))
+		{
+			std::filesystem::current_path(path);
+			ANV_LOG_INFO("Changed working directory to: " + path);
+		}
+		else
+		{
+			ANV_LOG_FATAL("Project path does not exist or is not a directory: " + path);
+		}
 	}
 }

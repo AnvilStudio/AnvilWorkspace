@@ -1,104 +1,80 @@
 #include "QueueChain.h"
+#include <iostream>
 
-namespace anv {
+namespace anv
+{
 
-    QueueChain::QueueChain() : m_StopProc(false), m_MainRdy(false), m_ProcRdy(false)
-    {
-        m_Front = new CmdQueue();
-        m_Middle = new CmdQueue();
-        m_Back = new CmdQueue();
-    }
+QueueChain::QueueChain() {
+    m_Front = std::make_unique<CmdQueue>();
+    m_Back = std::make_unique<CmdQueue>();
+}
 
-    QueueChain::~QueueChain() {
-        Stop();
-    }
+QueueChain::~QueueChain() {
+    Stop(); // <-- Ensure thread is stopped before destruction
+}
 
-    void QueueChain::Start() {
-        m_StopProc = false;
-        m_ProcThread = std::thread(&QueueChain::ProcessFrontQueue, this);
-    }
+void QueueChain::Start() {
+    m_StopProc = false;
+    m_ThreadRunning = true;
+    m_ProcThread = std::thread(&QueueChain::ProcessFrontQueue, this);
+}
 
-    void QueueChain::Stop() {
-        {
-            std::unique_lock<std::mutex> lock(m_QueueMutex);
-            m_StopProc = true;
-            m_QueueCondition.notify_all();
-        }
+void QueueChain::Stop() {
+    if (m_ThreadRunning) {
+        m_StopProc = true;
         if (m_ProcThread.joinable()) {
             m_ProcThread.join();
         }
-    }
-
-    void QueueChain::WriteToBack(const std::function<void()>& task) {
-        std::lock_guard<std::mutex> lock(m_QueueMutex);
-        m_Back->push(task);
-    }
-
-    void QueueChain::NotifyMainDone() {
-        std::unique_lock<std::mutex> lock(m_QueueMutex);
-        m_MainRdy = true;
-        m_QueueCondition.notify_all();
-    }
-
-    void QueueChain::WaitForProcessComplete() {
-        std::unique_lock<std::mutex> lock(m_QueueMutex);
-        m_QueueCondition.wait(lock, [this]() { return m_ProcRdy; });
-        m_ProcRdy = false;
-    }
-
-    void QueueChain::Swap() {
-        std::unique_lock<std::mutex> lock(m_QueueMutex);
-
-
-
-        if (m_Back->empty()) {
-            return;
-        }
-
-        // Rotate queues
-        std::swap(m_Front, m_Middle);
-        std::swap(m_Middle, m_Back);
-
-
-
-        m_MainRdy = true;  // Notify that the front queue is ready
-        m_QueueCondition.notify_all();
-    }
-
-
-    // Worker thread
-    void QueueChain::ProcessFrontQueue() {
-        while (!m_StopProc) {
-            std::unique_lock<std::mutex> lock(m_QueueMutex);
-
-
-            m_QueueCondition.wait(lock, [this]() {
-                return (this->m_MainRdy) || this->m_StopProc;
-                });
-
-            if (m_StopProc) {
-                break;
-            }
-
-
-            if (m_Front->empty())
-            {
-
-            }
-
-            else {
-                while (!m_Front->empty()) {
-                    auto task = m_Front->front();
-                    m_Front->pop();
-                    lock.unlock();
-                    if (task) task();
-                    lock.lock();
-                }
-            }
-
-
-            m_ProcRdy = true;
-            m_QueueCondition.notify_all();
-        }
+        m_ThreadRunning = false;
     }
 }
+
+void QueueChain::WriteToBack(const std::function<void()>& task) {
+    m_Back->push(task);
+}
+
+void QueueChain::Swap() {
+    if (!m_Back->empty()) {
+        std::swap(m_Front, m_Back); // 🔥 Swap buffer pointers
+        m_WorkAvailable = true;
+        m_ProcComplete = false; // Mark processing not yet done
+    }
+}
+
+void QueueChain::WaitForProcessComplete() {
+    // Spin-wait until processing is done
+    while (!m_ProcComplete && !m_StopProc) {
+        std::this_thread::yield();
+    }
+}
+
+void QueueChain::ProcessFrontQueue() {
+    while (!m_StopProc) {
+        // Spin-wait for work
+        if (!m_WorkAvailable) {
+            std::this_thread::yield();
+            continue;
+        }
+
+        // Process all tasks in strict FIFO order
+        while (!m_Front->empty()) {
+            auto task = m_Front->front();
+            m_Front->pop();
+            try {
+                if (task) task();
+            } catch (const std::exception& ex) {
+                std::cerr << "[QueueChain] Task exception: " << ex.what() << std::endl;
+            } catch (...) {
+                std::cerr << "[QueueChain] Task threw unknown exception!" << std::endl;
+            }
+        }
+
+        m_WorkAvailable = false;
+        m_ProcComplete = true;
+
+        std::this_thread::yield();
+    }
+
+    m_ThreadRunning = false; // Mark thread as stopped
+}
+} // namespace anv

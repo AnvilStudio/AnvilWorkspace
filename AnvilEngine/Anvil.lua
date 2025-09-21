@@ -26,6 +26,7 @@ project "AnvilEngine"
         {
             "./src/",
             "./vendor/GLFW/include",
+            "./vendor/glm",
             "%{VULKAN_SDK}"
         }
 

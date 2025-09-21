@@ -4,7 +4,11 @@
 class Forge : public anv::App
 {
 public:
-	Forge(anv::AppCreateInfo _info);
+	Forge(anv::AppCreateInfo _info, int arg_c, char* arg_v[])
+		: App(_info, arg_c, arg_v)
+	{
+		// Initialize Forge specific components here if needed
+	}
 
 	void OnSetup()   override 
 	{
@@ -18,13 +22,7 @@ public:
 
 };
 
-Forge::Forge(anv::AppCreateInfo _info)
-	: App(_info)
-{
-
-}
-
-anv::App* CreateApp()
+anv::App* CreateApp(int arg_c, char* arg_v[])
 {
 	anv::AppCreateInfo i
 	{
@@ -37,7 +35,7 @@ anv::App* CreateApp()
 	i.WindowCreateInfo.width = 750;
 	i.WindowCreateInfo.height = 500;
 
-	return new Forge(i);
+	return new Forge(i, arg_c, arg_v);
 }
 
 
