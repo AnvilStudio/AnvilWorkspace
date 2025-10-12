@@ -64,5 +64,7 @@ namespace anv
 		VkPipelineLayout          m_PipelineLayout;
 		VkRenderPass              m_RenderPass;
 		VulkanContext*            m_VkContext;
+		Ref<Shader>               m_Shader;                  // keep shader alive
+		std::vector<std::string>  m_EntryNames; // if you need to own entrypoint names
 	};
 }

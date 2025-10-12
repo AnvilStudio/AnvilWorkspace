@@ -1,12 +1,67 @@
-# ----------------------------
-# MSBuild logs and project files
-# ----------------------------
-*.log
-*.alog
-*.tlog
-*.recipe
+# ============================
+# Build Artifacts & Binaries
+# ============================
+*.exe
+*.dll
+*.dylib
+*.so
+*.out
+*.a
+*.lib
+*.ipa
+*.aab
+*.nupkg
+*.snupkg
+*.symbols.nupkg
 
-# MSBuild project files
+# ============================
+# Object / Intermediate Files
+# ============================
+*.obj
+*.o
+*.ilk
+*.pdb
+*.ipch
+*.pch
+*.idb
+*.tlog
+*.sbr
+*.d
+*.opendb
+*.opensdf
+*.sdf
+*.aps
+*.ncb
+*.cachefile
+*.VC.opendb
+*.VC.VC.opendb
+*.lastbuildstate
+
+# ============================
+# Build & Output Directories
+# ============================
+bin/
+bin-int/
+build/
+obj/
+_temp/
+_intermediate/
+publish/
+GeneratedFiles/
+
+# ============================
+# IDE / Tool Cache
+# ============================
+.vscode/
+.vs/
+.DS_Store
+.nuget/
+*.user
+*.suo
+
+# ============================
+# MSBuild / Visual Studio Files
+# ============================
 *.sln
 *.vcxproj
 *.vcxproj.*
@@ -18,227 +73,51 @@
 *.dbproj
 *.sqlproj
 
-# ----------------------------
-# Temporary build files
-# ----------------------------
-*.ilk
-*.obj
-*.o
-*.pdb
-*.ipch
-*.pch
-*.idb
-*.tlog
-*.lastbuildstate
-*.sbr
-*.opendb
-*.opensdf
-*.aps
-*.ncb
-*.sdf
-*.cachefile
-*.VC.opendb
-*.VC.VC.opendb
-*.hint
-*.d
-
-# ----------------------------
-# Build artifacts
-# ----------------------------
-*.exe
-*.dll
-*.dylib
-*.so
-*.out
-*.a
-*.lib
-*.aab
-*.ipa
-*.nupkg
-
-# Publish folders
-publish/
-
-# Auto-generated files
-GeneratedFiles/
-
-# Common intermediary folders
-_temp/
-_intermediate/
-.obj/
-
-# NuGet
-*.nupkg
-*.snupkg
-*.symbols.nupkg
-
-# ----------------------------
-# Makefiles and build scripts
-# ----------------------------
+# ============================
+# Make / Premake / CMake
+# ============================
 Makefile
 *.make
 *.mk
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.recipe
 
-# ----------------------------
-# Build directories
-# ----------------------------
-/bin/
-/bin-int/
-/build/
-/publish/
-/GeneratedFiles/
-/_temp/
-/_intermediate/
-/obj/
+# ============================
+# Logs
+# ============================
+*.log
+*.alog
+logs.alog
 
-# ----------------------------
-# IDE / tool cache
-# ----------------------------
-.vscode/
-.vs/
-.nuget/
-.DS_Store
-
-# ----------------------------
-# Forge/AnvilEngine specific
-# ----------------------------
-AnvilEngine/bin*
+# ============================
+# Forge / AnvilEngine
+# ============================
+AnvilEngine/bin*/
 AnvilEngine/bin-int/
-AnvilEngine/vendor/GLFW/bin*
-AnvilEngine/Makefile
-Forge/bin*
+Forge/bin*/
 Forge/bin-int/
 Forge/*.alog
-Forge/bin/DebugG-macosx-x86_64/Forge/Forge
 
-# ----------------------------
-# Setup and redundant paths
-# ----------------------------
-/Setup
+# Premake & Xcode Generated
+AnvilEngine/Makefile
+AnvilEngine/AnvilEngine.xcodeproj/
+Forge/Forge.xcodeproj/
+AnvilWorkspace.xcworkspace/
+
+# GLFW Vendor Outputs
+AnvilEngine/vendor/GLFW/bin*/
+AnvilEngine/vendor/GLFW/bin-int/
+AnvilEngine/vendor/GLFW/CMake/
+AnvilEngine/vendor/GLFW/CMakeCache.txt
+AnvilEngine/vendor/GLFW/CMakeFiles/
+
+# Shader / Asset Generated
+Assets/com.anvstu.engine/shaders/
+
+# ============================
+# Setup & Redundant
+# ============================
+Setup/
 *.hint
-/AnvilEngine/src/Util/AnvilEngine/src/Util
-
-# ----------------------------
-# Premake-generated / shader-generated assets
-# ----------------------------
-Assets/com.anvstu.engine/shaders
-logs.alog
-logs.alog
-AnvilEngine/AnvilEngine.xcodeproj/project.pbxproj
-AnvilEngine/AnvilEngine.xcodeproj/xcuserdata/caydenjordan.xcuserdatad/xcschemes/xcschememanagement.plist
-AnvilEngine/bin/DebugG-macosx-x86_64/AnvilEngine/libAnvilEngine.a
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/App.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/Asset.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/Asset.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/AssetManager.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/AssetManager.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/Context.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/Context.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/Framebuffer.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/Framebuffer.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/GraphicsPipeline.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/GraphicsPipeline.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/Image.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/Image.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/log.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/log.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/QueueChain.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/QueueChain.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/RenderAPI.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/RenderAPI.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/Renderer.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/Renderer.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/RenderPass.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/RenderPass.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/Shader.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/Shader.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/Swapchain.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/Swapchain.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanContext.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanContext.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanFrameBuffer.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanFrameBuffer.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanImage.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanImage.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanPipeline.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanPipeline.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanRenderAPI.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanRenderAPI.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanRenderPass.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanRenderPass.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanShader.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanShader.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanSwapChain.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanSwapChain.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanUtil.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/VulkanUtil.o
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/Window.d
-AnvilEngine/bin-int/DebugG-macosx-x86_64/AnvilEngine/Window.o
-AnvilEngine/vendor/GLFW/bin/Debug-macosx-x86_64/GLFW/libGLFW.a
-AnvilEngine/vendor/GLFW/bin/DebugG-macosx-x86_64/GLFW/libGLFW.a
-AnvilEngine/vendor/GLFW/bin-int/Debug-windows-x86_64/GLFW/GLFW.lib.recipe
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/cocoa_init.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/cocoa_init.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/cocoa_joystick.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/cocoa_joystick.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/cocoa_monitor.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/cocoa_monitor.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/cocoa_time.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/cocoa_time.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/cocoa_window.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/cocoa_window.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/context.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/context.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/egl_context.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/egl_context.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/init.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/init.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/input.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/input.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/monitor.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/monitor.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/nsgl_context.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/nsgl_context.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/null_init.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/null_init.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/null_joystick.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/null_joystick.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/null_monitor.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/null_monitor.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/null_window.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/null_window.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/osmesa_context.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/osmesa_context.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/platform.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/platform.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/posix_module.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/posix_module.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/posix_thread.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/posix_thread.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/vulkan.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/vulkan.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/window.d
-AnvilEngine/vendor/GLFW/bin-int/DebugG-macosx-x86_64/GLFW/window.o
-AnvilEngine/vendor/GLFW/bin-int/DebugG-windows-x86_64/GLFW/GLFW.lib.recipe
-AnvilEngine/vendor/GLFW/bin-int/Release-windows-x86_64/GLFW/GLFW.lib.recipe
-AnvilEngine/vendor/GLFW/CMake/cmake_uninstall.cmake.in
-AnvilEngine/vendor/GLFW/CMake/GenerateMappings.cmake
-AnvilEngine/vendor/GLFW/CMake/glfw3.pc.in
-AnvilEngine/vendor/GLFW/CMake/glfw3Config.cmake.in
-AnvilEngine/vendor/GLFW/CMake/i686-w64-mingw32-clang.cmake
-AnvilEngine/vendor/GLFW/CMake/i686-w64-mingw32.cmake
-AnvilEngine/vendor/GLFW/CMake/Info.plist.in
-AnvilEngine/vendor/GLFW/CMake/x86_64-w64-mingw32-clang.cmake
-AnvilEngine/vendor/GLFW/CMake/x86_64-w64-mingw32.cmake
-AnvilEngine/vendor/GLFW/CMake/modules/FindEpollShim.cmake
-AnvilEngine/vendor/GLFW/CMake/modules/FindOSMesa.cmake
-AnvilWorkspace.xcworkspace/contents.xcworkspacedata
-AnvilWorkspace.xcworkspace/xcuserdata/caydenjordan.xcuserdatad/UserInterfaceState.xcuserstate
-Forge/bin/.DS_Store
-Forge/bin/DebugG-macosx-x86_64/.DS_Store
-Forge/bin/DebugG-macosx-x86_64/Forge/Forge
-Forge/bin/DebugG-macosx-x86_64/Forge/libvulkan.1.dylib
-Forge/bin-int/DebugG-macosx-x86_64/Forge/Forge.d
-Forge/bin-int/DebugG-macosx-x86_64/Forge/Forge.o
-Forge/Forge.xcodeproj/project.pbxproj
-Forge/Forge.xcodeproj/xcuserdata/caydenjordan.xcuserdatad/xcschemes/xcschememanagement.plist

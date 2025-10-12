@@ -168,6 +168,6 @@ namespace anv {
         inline static Ref<RenderPass>           m_RenderPass = nullptr;
         inline static Render2DCreateInfo        m_RenderCreateInfo {};
         
-        inline static QueueChain* m_RenderCmdChain = nullptr;
+        //inline static QueueChain* m_RenderCmdChain = nullptr;
     };
 }

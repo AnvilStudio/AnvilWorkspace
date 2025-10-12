@@ -34,7 +34,7 @@ namespace anv
 		m_RenderPass = RenderPass::Create(rpinfo, _info.pTarget->GetContext());
 		m_RenderPass->Build();
 
-		// == TMP ==
+		// // == TMP ==
 		auto v = Shader::Create(_info.shaderPath + "/shader.glsl", _info.pTarget->GetContext());
 		m_Pipeline = GraphicsPipeline::Create(_info.pTarget->GetContext());
 		m_Pipeline->SetShaderStages(v);
@@ -48,17 +48,17 @@ namespace anv
 		create_frame_buffers();
 
 		// Start the render thread
-		m_RenderCmdChain = new QueueChain();
-		m_RenderCmdChain->Start();
+		//m_RenderCmdChain = new QueueChain();
+		//m_RenderCmdChain->Start();
 	}
 
 	void Renderer2D::Shutdown()
 	{
 		// Stop the render thread
 		
-		delete m_RenderCmdChain;
-
-		//m_Pipeline->Destroy()
+		// Note to self: if you want to make Ref<>s static, EXPLICITLY destroy them...
+		m_Pipeline.Reset();
+		m_RenderPass.Reset();
 	}
 
 	// start recording commands & begin render pass
@@ -77,10 +77,10 @@ namespace anv
 		// end render pass 
 
 		// Swap CmdBuffers
-		m_RenderCmdChain->Swap();
+		//m_RenderCmdChain->Swap();
 
 		// Wait for the render thread to finish processing the front queue
-		m_RenderCmdChain->WaitForProcessComplete();
+		//m_RenderCmdChain->WaitForProcessComplete();
 	}
 
 	void Renderer2D::create_frame_buffers()
@@ -90,7 +90,7 @@ namespace anv
 		auto image_views = m_RenderCreateInfo.pTarget->GetContext()->GetSwapchain()->GetImageViews();
 		for (int i = 0; i < image_views.size(); i++)
 		{
-			m_FrameBuffers[i] = Framebuffer::Create(m_RenderCreateInfo.pTarget->GetContext(), image_views[i], m_RenderPass);
+			//m_FrameBuffers[i] = Framebuffer::Create(m_RenderCreateInfo.pTarget->GetContext(), image_views[i], m_RenderPass);
 		}
 	}
 }

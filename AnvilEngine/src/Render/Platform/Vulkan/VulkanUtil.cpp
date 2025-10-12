@@ -37,7 +37,7 @@ namespace anv::vk_util
 
     #ifdef __APPLE__
         // Required on macOS with MoltenVK
-        extensions.push_back("VK_KHR_portability_enumeration");
+        extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
         extensions.push_back("VK_MVK_macos_surface");
     #endif
 
@@ -111,7 +111,6 @@ namespace anv::vk_util
             // Geometry shader is a bonus!
             if (!deviceFeatures.geometryShader) {
                 score += 1000; 
-                continue;
             }
 
             QueueFamilyIndices indices = vku_FindQueueFamilies(device, _surface);

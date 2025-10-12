@@ -27,33 +27,25 @@
  * - Supports `operator->`, `operator*`, and comparison operators.
  * - Thread-safe reference count management.
  */
-
+#include "../Util/UMacros.h"
 #include <memory>
 
 namespace anv{
 
-	class RefCounter
-	{
+	class RefCounter {
 	public:
 		virtual ~RefCounter() = default;
 
-		void IncRef() const
-		{
-			m_RefCount++;
+		uint32_t IncRef() const {
+			return m_RefCount.fetch_add(1, std::memory_order_acq_rel) + 1;
 		}
-
-		void DecRef() const
-		{
-			m_RefCount--;
+		uint32_t DecRef() const {
+			return m_RefCount.fetch_sub(1, std::memory_order_acq_rel) - 1;
 		}
-
-		uint32_t GetRefCount() const
-		{
-			return m_RefCount.load();
-		}
+		uint32_t GetRefCount() const { return m_RefCount.load(std::memory_order_acquire); }
 
 	private:
-		mutable std::atomic<uint32_t> m_RefCount = 0;
+		mutable std::atomic<uint32_t> m_RefCount{0};
 	};
 
 	template<typename T>
@@ -94,8 +86,8 @@ namespace anv{
 
 		static Ref<T> CopyWithoutIncrement(const Ref<T>& other)
 		{
-			Ref<T> result = nullptr;
-			result->m_Instance = other.m_Instance;
+			Ref<T> result;
+			result.m_Instance = other.m_Instance; // no IncRef
 			return result;
 		}
 
@@ -207,14 +199,13 @@ namespace anv{
 
 		void DecRef() const
 		{
-			if (m_Instance)
-			{
-				m_Instance->DecRef();
-
-				if (m_Instance->GetRefCount() == 0)
-				{
-					delete m_Instance;
-					m_Instance = nullptr;
+			if (m_Instance) {
+				// if refcount becomes zero after this call, delete
+				if (m_Instance->DecRef() == 0) {
+					// DO NOT LOG HERE
+					auto* p = m_Instance;
+					m_Instance = nullptr; // this Ref no longer owns it
+					delete p;
 				}
 			}
 		}

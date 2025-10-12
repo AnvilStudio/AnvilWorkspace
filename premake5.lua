@@ -1,3 +1,25 @@
+-- cleaning gen project files
+newaction {
+    trigger     = "clean",
+    description = "Clean all generated project files and binaries",
+    execute     = function()
+        print("Cleaning project files...")
+        os.rmdir("bin")
+        os.rmdir("bin-int")
+        os.rmdir("build")
+
+        -- Remove generated project files
+        os.remove("Makefile")
+        os.remove("*.make")
+        os.remove("*.sln")
+        os.remove("*.vcxproj")
+        os.remove("*.vcxproj.*")
+        os.remove("*.xcodeproj")
+        print("Clean complete.")
+    end
+}
+
+
 workspace "AnvilWorkspace"
     architecture "x64"
     startproject "Forge"
@@ -37,6 +59,7 @@ workspace "AnvilWorkspace"
         --VULKAN_SDK = os.getenv("VULKAN_SDK") or "/usr/include/vulkan"
 
     filter "system:macosx"
+        architecture "arm64"
         VULKAN_SDK = "/usr/local/include/vulkan"
         VULKAN_LIB = "/usr/local/lib"
 

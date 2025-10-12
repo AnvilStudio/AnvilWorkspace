@@ -5,11 +5,27 @@
 namespace anv
 {
 	VulkanPipeline::VulkanPipeline(_shared<Context> _ctx)
-		: GraphicsPipeline(_ctx)
+		: GraphicsPipeline(_ctx),
+		m_Pipeline(VK_NULL_HANDLE),
+  		m_PipelineLayout(VK_NULL_HANDLE),
+  		m_RenderPass(VK_NULL_HANDLE)
 	{
 		ANV_PROFILE_SCOPE()
 		// Get the native Vk Context;
 		m_VkContext = _ctx->GetAs<VulkanContext>();
+
+
+		// Zero all create infos up front
+		m_CreateInfo.dynamicState      = {};
+		m_CreateInfo.viewportState     = {};
+		m_CreateInfo.vertexInputInfo   = {};
+		m_CreateInfo.inputAssembly     = {};
+		m_CreateInfo.rasterizer        = {};
+		m_CreateInfo.multisampling     = {};
+		m_CreateInfo.colorBlendAttachment = {};
+		m_CreateInfo.colorBlending     = {};
+		m_CreateInfo.pipelineLayoutInfo= {};
+		m_CreateInfo.pipelineCreateInfo= {};
 
 		// Set Viewport
 
@@ -53,18 +69,27 @@ namespace anv
 
 	VulkanPipeline::~VulkanPipeline()
 	{
-		ANV_PROFILE_SCOPE()
+		ANV_PROFILE_SCOPE();
+    	if (m_Pipeline)       vkDestroyPipeline(m_VkContext->GetDevice(), m_Pipeline, nullptr);
+    	if (m_PipelineLayout) vkDestroyPipelineLayout(m_VkContext->GetDevice(), m_PipelineLayout, nullptr);
 
-		vkDestroyPipeline(m_VkContext->GetDevice(), m_Pipeline, nullptr);
-		vkDestroyPipelineLayout(m_VkContext->GetDevice(), m_PipelineLayout, nullptr);
 	}
 
 	void VulkanPipeline::SetShaderStages(const Ref<Shader> _shader)
 	{
+		m_Shader = _shader; // keep alive through Build()
 		auto vkshaders = _shader.As<VulkanShader>()->GetShaderStages();
-		m_CreateInfo.stages.resize(vkshaders.size());
-		m_CreateInfo.stages[0] = vkshaders[0];
-		m_CreateInfo.stages[1] = vkshaders[1];
+		m_CreateInfo.stages = vkshaders; // copy all stages safely
+
+		// fix for pName lifetime issue:
+		m_EntryNames.clear();
+		m_EntryNames.reserve(m_CreateInfo.stages.size());
+		for (auto& st : m_CreateInfo.stages) {
+			if (st.pName) {
+				m_EntryNames.emplace_back(st.pName);
+				st.pName = m_EntryNames.back().c_str(); // point to our owned copy
+			}
+		}
 	}
 
 	void VulkanPipeline::SetVertexInputLayout(const VertexInputLayout* _layout)
@@ -158,16 +183,32 @@ namespace anv
 
 	void VulkanPipeline::Build()
 	{
-		VkGraphicsPipelineCreateInfo* info = m_CreateInfo.BuildInfo();
-		info->sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		info->layout = m_PipelineLayout;
-		info->renderPass = m_RenderPass;
-		info->pDepthStencilState = nullptr;
-		info->subpass = 0;
-		info->basePipelineHandle = VK_NULL_HANDLE;
-		info->basePipelineIndex = -1;
+		// ensure renderPass & layout are valid
+		ANV_ASSERT(m_RenderPass != VK_NULL_HANDLE, "Render pass not set");
+		ANV_ASSERT(m_PipelineLayout != VK_NULL_HANDLE, "Pipeline layout not created");
 
-		ANV_VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VkContext->GetDevice(), VK_NULL_HANDLE, 1, info, nullptr, &m_Pipeline),
-			"Failed to create Vk graphics pipeline")
+		auto* info = m_CreateInfo.BuildInfo();
+		*info = {}; // full reset before fill
+		info->sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		info->layout              = m_PipelineLayout;
+		info->renderPass          = m_RenderPass;
+		info->pVertexInputState   = &m_CreateInfo.vertexInputInfo;
+		info->pInputAssemblyState = &m_CreateInfo.inputAssembly;
+		info->pViewportState      = &m_CreateInfo.viewportState;
+		info->pRasterizationState = &m_CreateInfo.rasterizer;
+		info->pMultisampleState   = &m_CreateInfo.multisampling;
+		info->pColorBlendState    = &m_CreateInfo.colorBlending;
+		info->pDynamicState       = &m_CreateInfo.dynamicState;
+		info->pDepthStencilState  = nullptr;
+		info->subpass             = 0;
+		info->basePipelineHandle  = VK_NULL_HANDLE;
+		info->basePipelineIndex   = -1;
+		info->stageCount          = static_cast<uint32_t>(m_CreateInfo.stages.size());
+		info->pStages             = m_CreateInfo.stages.data();
+
+		ANV_VK_CHECK_RESULT(
+			vkCreateGraphicsPipelines(m_VkContext->GetDevice(), VK_NULL_HANDLE, 1, info, nullptr, &m_Pipeline),
+			"Failed to create Vk graphics pipeline"
+		);
 	}
 }

@@ -48,10 +48,11 @@ namespace anv_log
 	{
 		std::string fileBanner  = ANV_STD_LOG_BANNER; // Set the banner at the beginning of the file
 		std::string logFilePath = "AnvLog.log";       // Set the path of the log file
+		std::string logFileName = "Logfile.alog";     // Set Name
 		std::string timeFormat  = "%I:%M:%S";         // Set the time format
 		bool		consoleOutput = true;             // Set if you want standard console output
 		bool		fileOutput    = false;            // Set if you want file output
-		bool        abortOnError   = false;            // Program abort if Error is logged
+		bool        abortOnError   = false;           // Program abort if Error is logged
 	};
 
 	struct File;

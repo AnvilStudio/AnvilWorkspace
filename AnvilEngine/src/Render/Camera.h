@@ -25,7 +25,7 @@ namespace anv
     class Camera2D
     {
     public:
-        Camera2D() = default;
+        Camera2D();
         ~Camera2D() = default;
 
         CameraUBO& GetCameraUBO() { return m_CameraUBO; }

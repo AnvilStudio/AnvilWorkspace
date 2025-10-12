@@ -58,8 +58,8 @@ namespace anv {
         VkQueue m_GraphicsQueue;
         VkQueue m_PresentQueue;
         
-        const _vec<const char*> m_DeviceExtensions = {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        _vec<const char*> m_DeviceExtensions = {
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         };
 
     #ifdef DEBUG

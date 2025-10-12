@@ -31,7 +31,7 @@ anv::App* CreateApp(int arg_c, char* arg_v[])
 		.description = "Level editor for anvil",
 	};
 
-	i.WindowCreateInfo.name = "Level Editor";
+	i.WindowCreateInfo.name = "Forge Editor";
 	i.WindowCreateInfo.width = 750;
 	i.WindowCreateInfo.height = 500;
 

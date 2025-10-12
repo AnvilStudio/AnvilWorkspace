@@ -71,6 +71,10 @@ namespace anv {
 		#ifdef __APPLE__
 		// Required on macOS with MoltenVK
 		info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+		extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+		extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+		extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+
 		#endif
 		info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
 		info.ppEnabledExtensionNames = extensions.data();
@@ -193,6 +197,10 @@ namespace anv {
 		}
 
 		VkPhysicalDeviceFeatures deviceFeatures{};
+
+		#ifdef __APPLE__
+			m_DeviceExtensions.push_back("VK_KHR_portability_subset");
+		#endif
 
 		VkDeviceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

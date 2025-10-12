@@ -49,24 +49,23 @@ namespace anv {
 			if (arg == "-projectPath" && i + 1 < arg_c)
 			{
 				m_ProjPath = arg_v[i + 1];
+				{
+					anv_log::LogCreateInfo info
+					{
+						.timeFormat = "%I:%M:%S",
+						.logFilePath = m_ProjPath,
+						.logFileName = "forgelog.txt",
+						.consoleOutput = true,
+						.fileOutput = true,
+						.abortOnError = false
+					};
+
+					anv_log::AnvLog::Init(info);
+				}
+
 				NavigateToProjectDir(m_ProjPath);
 				break;
 			}
-		}
-
-		// init logging
-		{
-			anv_log::LogCreateInfo info
-			{
-				.logFilePath = "logs.alog",
-				.timeFormat = "%I:%M:%S",
-				.logFilePath = m_ProjPath,
-				.consoleOutput = true,
-				.fileOutput = true,
-				.abortOnError = false
-			};
-
-			anv_log::AnvLog::Init(info);
 		}
 
 		ANV_PROFILE_SCOPE()

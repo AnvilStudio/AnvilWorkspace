@@ -48,7 +48,7 @@ namespace anv_log
 		m_CreationInfo = _info;
 		if (_info.fileOutput)
 		{
-			m_File = std::make_unique<File>(_info.logFilePath);
+			m_File = std::make_unique<File>(_info.logFilePath + _info.logFileName);
 		}
 	}
 
