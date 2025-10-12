@@ -54,7 +54,7 @@ namespace anv {
 					{
 						.timeFormat = "%I:%M:%S",
 						.logFilePath = m_ProjPath,
-						.logFileName = "forgelog.txt",
+						.logFileName = "forgelog.alog",
 						.consoleOutput = true,
 						.fileOutput = true,
 						.abortOnError = false

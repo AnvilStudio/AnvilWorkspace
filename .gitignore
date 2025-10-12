@@ -114,7 +114,8 @@ AnvilEngine/vendor/GLFW/CMakeCache.txt
 AnvilEngine/vendor/GLFW/CMakeFiles/
 
 # Shader / Asset Generated
-Assets/com.anvstu.engine/shaders/
+# Assets/com.anvstu.engine/shaders/ (need for now)
+*.alog
 
 # ============================
 # Setup & Redundant
