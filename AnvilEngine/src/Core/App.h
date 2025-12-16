@@ -1,13 +1,17 @@
 #pragma once
 #include "../Render/Renderer.h"
+#include "../Scene/Scene.h"
 #include "Window.h"
 #include <string>
 
 namespace anv
 {	
-	struct AppCreateInfo
+
+	struct AppSettings
 	{
-		std::string name = "Anvil App";
+		std::string projectName;
+		std::string projectPath;
+		std::string projectDir;
 		std::string version = "";
 		std::string description = "";
 
@@ -18,7 +22,7 @@ namespace anv
 	{
 	public:
 		App();
-		App(AppCreateInfo _info, int arg_c = 0, char* arg_v[] = nullptr);
+		App(int arg_c = 0, char* arg_v[] = nullptr);
 		~App();
 
 		void Run();
@@ -33,9 +37,10 @@ namespace anv
 
 	private:
 		void NavigateToProjectDir(std::string path);
+		void PopulateSettings(const std::string& prjPath);
 
 	private:
-		std::string m_ProjPath;
+		AppSettings   m_Settings;
 		inline static App* m_This  = nullptr;
 		_shared<Window> m_AppWin   = nullptr;
 	};

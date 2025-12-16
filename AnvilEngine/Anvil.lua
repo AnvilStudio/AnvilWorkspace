@@ -19,14 +19,17 @@ project "AnvilEngine"
         {
             "./src/**.cpp",
             "./src/**.h",
-            "./include/**.h"
+            "./include/**.h",
         }
 
         includedirs
         {
             "./src/",
-            "./vendor/GLFW/include",
+            "./vendor",
             "./vendor/glm",
+            "./vendor/GLFW/include",
+            "./vendor/tomlplusplus/include",
+            "./vendor/entt/single_include",
             "%{VULKAN_SDK}"
         }
 
@@ -85,7 +88,7 @@ project "AnvilEngine"
             optimize "on"
         
             filter { "system:windows" }
-                    linkoptions { "/SUBSYSTEM:WINDOWS" }
+                    --linkoptions { "/SUBSYSTEM:WINDOWS" }
                     buildoptions { "/MP" } -- windows only
 
             filter { "system:macosx" }

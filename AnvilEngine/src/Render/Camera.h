@@ -1,6 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
-#include "Scene/Component.h"
+#include "../Scene/Component.h"
 
 namespace anv
 {

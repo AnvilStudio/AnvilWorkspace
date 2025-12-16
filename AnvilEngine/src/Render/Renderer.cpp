@@ -61,6 +61,11 @@ namespace anv
 		m_RenderPass.Reset();
 	}
 
+	void Renderer2D::SetCamera(_shared<Camera2D> _main)
+	{
+		m_MainCamera = _main;
+	}
+
 	// start recording commands & begin render pass
 	// optional
 	// Begin scene should batch all like object together. then draw those objects together

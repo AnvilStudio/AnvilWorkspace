@@ -63,5 +63,9 @@ workspace "AnvilWorkspace"
         VULKAN_SDK = "/usr/local/include/vulkan"
         VULKAN_LIB = "/usr/local/lib"
 
+    filter "system:windows"
+        VULKAN_SDK = os.getenv("VULKAN_SDK") .. "/include"
+        VULKAN_LIB = os.getenv("VULKAN_SDK") .. "/Lib"
+
     print("Vulkan SDK: ", VULKAN_SDK)
     

@@ -17,6 +17,7 @@
 #include "Context.h"
 #include "Swapchain.h"
 #include "GraphicsPipeline.h"
+#include "Camera.h"
 
 #include <string>
 #include "Framebuffer.h"
@@ -151,6 +152,7 @@ namespace anv {
 
         static Render2DCreateInfo GetSettings() { return m_RenderCreateInfo; }
 
+        static void SetCamera(_shared<Camera2D> _main);
         //static void CmdDrawQuad(VertexBuffer& _vb, IndexBuffer& _ib);
         //static void CmdDrawQuadWithMaterial(Material& _mat, VertexBuffer& _vb, IndexBuffer& _ib);
         //static void CmdDrawQuadWithTexture(Texture& _text, VertexBuffer& _vb, IndexBuffer& _ib);
@@ -162,10 +164,11 @@ namespace anv {
         static void set_shaders();
 
     private:
-        inline static _shared<RenderAPI>        m_RenderAPI = nullptr;
-        inline static _vec<Ref<Framebuffer>>    m_FrameBuffers {};
-        inline static Ref<GraphicsPipeline>     m_Pipeline  = nullptr;
-        inline static Ref<RenderPass>           m_RenderPass = nullptr;
+        inline static _shared<Camera2D>         m_MainCamera       = nullptr;
+        inline static _shared<RenderAPI>        m_RenderAPI        = nullptr;
+        inline static Ref<GraphicsPipeline>     m_Pipeline         = nullptr;
+        inline static Ref<RenderPass>           m_RenderPass       = nullptr;
+        inline static _vec<Ref<Framebuffer>>    m_FrameBuffers     {};
         inline static Render2DCreateInfo        m_RenderCreateInfo {};
         
         //inline static QueueChain* m_RenderCmdChain = nullptr;
