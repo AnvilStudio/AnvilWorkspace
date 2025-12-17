@@ -29,6 +29,9 @@ namespace anv
         // Reads text file as lines (strips '\n' and optional '\r')
         _vec<std::string> Read() const;
 
+        bool Exists() const;
+        bool CreateIfMissing(bool binary) const;
+
         // Reads entire file as raw bytes into a vector of T.
         // Common uses: T=uint8_t, char, std::byte, etc.
         template<typename T>

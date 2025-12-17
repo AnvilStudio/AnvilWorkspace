@@ -94,6 +94,35 @@ namespace anv {
 	App::~App()
 	{
 		ANV_PROFILE_SCOPE()
+
+		Serializer ser(m_Settings.projectPath, Serializer::Mode::SER_MODE_TOML, Serializer::Direction::Write);
+		ser.Object("Settings", [&]
+			{
+				ser.Field("ProjName", m_Settings.projectName);
+				ser.Field("ProjDir", m_Settings.projectDir);
+				ser.Field("Version", m_Settings.version);
+				ser.Field("Description", m_Settings.description);
+
+				ser.Object("StartScene", [&]
+				{
+						auto name = m_ScnMngr.GetActive()->GetName();
+						auto UUID = m_ScnMngr.GetActive()->GetUUID();
+						auto pth = m_ScnMngr.GetActive()->GetPath();
+						ser.Field("Name", name);
+						ser.Field("UUID", UUID.uuid);
+						ser.Field("Path", pth);
+				});
+
+				ser.Object("WindowInfo", [&] {
+
+					int w = m_AppWin->GetExtent().width;
+					int h = m_AppWin->GetExtent().height;
+					ser.Field("Width", w);
+					ser.Field("Height", h);
+				});
+
+			});
+		ser.Close();
 		OnDestroy();
 
 		// Everything should be deleted before the app itself gets deleted
@@ -161,15 +190,14 @@ namespace anv {
 					// --- Start scene (optional) ---
 					ser.ObjectIf("StartScene", [&]
 						{
-							std::string sceneName;
-							std::string uuid;
+							std::string path;
 
-							ser.FieldOr<std::string>("Name", sceneName, "");
-							ser.FieldOr<std::string>("UUID", uuid, "");
+							ser.FieldOr<std::string>("Path", path, "");
+							m_Settings.startScene = path;
 
-							if (!sceneName.empty())
+							if (!path.empty())
 							{
-								// m_Settings.startScene = Scene::Create(sceneName, uuid);
+								m_ScnMngr.Register(path);
 							}
 						});
 				});

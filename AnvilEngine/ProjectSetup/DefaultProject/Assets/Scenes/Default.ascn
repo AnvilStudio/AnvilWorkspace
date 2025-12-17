@@ -1,0 +1,5 @@
+[Scene]
+Context = '2D'
+Name = 'NewScene'
+Path = 'Assets/Scenes/NewScene.ascn'
+UUID = ''

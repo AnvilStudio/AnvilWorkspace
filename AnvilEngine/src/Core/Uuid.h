@@ -5,56 +5,95 @@
 
 namespace anv
 {
-namespace uuid
-{
-    struct EntityUUID
+    namespace uuid
     {
-        // probably needs to be a uint32_t
-        std::string uuid = "";
-    };
+        struct EntityUUID
+        {
+            // probably needs to be a uint32_t
+            std::string uuid = "";
 
-    struct AssetUUID 
-    {
-        // probably needs to be a uint32_t
-        std::string uuid = "";
-    };
+            bool operator==(const EntityUUID& other) const noexcept
+            {
+                return uuid == other.uuid;
+            }
+            bool operator!=(const EntityUUID& other) const noexcept
+            {
+                return !(*this == other);
+            }
+        };
 
-    inline EntityUUID uuid_GenEntID()
-    {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<uint32_t> dis(0, 0xFFFFFFFF);
+        struct AssetUUID
+        {
+            // probably needs to be a uint32_t
+            std::string uuid = "";
 
-        std::stringstream ss;
-        ss << std::hex << std::setfill('0');
+            bool operator==(const AssetUUID& other) const noexcept
+            {
+                return uuid == other.uuid;
+            }
+            bool operator!=(const AssetUUID& other) const noexcept
+            {
+                return !(*this == other);
+            }
+        };
 
-        // Generate 10-5-5-5-12 format UUID
-        ss << std::setw(10) << dis(gen) << '-';
-        ss << std::setw(5) << (dis(gen) & 0xFFFF) << '-';
-        ss << std::setw(5) << ((dis(gen) & 0x0FFF) | 0x4000) << '-'; // Version 4 UUID
-        ss << std::setw(5) << ((dis(gen) & 0x3FFF) | 0x8000) << '-'; // Variant 1 UUID
-        ss << std::setw(12) << ((static_cast<uint64_t>(dis(gen)) << 32) | dis(gen));
+        inline EntityUUID uuid_GenEntID()
+        {
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::uniform_int_distribution<uint32_t> dis(0, 0xFFFFFFFF);
 
-        return EntityUUID{ ss.str() };
-    }
+            std::stringstream ss;
+            ss << std::hex << std::setfill('0');
 
-    inline AssetUUID uuid_GenAssetID()
-    {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<uint32_t> dis(0, 0xFFFFFFFF);
+            // Generate 10-5-5-5-12 format UUID
+            ss << std::setw(10) << dis(gen) << '-';
+            ss << std::setw(5) << (dis(gen) & 0xFFFF) << '-';
+            ss << std::setw(5) << ((dis(gen) & 0x0FFF) | 0x4000) << '-'; // Version 4 UUID
+            ss << std::setw(5) << ((dis(gen) & 0x3FFF) | 0x8000) << '-'; // Variant 1 UUID
+            ss << std::setw(12) << ((static_cast<uint64_t>(dis(gen)) << 32) | dis(gen));
 
-        std::stringstream ss;
-        ss << std::hex << std::setfill('0');
+            return EntityUUID{ ss.str() };
+        }
 
-        // Generate 8-4-4-4-12 format UUID
-        ss << std::setw(8) << dis(gen) << '-';
-        ss << std::setw(4) << (dis(gen) & 0xFFFF) << '-';
-        ss << std::setw(4) << ((dis(gen) & 0x0FFF) | 0x4000) << '-'; // Version 4 UUID
-        ss << std::setw(4) << ((dis(gen) & 0x3FFF) | 0x8000) << '-'; // Variant 1 UUID
-        ss << std::setw(12) << ((static_cast<uint64_t>(dis(gen)) << 32) | dis(gen));
+        inline AssetUUID uuid_GenAssetID()
+        {
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::uniform_int_distribution<uint32_t> dis(0, 0xFFFFFFFF);
 
-        return AssetUUID{ ss.str() };
+            std::stringstream ss;
+            ss << std::hex << std::setfill('0');
+
+            // Generate 8-4-4-4-12 format UUID
+            ss << std::setw(8) << dis(gen) << '-';
+            ss << std::setw(4) << (dis(gen) & 0xFFFF) << '-';
+            ss << std::setw(4) << ((dis(gen) & 0x0FFF) | 0x4000) << '-'; // Version 4 UUID
+            ss << std::setw(4) << ((dis(gen) & 0x3FFF) | 0x8000) << '-'; // Variant 1 UUID
+            ss << std::setw(12) << ((static_cast<uint64_t>(dis(gen)) << 32) | dis(gen));
+
+            return AssetUUID{ ss.str() };
+        }
     }
 }
+
+namespace std
+{
+    template<>
+    struct hash<anv::uuid::EntityUUID>
+    {
+        size_t operator()(const anv::uuid::EntityUUID& id) const noexcept
+        {
+            return std::hash<std::string>{}(id.uuid);
+        }
+    };
+
+    template<>
+    struct hash<anv::uuid::AssetUUID>
+    {
+        size_t operator()(const anv::uuid::AssetUUID& id) const noexcept
+        {
+            return std::hash<std::string>{}(id.uuid);
+        }
+    };
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include "../Render/Renderer.h"
 #include "../Scene/Scene.h"
+#include "../Scene/Manager.h"
 #include "Window.h"
 #include <string>
 
@@ -14,7 +15,7 @@ namespace anv
 		std::string projectDir;
 		std::string version = "";
 		std::string description = "";
-
+		std::string startScene = "";
 		WindowCreateInfo WindowCreateInfo;
 	};
 
@@ -42,6 +43,7 @@ namespace anv
 	private:
 		AppSettings   m_Settings;
 		inline static App* m_This  = nullptr;
+		SceneManager    m_ScnMngr;
 		_shared<Window> m_AppWin   = nullptr;
 	};
 

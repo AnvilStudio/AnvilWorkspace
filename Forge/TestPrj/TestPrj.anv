@@ -1,13 +1,14 @@
 [Settings]
-ProjName = "MyProject"
-ProjDir = "C:/Dev/cpp/Anvil/AnvilWorkspace/Forge/TestPrj"
-Version = "0.0.0"
-Description = "Test Build"
+Description = 'Test Build'
+ProjDir = 'C:/Dev/cpp/Anvil/AnvilWorkspace/Forge/TestPrj'
+ProjName = 'MyProject'
+Version = '0.0.0'
 
-[Settings.StartScene]
-Name = "NewScene"
-UUID = ""
+    [Settings.StartScene]
+    Name = 'NewScene'
+    Path = 'C:/Dev/cpp/Anvil/AnvilWorkspace/Forge/TestPrj/Assets/Scenes/NewScene.ascn'
+    UUID = '08c1ae50-090f-4043-9c2a-e1a5e9dd2eb05672'
 
-[Settings.WindowInfo]
-Width = 1000
-Height = 650
+    [Settings.WindowInfo]
+    Height = 758
+    Width = 1270

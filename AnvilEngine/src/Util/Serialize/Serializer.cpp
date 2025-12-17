@@ -1,6 +1,7 @@
 #include "Serializer.h"
 
 #include <cstring>
+#include <filesystem>
 
 namespace anv
 {
@@ -18,6 +19,7 @@ namespace anv
             if (IsReading())
                 TomlLoad();
         }
+
         else
         {
             if (IsReading())
@@ -87,7 +89,7 @@ namespace anv
     {
         auto* node = (*m_TomlStack.back()).get(name);
         if (!node || !node->is_table())
-            ANV_LOG_ERROR("TOML missing table: " + name);
+        ANV_LOG_ERROR("TOML missing table: " + name);
 
         m_TomlStack.push_back(node->as_table());
     }
@@ -104,6 +106,51 @@ namespace anv
         auto* node = (*m_TomlStack.back()).get(name);
         return node && node->is_table();
     }
+
+    void anv::Serializer::PushOrCreateTomlTable(const std::string& name)
+    {
+        // current stack top is the table we’re writing into
+        auto& cur = *m_TomlStack.back();
+
+        auto* node = cur.get(name);
+        if (!node)
+        {
+            cur.insert_or_assign(name, toml::table{});
+            node = cur.get(name);
+        }
+
+        if (!node->is_table())
+            throw std::runtime_error("TOML key exists but is not a table: " + name);
+
+        m_TomlStack.push_back(node->as_table());
+    }
+
+    void anv::Serializer::PushOrCreateTomlKeyedTable(const std::string& key)
+    {
+        auto& cur = *m_TomlStack.back();
+
+        auto* node = cur.get(key);
+        if (!node)
+        {
+            cur.insert_or_assign(key, toml::table{});
+            node = cur.get(key);
+        }
+
+        if (!node->is_table())
+            throw std::runtime_error("TOML key exists but is not a table: " + key);
+
+        m_TomlStack.push_back(node->as_table());
+    }
+
+    void anv::Serializer::PushTomlTableForReadKeyed(toml::table& parent, const std::string& key)
+    {
+        auto* node = parent.get(key);
+        if (!node || !node->is_table())
+            throw std::runtime_error("TOML missing keyed table: " + key);
+
+        m_TomlStack.push_back(node->as_table());
+    }
+
 
     // -------------------------
     // Binary backend

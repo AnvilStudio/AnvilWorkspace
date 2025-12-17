@@ -1,0 +1,14 @@
+[Settings]
+Description = 'Default Anvil Project'
+ProjDir = ''
+ProjName = 'NewProject'
+Version = '0.0.0'
+
+[Settings.StartScene]
+Name = 'NewScene'
+Path = 'Assets/Scenes/NewScene.ascn'
+UUID = ''
+
+[Settings.WindowInfo]
+Height = 760
+Width = 1270

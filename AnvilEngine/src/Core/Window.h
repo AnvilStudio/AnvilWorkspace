@@ -20,6 +20,11 @@ namespace anv {
 		std::string name = "Anvil App Window";
 	};
 
+	struct Extent
+	{
+		int width, height;
+	};
+
 	class Window
 	{
 	public:
@@ -29,6 +34,7 @@ namespace anv {
 		~Window();
 
 		void OnUpdate();
+		Extent GetExtent();
 		bool ShouldClose();
 
 		GLFWwindow* GetNativeWindow() { return m_WinPtr; }

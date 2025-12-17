@@ -10,7 +10,13 @@ namespace anv
     {
         // Keep a handle open (read-binary) mainly to validate existence and allow quick Size().
         // Read/Write functions open their own handles with correct modes.
-        m_File = std::fopen(m_Path.c_str(), "rb");
+        if (Exists())
+            m_File = std::fopen(m_Path.c_str(), "rb");
+        else
+        {
+            CreateIfMissing(false);
+        }
+
         if (!m_File)
             ANV_LOG_ERROR("File::File - failed to open file: " + m_Path);
     }
@@ -22,6 +28,31 @@ namespace anv
             std::fclose(m_File);
             m_File = nullptr;
         }
+    }
+
+    bool File::Exists() const
+    {
+        FILE* f = std::fopen(m_Path.c_str(), "rb");
+        if (!f) return false;
+        std::fclose(f);
+        return true;
+    }
+
+    bool File::CreateIfMissing(bool binary) const
+    {
+        // If it exists, do nothing.
+        if (Exists())
+            return false;
+
+        // Create empty file.
+        // "wb"/"w" will create. Since we already checked non-existence, no truncation risk.
+        const char* mode = binary ? "wb" : "w";
+        FILE* f = std::fopen(m_Path.c_str(), mode);
+        if (!f)
+            ANV_LOG_ERROR("File::CreateIfMissing - failed to create file: " + m_Path);
+
+        std::fclose(f);
+        return true;
     }
 
     File::File(File&& other) noexcept

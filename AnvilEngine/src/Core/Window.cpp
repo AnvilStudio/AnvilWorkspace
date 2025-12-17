@@ -48,4 +48,11 @@ namespace anv {
 		return m_Context;
 	}
 
+	Extent Window::GetExtent()
+	{
+		Extent e;
+		glfwGetWindowSize(m_WinPtr, &e.width, &e.height);
+		return e;
+	}
+
 }

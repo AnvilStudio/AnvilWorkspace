@@ -41,6 +41,104 @@ namespace anv
         // Core API (agnostic)
         // -------------------------
 
+        // TOML-only: iterate immediate child tables under `parent`.
+        // Example: ForEachTable("Entities", [&](const std::string& id){ ... });
+        template<typename Fn>
+        void ForEachTable(const std::string& parent, Fn&& fn)
+        {
+            if (m_Mode != Mode::SER_MODE_TOML)
+                throw std::runtime_error("ForEachTable is TOML-only");
+
+            if (IsWriting())
+                throw std::runtime_error("ForEachTable is for reading (iteration)");
+
+            auto* node = (*m_TomlStack.back()).get(parent);
+            if (!node || !node->is_table())
+                return; // missing is OK
+
+            auto& tbl = *node->as_table();
+            for (auto&& [k, v] : tbl)
+            {
+                if (!v.is_table())
+                    continue;
+
+                // key can be quoted in TOML, toml++ gives it as a key object
+                std::string key = std::string(k.str());
+
+                // Enter Entities."<key>"
+                PushTomlTableForReadKeyed(tbl, key);
+                std::forward<Fn>(fn)(key);
+                PopTomlTable();
+            }
+        }
+
+        template<typename Fn>
+        void ObjectKeyed(const std::string& parent, const std::string& key, Fn&& fn)
+        {
+            if (m_Mode != Mode::SER_MODE_TOML)
+                throw std::runtime_error("ObjectKeyed is TOML-only");
+
+            // Ensure parent exists (create in write)
+            if (IsWriting())
+            {
+                PushOrCreateTomlTable(parent);
+                PushOrCreateTomlKeyedTable(key);
+                std::forward<Fn>(fn)();
+                PopTomlTable(); // keyed
+                PopTomlTable(); // parent
+                return;
+            }
+
+            // Read path
+            auto* pnode = (*m_TomlStack.back()).get(parent);
+            if (!pnode || !pnode->is_table())
+                throw std::runtime_error("Missing table: " + parent);
+
+            auto* cnode = pnode->as_table()->get(key);
+            if (!cnode || !cnode->is_table())
+                throw std::runtime_error("Missing table: " + parent + "." + key);
+
+            m_TomlStack.push_back(cnode->as_table());
+            std::forward<Fn>(fn)();
+            PopTomlTable();
+        }
+
+        // TOML-only: enter parent."<key>" and run fn (creates on write, requires existing on read)
+        template<typename Fn>
+        bool ObjectKeyedIf(const std::string& parent, const std::string& key, Fn&& fn)
+        {
+            if (m_Mode != Mode::SER_MODE_TOML)
+                throw std::runtime_error("ObjectKeyedIf is TOML-only");
+
+            if (IsWriting())
+            {
+                // Ensure parent table exists, then ensure keyed child exists
+                toml::table child;
+                PushOrCreateTomlTable(parent);
+                PushOrCreateTomlKeyedTable(key);
+                std::forward<Fn>(fn)();
+                PopTomlTable(); // keyed
+                PopTomlTable(); // parent
+                return true;
+            }
+            else
+            {
+                auto* pnode = (*m_TomlStack.back()).get(parent);
+                if (!pnode || !pnode->is_table())
+                    return false;
+
+                auto* childNode = pnode->as_table()->get(key);
+                if (!childNode || !childNode->is_table())
+                    return false;
+
+                m_TomlStack.push_back(childNode->as_table());
+                std::forward<Fn>(fn)();
+                PopTomlTable();
+                return true;
+            }
+        }
+
+
         // Primitive + string + trivially copyable structs
         template<typename T>
         void Field(const std::string& name, T& value)
@@ -164,6 +262,32 @@ namespace anv
             Field(name, value);
         }
 
+        template<typename Enum>
+        void EnumFieldOr(const std::string& name, Enum& value,
+            Enum fallback, const char* (*toStr)(Enum),
+            bool (*fromStr)(const std::string&, Enum&)
+        )
+        {
+            static_assert(std::is_enum_v<Enum>);
+
+            if (IsWriting())
+            {
+                std::string s = toStr(value);
+                Field(name, s);
+                return;
+            }
+
+            std::string s;
+            if (!TryField(name, s))
+            {
+                value = fallback;
+                return;
+            }
+
+            if (!fromStr(s, value))
+                value = fallback;
+        }
+
         // Strict versions (will throw on missing/wrong type in TOML)
         template<typename T>
         void FieldStrict(const std::string& name, T& value)
@@ -236,6 +360,7 @@ namespace anv
         }
 
     private:
+
         // -------------------------
         // TOML backend
         // -------------------------
@@ -245,6 +370,14 @@ namespace anv
         void PushTomlTable(const std::string& name, toml::table& childOut);
         void PushTomlTableForRead(const std::string& name);
         void PopTomlTable();
+
+        // Helpers used by the new APIs (TOML-only)
+        void PushOrCreateTomlTable(const std::string& name);
+        void PushOrCreateTomlKeyedTable(const std::string& key);
+
+        // Push a child table for read when you already have the parent table reference
+        void PushTomlTableForReadKeyed(toml::table& parent, const std::string& key);
+
 
         template<typename T>
         void TomlWriteValue(const std::string& name, const T& v)
