@@ -1,5 +1,5 @@
 [Settings]
-ProjName = "TestProject"
+ProjName = "MyProject"
 ProjDir = "C:/Dev/cpp/Anvil/AnvilWorkspace/Forge/TestPrj"
 Version = "0.0.0"
 Description = "Test Build"
@@ -9,5 +9,5 @@ Name = "NewScene"
 UUID = ""
 
 [Settings.WindowInfo]
-Width = 800
-Height = 550
+Width = 1000
+Height = 650

@@ -1,6 +1,6 @@
 #include "App.h"	
 #include <filesystem>
-#include <toml++/toml.hpp>
+#include <Util/Serialize/Serializer.h>
 
 namespace anv {
 
@@ -137,48 +137,46 @@ namespace anv {
 
 	void App::PopulateSettings(const std::string& prjPath)
 	{
-		toml::table tbl;
+		using anv::Serializer;
 
 		try
 		{
-			tbl = toml::parse_file(prjPath); // IMPORTANT
-		}
-		catch (const toml::parse_error& e)
-		{
-			ANV_LOG_FATAL("Failed to parse project file: %s", prjPath.c_str());
-			return;
-		}
+			Serializer ser(prjPath, Serializer::Mode::SER_MODE_TOML, Serializer::Direction::Read);
 
-		const auto settings = tbl["Settings"].as_table();
-		if (!settings)
-		{
-			ANV_LOG_FATAL("Missing [Settings] table");
-			return;
-		}
+			ser.ObjectStrict("Settings", [&]
+				{
+					// --- Basic metadata ---
+					ser.FieldOr<std::string>("ProjName", m_Settings.projectName, "");
+					ser.FieldOr<std::string>("ProjDir", m_Settings.projectDir, "");
+					ser.FieldOr<std::string>("Version", m_Settings.version, "");
+					ser.FieldOr<std::string>("Description", m_Settings.description, "");
 
-		// --- Basic metadata ---
-		m_Settings.projectName =
-			(*settings)["ProjName"].value_or("");
+					// --- Window (optional) ---
+					ser.ObjectIf("WindowInfo", [&]
+						{
+							ser.FieldOr("Width", m_Settings.WindowCreateInfo.width, 1280);
+							ser.FieldOr("Height", m_Settings.WindowCreateInfo.height, 720);
+						});
 
-		m_Settings.projectDir =
-			(*settings)["ProjDir"].value_or("");
+					// --- Start scene (optional) ---
+					ser.ObjectIf("StartScene", [&]
+						{
+							std::string sceneName;
+							std::string uuid;
 
-		m_Settings.version =
-			(*settings)["Version"].value_or("");
+							ser.FieldOr<std::string>("Name", sceneName, "");
+							ser.FieldOr<std::string>("UUID", uuid, "");
 
-		m_Settings.description =
-			(*settings)["Description"].value_or("");
+							if (!sceneName.empty())
+							{
+								// m_Settings.startScene = Scene::Create(sceneName, uuid);
+							}
+						});
+				});
 
-		m_Settings.projectPath = prjPath;
+			ser.Close();
 
-		// --- Window ---
-		if (const auto win = (*settings)["WindowInfo"].as_table())
-		{
-			m_Settings.WindowCreateInfo.width =
-				(*win)["Width"].value_or(1280);
-
-			m_Settings.WindowCreateInfo.height =
-				(*win)["Height"].value_or(720);
+			m_Settings.projectPath = prjPath;
 
 			std::string win_name = m_Settings.projectName;
 			win_name.append(" | ver ");
@@ -186,21 +184,9 @@ namespace anv {
 			win_name.append(" | Anvil Engine");
 			m_Settings.WindowCreateInfo.name = win_name;
 		}
-
-		// --- Start scene ---
-		if (const auto scene = (*settings)["StartScene"].as_table())
+		catch (const std::exception& e)
 		{
-			std::string sceneName =
-				(*scene)["Name"].value_or("");
-
-			std::string uuid =
-				(*scene)["UUID"].value_or("");
-
-			if (!sceneName.empty())
-			{
-				// however you create/load scenes
-				//m_Settings.startScene = Scene::Create(sceneName, uuid);
-			}
+			ANV_LOG_FATAL("Failed to load project settings: %s", e.what());
 		}
 	}
 }
