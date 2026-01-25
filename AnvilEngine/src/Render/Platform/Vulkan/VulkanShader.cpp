@@ -1,7 +1,9 @@
 #include "VulkanShader.h"
 #include "VulkanUtil.h"
+#include <Core/App.h>
+#include <Util/FileSys/FileSystem.h>
 #include <shaderc/shaderc.hpp>
-#include <filesystem>
+
 
 // TODO: Add a settings file to cache the already compiled shader src code path.
 // That way, next time the app opens, the shader wont have to re-compile
@@ -9,9 +11,12 @@
 namespace anv
 {
 	VulkanShader::VulkanShader(std::string _path, _shared<Context> _ctx)
-		: m_Name(_path)
+		: Shader(_path), m_Name(_path)
 	{
 		ANV_PROFILE_SCOPE()
+		App::GetInstance()->GetFS().CreateKeyDir("ShaderCache", 
+			"Assets/com.anvstu.engine/Cache/ShaderCache/");
+
 		m_VkContext = _ctx->GetAs<VulkanContext>();
 		load(_path);
 		pre_process();
@@ -61,22 +66,10 @@ namespace anv
 	void VulkanShader::load(std::string& _file)
 	{
 		ANV_LOG_DEBUG("Loading Shader: %s", m_Name.c_str())
-		std::ifstream shader_file(_file);
-
-		if (!shader_file.is_open())
-		{
-			ANV_LOG_ERROR("Failed to open shader file: %s", _file.c_str())
-			return;
-		}
-		
-		m_SrcCode = {};
-		std::string line{};
-		while (std::getline(shader_file, line))
-		{
-			m_SrcCode.push_back(line);
-		}
-
-		shader_file.close();
+		auto& fs = App::GetInstance()->GetFS();
+		// No need to call "close" as it happens automatically
+		auto shader_file = fs.CreateFile(_file);
+		m_SrcCode = shader_file->Read();
 	}
 
 	void VulkanShader::pre_process()
@@ -169,41 +162,37 @@ namespace anv
 	
 	void VulkanShader::save_files()
 	{
-		// Construct paths for vertex and fragment shader SPIR-V files
-		std::string vpath = std::string(m_FilePath + m_Name + ".v.spv");
-		std::string fpath = std::string(m_FilePath + m_Name + ".f.spv");
+		auto& fs = App::GetInstance()->GetFS();
+		//fs.Save(
+		//	fs.AtKeyDir("ShaderCache") + m_Name + ".shade",
+		//	Serializer::Mode::SER_MODE_BINARY,
+		//	[&](Serializer& ser)
+		//	{
 
-		// Open output file streams
-		std::ofstream vspvf(vpath, std::ios::binary); // Vertex shader
-		std::ofstream fspvf(fpath, std::ios::binary); // Fragment shader
+		//		auto vert = m_VertCode.second;
+		//		auto frag = m_FragCode.second;
 
-		// Check if the vertex shader file stream is open
-		if (!vspvf.is_open())
-		{
-			ANV_LOG_WARN("Failed to write compiled vertex SPIR-V shader %s to file %s", m_Name.c_str(), vpath.c_str());
-		}
-
-		// Check if the fragment shader file stream is open
-		if (!fspvf.is_open())
-		{
-			ANV_LOG_WARN("Failed to write compiled fragment SPIR-V shader %s to file %s", m_Name.c_str(), fpath.c_str());
-		}
-
-		// Write vertex shader code to the file
-		for (uint32_t& op : m_VertCode.second)
-		{
-			vspvf.write(reinterpret_cast<const char*>(&op), sizeof(uint32_t));
-		}
-
-		// Write fragment shader code to the file
-		for (uint32_t& op : m_FragCode.second)
-		{
-			fspvf.write(reinterpret_cast<const char*>(&op), sizeof(uint32_t));
-		}
-
-		// Close the file streams
-		vspvf.close();
-		fspvf.close();
+		//		ser.Object("ShaderCache", [&]
+		//			{
+		//				ser.Field("Magic", kShaderCacheMagic);
+		//				ser.Field("Version", kShaderCacheVersion);
+		//				ser.Field("Name", m_Name);
+		//				ser.Vector("VertSpv", vert);
+		//				ser.Vector("FragSpv", frag);
+		//			});
+		//	}
+		//);
+		std::string path;
+		path = fs.AtKeyDir("ShaderCache") + m_Name.substr(m_Name.find_last_of("\\/")) + ".shade";
+		auto file = fs.CreateFile(path);
+		Serializer ser(path, Serializer::Mode::SER_MODE_TOML, Serializer::Direction::Write);
+		ser.Object(m_Name, [&]()
+			{
+				ser.Field("Magic", kShaderCacheMagic);
+				ser.Field("Version", kShaderCacheVersion);
+				ser.Vector("Vertex", m_VertCode.second);
+				ser.Vector("Fragment", m_FragCode.second);
+			});
 	}
 
 
@@ -214,13 +203,15 @@ namespace anv
 		vcreateInfo.codeSize = m_VertCode.second.size() * sizeof(uint32_t); // multiply by u32t for alignment
 		vcreateInfo.pCode = m_VertCode.second.data();
 
-		ANV_VK_CHECK_RESULT(vkCreateShaderModule(m_VkContext->GetDevice(), &vcreateInfo, nullptr, &m_VModule), std::string("Failed to create vert shader module for: ") + m_Name);
+		ANV_VK_CHECK_RESULT(vkCreateShaderModule(m_VkContext->GetDevice(), &vcreateInfo, nullptr, &m_VModule), 
+			std::string("Failed to create vert shader module for: ") + m_Name);
 
 		VkShaderModuleCreateInfo fcreateInfo = {};
 		fcreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		fcreateInfo.codeSize = m_FragCode.second.size() * sizeof(uint32_t); // multiply by u32t for alignment
 		fcreateInfo.pCode = m_FragCode.second.data();
 
-		ANV_VK_CHECK_RESULT(vkCreateShaderModule(m_VkContext->GetDevice(), &fcreateInfo, nullptr, &m_FModule), std::string("Failed to create frag shader module for: ") + m_Name);
+		ANV_VK_CHECK_RESULT(vkCreateShaderModule(m_VkContext->GetDevice(), &fcreateInfo, nullptr, &m_FModule), 
+			std::string("Failed to create frag shader module for: ") + m_Name);
 	}
 }

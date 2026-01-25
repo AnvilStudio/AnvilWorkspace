@@ -11,7 +11,7 @@ namespace anv
         struct Tag
         {
             std::string tag = "";
-            std::string Get() { return tag; }
+            std::string Get() const { return tag; }
         };
 
         struct UID

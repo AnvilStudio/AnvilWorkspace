@@ -1,0 +1,101 @@
+Checks: >
+  readability-identifier-naming
+
+WarningsAsErrors: ''
+
+CheckOptions:
+  # ---------------------------
+  # Files / tests:
+  # clang-tidy cannot enforce file names or "tst_" prefixes reliably.
+  # Do that via CI scripts or git hooks.
+  # ---------------------------
+
+  # ---------------------------
+  # Macros: ANV_* and ALL_CAPS_WITH_UNDERS
+  # ---------------------------
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.MacroDefinitionPrefix
+    value: ANV_
+
+  # ---------------------------
+  # Globals: g_ + UpperCamelCase
+  # ---------------------------
+  - key: readability-identifier-naming.GlobalVariableCase
+    value: CamelCase
+  - key: readability-identifier-naming.GlobalVariablePrefix
+    value: g_
+
+  # ---------------------------
+  # Namespaces:
+  # - Nested namespaces within anv should be lowercase
+  # NOTE: clang-tidy can enforce namespace naming generally,
+  # but it cannot do "only inside anv" conditionally.
+  # ---------------------------
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+
+  # ---------------------------
+  # Functions / methods:
+  # Public + static member functions: UpperCamelCase
+  # Private member functions: lower_case_with_underscores (lower_case)
+  # ---------------------------
+  - key: readability-identifier-naming.FunctionCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.MethodCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.PrivateMethodCase
+    value: lower_case
+
+  - key: readability-identifier-naming.PublicMethodCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.ProtectedMethodCase
+    value: CamelCase
+
+  # ---------------------------
+  # Parameters: _ + lowerCamelCase
+  # ---------------------------
+  - key: readability-identifier-naming.ParameterCase
+    value: lowerCamelCase
+  - key: readability-identifier-naming.ParameterPrefix
+    value: _
+
+  # ---------------------------
+  # Classes / structs / enums
+  # ---------------------------
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE
+
+  # ---------------------------
+  # Members:
+  # non-static: m_ + UpperCamelCase
+  # static: s_ + UpperCamelCase
+  # ---------------------------
+  - key: readability-identifier-naming.MemberCase
+    value: CamelCase
+  - key: readability-identifier-naming.MemberPrefix
+    value: m_
+
+  - key: readability-identifier-naming.StaticMemberCase
+    value: CamelCase
+  - key: readability-identifier-naming.StaticMemberPrefix
+    value: s_
+
+  # ---------------------------
+  # Local variables / fields in structs:
+  # You want struct members lowerCamelCase, but clang-tidy can’t
+  # apply different rules to struct members vs class members perfectly.
+  # If you truly want struct members lowerCamelCase while class members CamelCase,
+  # you may need to relax one of those rules.
+  # ---------------------------

@@ -29,42 +29,6 @@ using _unique = std::unique_ptr<_ty>;
 template<typename _ty>
 using _weak = std::weak_ptr<_ty>;
 
-// ====================================================================
-
-namespace util
-{
-    inline std::string GenUID()
-    {
-
-        std::random_device rd;
-        std::mt19937 mt(rd());
-
-        const static _vec<char> alphaNum = {
-            'a','A','0','b','B','1','c','C','2',
-            'd','D','3','e','E','4','f','F','5',
-            'g','G','6','h','H','7','i','I','8',
-            'j','J','9','k','K','0','l','L','1',
-            'm','M','2','n','N','3','o','O','4',
-            'p','P','5','q','Q','6','r','R','7',
-            's','S','8','t','T','9','u','U','0',
-            'v','V','1','w','W','2','x','X','3',
-            'y','Y','4','z','Z','5'
-        };
-
-        std::uniform_int_distribution<int> uni(0, alphaNum.size());
-
-        std::string ID = "";
-
-        // UID is 15 char long
-        for (int i = 0; i < 15; i++)
-        {
-            ID.push_back(alphaNum[uni(mt)]);
-        }
-
-        return ID;
-    }
-}
-
 // Profiling
 // ====================================================================
 

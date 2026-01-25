@@ -2,9 +2,9 @@
 
 namespace anv_log
 {
-	struct File
+	struct LogFile
 	{
-		File(const std::string _path)
+		LogFile(const std::string _path)
 		{
 			m_Path = _path;
 			CheckExists();
@@ -48,7 +48,7 @@ namespace anv_log
 		m_CreationInfo = _info;
 		if (_info.fileOutput)
 		{
-			m_File = std::make_unique<File>(_info.logFilePath + _info.logFileName);
+			m_File = std::make_unique<LogFile>(_info.logFilePath + _info.logFileName);
 		}
 	}
 

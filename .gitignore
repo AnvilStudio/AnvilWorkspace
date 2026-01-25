@@ -122,3 +122,4 @@ AnvilEngine/vendor/GLFW/CMakeFiles/
 # ============================
 Setup/
 *.hint
+/Forge/TestPrj/Assets/com.anvstu.engine/Cache/ShaderCache

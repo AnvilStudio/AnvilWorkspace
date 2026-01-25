@@ -55,8 +55,8 @@ namespace anv_log
 		bool        abortOnError   = false;           // Program abort if Error is logged
 	};
 
-	struct File;
 
+	struct LogFile;
 
 	// a general pourpose logging class that 
 	// can be used anywhere within the codebase.
@@ -80,9 +80,9 @@ namespace anv_log
 		static std::string level_to_string(const LogLevel _lev);
 		static std::string color_to_string(const TermColor _col);
 
-		static inline std::shared_ptr<File> m_File = nullptr;
+		static inline std::shared_ptr<LogFile> m_File = nullptr;
 		static inline LogCreateInfo m_CreationInfo = {};
 
-		friend struct File;
+		friend struct LogFile;
 	};
 }

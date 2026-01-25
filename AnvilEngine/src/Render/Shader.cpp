@@ -35,4 +35,10 @@ namespace anv
 			break;
 		}
 	}
+
+	Shader::Shader(std::string& _name)
+		: Asset(_name)
+	{
+
+	}
 }

@@ -13,9 +13,16 @@ namespace anv
 		std::string projectName;
 		std::string projectPath;
 		std::string projectDir;
+
 		std::string version = "";
 		std::string description = "";
+
 		std::string startScene = "";
+
+		std::string engineRes = "";
+		std::string assetDir = "";
+		std::string cacheDir = "";
+
 		WindowCreateInfo WindowCreateInfo;
 	};
 
@@ -29,6 +36,7 @@ namespace anv
 		void Run();
 
 		static App* GetInstance();
+		FileSystem& GetFS();
 		_shared<Window> GetMainWindow();
 
 	public:
@@ -37,14 +45,16 @@ namespace anv
 		virtual void OnDestroy() {};
 
 	private:
-		void NavigateToProjectDir(std::string path);
-		void PopulateSettings(const std::string& prjPath);
+		void SaveStates();
+		void InitializeFileSys();
+		void PopulateSettings(const std::string prjPath);
 
 	private:
-		AppSettings   m_Settings;
+		std::unique_ptr<FileSystem> m_FileSystem;
+		AppSettings        m_Settings;
+		SceneManager       m_ScnMngr;
 		inline static App* m_This  = nullptr;
-		SceneManager    m_ScnMngr;
-		_shared<Window> m_AppWin   = nullptr;
+		_shared<Window>    m_AppWin   = nullptr;
 	};
 
 }

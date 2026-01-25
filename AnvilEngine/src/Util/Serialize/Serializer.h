@@ -66,9 +66,9 @@ namespace anv
                 std::string key = std::string(k.str());
 
                 // Enter Entities."<key>"
-                PushTomlTableForReadKeyed(tbl, key);
+                push_toml_table_for_read_keyed(tbl, key);
                 std::forward<Fn>(fn)(key);
-                PopTomlTable();
+                pop_toml_table();
             }
         }
 
@@ -81,11 +81,11 @@ namespace anv
             // Ensure parent exists (create in write)
             if (IsWriting())
             {
-                PushOrCreateTomlTable(parent);
-                PushOrCreateTomlKeyedTable(key);
+                push_or_create_toml_table(parent);
+                push_or_create_toml_keyed_table(key);
                 std::forward<Fn>(fn)();
-                PopTomlTable(); // keyed
-                PopTomlTable(); // parent
+                pop_toml_table(); // keyed
+                pop_toml_table(); // parent
                 return;
             }
 
@@ -100,7 +100,7 @@ namespace anv
 
             m_TomlStack.push_back(cnode->as_table());
             std::forward<Fn>(fn)();
-            PopTomlTable();
+            pop_toml_table();
         }
 
         // TOML-only: enter parent."<key>" and run fn (creates on write, requires existing on read)
@@ -114,11 +114,11 @@ namespace anv
             {
                 // Ensure parent table exists, then ensure keyed child exists
                 toml::table child;
-                PushOrCreateTomlTable(parent);
-                PushOrCreateTomlKeyedTable(key);
+                push_or_create_toml_table(parent);
+                push_or_create_toml_keyed_table(key);
                 std::forward<Fn>(fn)();
-                PopTomlTable(); // keyed
-                PopTomlTable(); // parent
+                pop_toml_table(); // keyed
+                pop_toml_table(); // parent
                 return true;
             }
             else
@@ -133,7 +133,7 @@ namespace anv
 
                 m_TomlStack.push_back(childNode->as_table());
                 std::forward<Fn>(fn)();
-                PopTomlTable();
+                pop_toml_table();
                 return true;
             }
         }
@@ -145,16 +145,16 @@ namespace anv
         {
             if constexpr (std::is_same_v<T, std::string>)
             {
-                FieldString(name, value);
+                field_str(name, value);
             }
             else if constexpr (std::is_arithmetic_v<T> || std::is_enum_v<T>)
             {
-                FieldArithmetic(name, value);
+                feild_arithmatic(name, value);
             }
             else if constexpr (std::is_trivially_copyable_v<T>)
             {
                 // e.g. small POD structs (careful with endianness/padding across platforms)
-                FieldTrivialBlob(name, value);
+                field_trivial_blob(name, value);
             }
             else
             {
@@ -173,31 +173,31 @@ namespace anv
                 if (IsWriting())
                 {
                     toml::table child;
-                    PushTomlTable(name, child);
+                    push_toml_table(name, child);
                     std::forward<Fn>(fn)();
-                    PopTomlTable();
+                    pop_toml_table();
                 }
                 else
                 {
-                    PushTomlTableForRead(name);
+                    push_toml_table_for_read(name);
                     std::forward<Fn>(fn)();
-                    PopTomlTable();
+                    pop_toml_table();
                 }
             }
             else
             {
                 // Binary: write object markers + name, then fields inside.
                 if (IsWriting())
-                    BinWriteObjectBegin(name);
+                    bin_write_obj_begin(name);
                 else
-                    BinReadObjectBegin(name);
+                    bin_read_obj_begin(name);
 
                 std::forward<Fn>(fn)();
 
                 if (IsWriting())
-                    BinWriteObjectEnd();
+                    bin_write_obj_end();
                 else
-                    BinReadObjectEnd();
+                    bin_read_obj_end();
             }
         }
 
@@ -207,15 +207,15 @@ namespace anv
         {
             if constexpr (std::is_same_v<T, std::string>)
             {
-                VectorString(name, v);
+                vec_string(name, v);
             }
             else if constexpr (std::is_arithmetic_v<T> || std::is_enum_v<T>)
             {
-                VectorArithmetic(name, v);
+                vec_arithmatic(name, v);
             }
             else if constexpr (std::is_trivially_copyable_v<T>)
             {
-                VectorTrivialBlob(name, v);
+                vec_trivial_blob(name, v);
             }
             else
             {
@@ -234,7 +234,7 @@ namespace anv
             }
 
             if (m_Mode == Mode::SER_MODE_TOML)
-                return TomlTryReadValue(name, out);
+                return toml_try_read_val(name, out);
 
             // Binary mode is ordered/strict in this design.
             Field(name, out);
@@ -253,7 +253,7 @@ namespace anv
 
             if (m_Mode == Mode::SER_MODE_TOML)
             {
-                if (!TomlTryReadValue(name, value))
+                if (!toml_try_read_val(name, value))
                     value = fallback;
                 return;
             }
@@ -295,7 +295,7 @@ namespace anv
             if (m_Mode == Mode::SER_MODE_TOML)
             {
                 if (IsWriting()) { Field(name, value); return; }
-                TomlReadValue(name, value); // throws if missing/mismatch
+                toml_read_value(name, value); // throws if missing/mismatch
                 return;
             }
 
@@ -312,19 +312,19 @@ namespace anv
                 if (IsWriting())
                 {
                     toml::table child;
-                    PushTomlTable(name, child);
+                    push_toml_table(name, child);
                     std::forward<Fn>(fn)();
-                    PopTomlTable();
+                    pop_toml_table();
                     return true;
                 }
                 else
                 {
-                    if (!TomlHasTable(name))
+                    if (!toml_has_table(name))
                         return false;
 
-                    PushTomlTableForRead(name);
+                    push_toml_table_for_read(name);
                     std::forward<Fn>(fn)();
-                    PopTomlTable();
+                    pop_toml_table();
                     return true;
                 }
             }
@@ -343,15 +343,15 @@ namespace anv
                 if (IsWriting())
                 {
                     toml::table child;
-                    PushTomlTable(name, child);
+                    push_toml_table(name, child);
                     std::forward<Fn>(fn)();
-                    PopTomlTable();
+                    pop_toml_table();
                 }
                 else
                 {
-                    PushTomlTableForRead(name); // throws if missing
+                    push_toml_table_for_read(name); // throws if missing
                     std::forward<Fn>(fn)();
-                    PopTomlTable();
+                    pop_toml_table();
                 }
                 return;
             }
@@ -364,19 +364,19 @@ namespace anv
         // -------------------------
         // TOML backend
         // -------------------------
-        void TomlLoad();
-        void TomlSave();
+        void toml_load();
+        void toml_save();
 
-        void PushTomlTable(const std::string& name, toml::table& childOut);
-        void PushTomlTableForRead(const std::string& name);
-        void PopTomlTable();
+        void push_toml_table(const std::string& name, toml::table& childOut);
+        void push_toml_table_for_read(const std::string& name);
+        void pop_toml_table();
 
         // Helpers used by the new APIs (TOML-only)
-        void PushOrCreateTomlTable(const std::string& name);
-        void PushOrCreateTomlKeyedTable(const std::string& key);
+        void push_or_create_toml_table(const std::string& name);
+        void push_or_create_toml_keyed_table(const std::string& key);
 
         // Push a child table for read when you already have the parent table reference
-        void PushTomlTableForReadKeyed(toml::table& parent, const std::string& key);
+        void push_toml_table_for_read_keyed(toml::table& parent, const std::string& key);
 
 
         template<typename T>
@@ -386,7 +386,7 @@ namespace anv
         }
 
         template<typename T>
-        void TomlReadValue(const std::string& name, T& out)
+        void toml_read_value(const std::string& name, T& out)
         {
             auto* node = (*m_TomlStack.back()).get(name);
             if (!node)
@@ -407,10 +407,10 @@ namespace anv
             }
         }
 
-        bool TomlHasTable(const std::string& name) const;
+        bool toml_has_table(const std::string& name) const;
 
         template<typename T>
-        bool TomlTryReadValue(const std::string& name, T& out)
+        bool toml_try_read_val(const std::string& name, T& out)
         {
             auto* node = (*m_TomlStack.back()).get(name);
             if (!node)
@@ -454,31 +454,31 @@ namespace anv
             VecString = 32
         };
 
-        void BinLoad();
-        void BinSave();
+        void bin_load();
+        void bin_save();
 
-        void BinWriteObjectBegin(const std::string& name);
-        void BinWriteObjectEnd();
-        void BinReadObjectBegin(const std::string& expectedName);
-        void BinReadObjectEnd();
+        void bin_write_obj_begin(const std::string& name);
+        void bin_write_obj_end();
+        void bin_read_obj_begin(const std::string& expectedName);
+        void bin_read_obj_end();
 
-        void BinWriteName(const std::string& name);
-        std::string BinReadName();
+        void bin_write_name(const std::string& name);
+        std::string bin_read_name();
 
-        void BinWriteTag(BinTag t);
-        BinTag BinReadTag();
+        void bin_write_tag(BinTag t);
+        BinTag bin_read_tag();
 
-        void BinWriteBytes(const void* data, size_t n);
-        void BinReadBytes(void* out, size_t n);
+        void bin_write_bytes(const void* data, size_t n);
+        void bin_read_bytes(void* out, size_t n);
 
-        void BinWriteU64(uint64_t v);
-        uint64_t BinReadU64();
+        void bin_write_u64(uint64_t v);
+        uint64_t bin_read_u64();
 
         // -------------------------
         // Field implementations
         // -------------------------
         template<typename T>
-        void FieldArithmetic(const std::string& name, T& value)
+        void feild_arithmatic(const std::string& name, T& value)
         {
             if (m_Mode == Mode::SER_MODE_TOML)
             {
@@ -492,9 +492,9 @@ namespace anv
                 else
                 {
                     if constexpr (std::is_enum_v<T>)
-                        TomlReadValue(name, value);
+                        toml_read_value(name, value);
                     else
-                        TomlReadValue(name, value);
+                        toml_read_value(name, value);
                 }
                 return;
             }
@@ -502,107 +502,107 @@ namespace anv
             // Binary
             if (IsWriting())
             {
-                BinWriteName(name);
+                bin_write_name(name);
 
                 if constexpr (std::is_same_v<T, bool>)
                 {
-                    BinWriteTag(BinTag::Bool);
+                    bin_write_tag(BinTag::Bool);
                     uint8_t b = value ? 1 : 0;
-                    BinWriteBytes(&b, 1);
+                    bin_write_bytes(&b, 1);
                 }
                 else if constexpr (std::is_floating_point_v<T>)
                 {
-                    BinWriteTag(BinTag::F64);
+                    bin_write_tag(BinTag::F64);
                     double d = static_cast<double>(value);
-                    BinWriteBytes(&d, sizeof(double));
+                    bin_write_bytes(&d, sizeof(double));
                 }
                 else if constexpr (std::is_signed_v<T>)
                 {
-                    BinWriteTag(BinTag::I64);
+                    bin_write_tag(BinTag::I64);
                     int64_t i = static_cast<int64_t>(value);
-                    BinWriteBytes(&i, sizeof(int64_t));
+                    bin_write_bytes(&i, sizeof(int64_t));
                 }
                 else
                 {
-                    BinWriteTag(BinTag::U64);
+                    bin_write_tag(BinTag::U64);
                     uint64_t u = static_cast<uint64_t>(value);
-                    BinWriteBytes(&u, sizeof(uint64_t));
+                    bin_write_bytes(&u, sizeof(uint64_t));
                 }
             }
             else
             {
                 // name is in stream; validate ordering by matching the expected name
-                const std::string got = BinReadName();
+                const std::string got = bin_read_name();
                 if (got != name)
                     ANV_LOG_ERROR("Binary field name mismatch. expected=" + name + " got=" + got);
 
-                const BinTag tag = BinReadTag();
+                const BinTag tag = bin_read_tag();
 
                 if constexpr (std::is_same_v<T, bool>)
                 {
                     if (tag != BinTag::Bool) ANV_LOG_ERROR("Binary type mismatch for: " + name);
                     uint8_t b{};
-                    BinReadBytes(&b, 1);
+                    bin_read_bytes(&b, 1);
                     value = (b != 0);
                 }
                 else if constexpr (std::is_floating_point_v<T>)
                 {
                     if (tag != BinTag::F64) ANV_LOG_ERROR("Binary type mismatch for: " + name);
                     double d{};
-                    BinReadBytes(&d, sizeof(double));
+                    bin_read_bytes(&d, sizeof(double));
                     value = static_cast<T>(d);
                 }
                 else if constexpr (std::is_signed_v<T>)
                 {
                     if (tag != BinTag::I64) ANV_LOG_ERROR("Binary type mismatch for: " + name);
                     int64_t i{};
-                    BinReadBytes(&i, sizeof(int64_t));
+                    bin_read_bytes(&i, sizeof(int64_t));
                     value = static_cast<T>(i);
                 }
                 else
                 {
                     if (tag != BinTag::U64) ANV_LOG_ERROR("Binary type mismatch for: " + name);
                     uint64_t u{};
-                    BinReadBytes(&u, sizeof(uint64_t));
+                    bin_read_bytes(&u, sizeof(uint64_t));
                     value = static_cast<T>(u);
                 }
             }
         }
 
-        void FieldString(const std::string& name, std::string& value);
+        void field_str(const std::string& name, std::string& value);
         template<typename T>
-        void FieldTrivialBlob(const std::string& name, T& value)
+        void field_trivial_blob(const std::string& name, T& value)
         {
             if (m_Mode == Mode::SER_MODE_TOML)
                 ANV_LOG_ERROR("TOML cannot store arbitrary POD blobs directly: " + name + " (use Object/Fields instead)");
 
             if (IsWriting())
             {
-                BinWriteName(name);
-                BinWriteTag(BinTag::Blob);
-                BinWriteU64(static_cast<uint64_t>(sizeof(T)));
-                BinWriteBytes(&value, sizeof(T));
+                bin_write_name(name);
+                bin_write_tag(BinTag::Blob);
+                bin_write_u64(static_cast<uint64_t>(sizeof(T)));
+                bin_write_bytes(&value, sizeof(T));
             }
             else
             {
-                const std::string got = BinReadName();
+                const std::string got = bin_read_name();
                 if (got != name)
                     ANV_LOG_ERROR("Binary field name mismatch. expected=" + name + " got=" + got);
 
-                const BinTag tag = BinReadTag();
+                const BinTag tag = bin_read_tag();
                 if (tag != BinTag::Blob)
                     ANV_LOG_ERROR("Binary type mismatch for: " + name);
 
-                const uint64_t sz = BinReadU64();
+                const uint64_t sz = bin_read_u64();
                 if (sz != sizeof(T))
                     ANV_LOG_ERROR("Binary blob size mismatch for: " + name);
 
-                BinReadBytes(&value, sizeof(T));
+                bin_read_bytes(&value, sizeof(T));
             }
         }
 
         template<typename T>
-        void VectorArithmetic(const std::string& name, _vec<T>& v)
+        void vec_arithmatic(const std::string& name, _vec<T>& v)
         {
             if (m_Mode == Mode::SER_MODE_TOML)
             {
@@ -652,38 +652,38 @@ namespace anv
             // Binary: write as VecBlob of element bytes (works for arithmetic/enum)
             if (IsWriting())
             {
-                BinWriteName(name);
-                BinWriteTag(BinTag::VecBlob);
-                BinWriteU64(static_cast<uint64_t>(sizeof(T)));
-                BinWriteU64(static_cast<uint64_t>(v.size()));
+                bin_write_name(name);
+                bin_write_tag(BinTag::VecBlob);
+                bin_write_u64(static_cast<uint64_t>(sizeof(T)));
+                bin_write_u64(static_cast<uint64_t>(v.size()));
                 if (!v.empty())
-                    BinWriteBytes(v.data(), sizeof(T) * v.size());
+                    bin_write_bytes(v.data(), sizeof(T) * v.size());
             }
             else
             {
-                const std::string got = BinReadName();
+                const std::string got = bin_read_name();
                 if (got != name)
                     ANV_LOG_ERROR("Binary vector name mismatch. expected=" + name + " got=" + got);
 
-                const BinTag tag = BinReadTag();
+                const BinTag tag = bin_read_tag();
                 if (tag != BinTag::VecBlob)
                     ANV_LOG_ERROR("Binary type mismatch for vector: " + name);
 
-                const uint64_t elemSz = BinReadU64();
+                const uint64_t elemSz = bin_read_u64();
                 if (elemSz != sizeof(T))
                     ANV_LOG_ERROR("Binary vector element size mismatch for: " + name);
 
-                const uint64_t count = BinReadU64();
+                const uint64_t count = bin_read_u64();
                 v.resize(static_cast<size_t>(count));
                 if (count > 0)
-                    BinReadBytes(v.data(), sizeof(T) * static_cast<size_t>(count));
+                    bin_read_bytes(v.data(), sizeof(T) * static_cast<size_t>(count));
             }
         }
 
-        void VectorString(const std::string& name, _vec<std::string>& v);
+        void vec_string(const std::string& name, _vec<std::string>& v);
 
         template<typename T>
-        void VectorTrivialBlob(const std::string& name, _vec<T>& v)
+        void vec_trivial_blob(const std::string& name, _vec<T>& v)
         {
             // Binary only; for TOML, you should represent as Object/Fields or specific arrays.
             if (m_Mode == Mode::SER_MODE_TOML)
@@ -691,31 +691,31 @@ namespace anv
 
             if (IsWriting())
             {
-                BinWriteName(name);
-                BinWriteTag(BinTag::VecBlob);
-                BinWriteU64(static_cast<uint64_t>(sizeof(T)));
-                BinWriteU64(static_cast<uint64_t>(v.size()));
+                bin_write_name(name);
+                bin_write_tag(BinTag::VecBlob);
+                bin_write_u64(static_cast<uint64_t>(sizeof(T)));
+                bin_write_u64(static_cast<uint64_t>(v.size()));
                 if (!v.empty())
-                    BinWriteBytes(v.data(), sizeof(T) * v.size());
+                    bin_write_bytes(v.data(), sizeof(T) * v.size());
             }
             else
             {
-                const std::string got = BinReadName();
+                const std::string got = bin_read_name();
                 if (got != name)
                     ANV_LOG_ERROR("Binary vector name mismatch. expected=" + name + " got=" + got);
 
-                const BinTag tag = BinReadTag();
+                const BinTag tag = bin_read_tag();
                 if (tag != BinTag::VecBlob)
                     ANV_LOG_ERROR("Binary type mismatch for vector: " + name);
 
-                const uint64_t elemSz = BinReadU64();
+                const uint64_t elemSz = bin_read_u64();
                 if (elemSz != sizeof(T))
                     ANV_LOG_ERROR("Binary vector element size mismatch for: " + name);
 
-                const uint64_t count = BinReadU64();
+                const uint64_t count = bin_read_u64();
                 v.resize(static_cast<size_t>(count));
                 if (count > 0)
-                    BinReadBytes(v.data(), sizeof(T) * static_cast<size_t>(count));
+                    bin_read_bytes(v.data(), sizeof(T) * static_cast<size_t>(count));
             }
         }
 

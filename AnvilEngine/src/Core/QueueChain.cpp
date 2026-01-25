@@ -1,4 +1,5 @@
 #include "QueueChain.h"
+#include "../Util/UMacros.h"
 #include <iostream>
 
 namespace anv
@@ -35,7 +36,7 @@ void QueueChain::WriteToBack(const std::function<void()>& task) {
 
 void QueueChain::Swap() {
     if (!m_Back->empty()) {
-        std::swap(m_Front, m_Back); // 🔥 Swap buffer pointers
+        std::swap(m_Front, m_Back); // Swap buffer pointers
         m_WorkAvailable = true;
         m_ProcComplete = false; // Mark processing not yet done
     }
@@ -63,9 +64,9 @@ void QueueChain::ProcessFrontQueue() {
             try {
                 if (task) task();
             } catch (const std::exception& ex) {
-                std::cerr << "[QueueChain] Task exception: " << ex.what() << std::endl;
+                ANV_LOG_ERROR("[QueueChain] Task exception: %s", ex.what())
             } catch (...) {
-                std::cerr << "[QueueChain] Task threw unknown exception!" << std::endl;
+                ANV_LOG_ERROR("[QueueChain] Task threw unknown exception!")
             }
         }
 

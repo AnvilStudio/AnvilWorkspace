@@ -9,6 +9,8 @@
 
 namespace anv
 {
+	static uint32_t kShaderCacheMagic = 0x414E5653; // 'ANVS'
+	static uint32_t kShaderCacheVersion = 1;
 
 	class VulkanShader
 		: public Shader
