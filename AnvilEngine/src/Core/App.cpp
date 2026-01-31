@@ -122,6 +122,8 @@ namespace anv {
 
 			// OnUpdate should hapen after input polling
 			OnUpdate();
+
+			Renderer2D::DrawFrame();
 		}
 	}
 
