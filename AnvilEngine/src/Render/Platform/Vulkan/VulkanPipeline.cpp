@@ -179,7 +179,7 @@ namespace anv
 
 	void VulkanPipeline::SetRenderPass(const Ref<RenderPass> _rps)
     {
-		m_RenderPass = _rps.As<VulkanRenderPass>()->GetRaw();
+		m_RenderPass = _rps.As<VulkanRenderPass>()->Get();
     }
 
 	void VulkanPipeline::Build()
@@ -219,6 +219,6 @@ namespace anv
 
 			vkCmdBindPipeline(cmd.As<VulkanCommandBuffer>()->Get(),
 				VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
-		});
+			});
 	}
 }

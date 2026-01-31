@@ -26,7 +26,7 @@ namespace anv
             Write
         };
 
-        Serializer(std::string path, Mode mode, Direction dir);
+        Serializer(std::string _path, Mode _mode, Direction _dir);
         ~Serializer();
 
         // For Write: flush to disk. For Read: no-op.
@@ -44,7 +44,7 @@ namespace anv
         // TOML-only: iterate immediate child tables under `parent`.
         // Example: ForEachTable("Entities", [&](const std::string& id){ ... });
         template<typename Fn>
-        void ForEachTable(const std::string& parent, Fn&& fn)
+        void ForEachTable(const std::string & _parent, Fn && _fn)
         {
             if (m_Mode != Mode::SER_MODE_TOML)
                 throw std::runtime_error("ForEachTable is TOML-only");
@@ -52,7 +52,7 @@ namespace anv
             if (IsWriting())
                 throw std::runtime_error("ForEachTable is for reading (iteration)");
 
-            auto* node = (*m_TomlStack.back()).get(parent);
+            auto* node = (*m_TomlStack.back()).get(_parent);
             if (!node || !node->is_table())
                 return; // missing is OK
 
@@ -67,13 +67,13 @@ namespace anv
 
                 // Enter Entities."<key>"
                 push_toml_table_for_read_keyed(tbl, key);
-                std::forward<Fn>(fn)(key);
+                std::forward<Fn>(_fn)(key);
                 pop_toml_table();
             }
         }
 
         template<typename Fn>
-        void ObjectKeyed(const std::string& parent, const std::string& key, Fn&& fn)
+        void ObjectKeyed(const std::string& _parent, const std::string& _key, Fn&& _fn)
         {
             if (m_Mode != Mode::SER_MODE_TOML)
                 throw std::runtime_error("ObjectKeyed is TOML-only");
@@ -81,31 +81,31 @@ namespace anv
             // Ensure parent exists (create in write)
             if (IsWriting())
             {
-                push_or_create_toml_table(parent);
-                push_or_create_toml_keyed_table(key);
-                std::forward<Fn>(fn)();
+                push_or_create_toml_table(_parent);
+                push_or_create_toml_keyed_table(_key);
+                std::forward<Fn>(_fn)();
                 pop_toml_table(); // keyed
                 pop_toml_table(); // parent
                 return;
             }
 
             // Read path
-            auto* pnode = (*m_TomlStack.back()).get(parent);
+            auto* pnode = (*m_TomlStack.back()).get(_parent);
             if (!pnode || !pnode->is_table())
-                throw std::runtime_error("Missing table: " + parent);
+                throw std::runtime_error("Missing table: " + _parent);
 
-            auto* cnode = pnode->as_table()->get(key);
+            auto* cnode = pnode->as_table()->get(_key);
             if (!cnode || !cnode->is_table())
-                throw std::runtime_error("Missing table: " + parent + "." + key);
+                throw std::runtime_error("Missing table: " + _parent + "." + _key);
 
             m_TomlStack.push_back(cnode->as_table());
-            std::forward<Fn>(fn)();
+            std::forward<Fn>(_fn)();
             pop_toml_table();
         }
 
         // TOML-only: enter parent."<key>" and run fn (creates on write, requires existing on read)
         template<typename Fn>
-        bool ObjectKeyedIf(const std::string& parent, const std::string& key, Fn&& fn)
+        bool ObjectKeyedIf(const std::string& _parent, const std::string& _key, Fn&& _fn)
         {
             if (m_Mode != Mode::SER_MODE_TOML)
                 throw std::runtime_error("ObjectKeyedIf is TOML-only");
@@ -114,25 +114,25 @@ namespace anv
             {
                 // Ensure parent table exists, then ensure keyed child exists
                 toml::table child;
-                push_or_create_toml_table(parent);
-                push_or_create_toml_keyed_table(key);
-                std::forward<Fn>(fn)();
+                push_or_create_toml_table(_parent);
+                push_or_create_toml_keyed_table(_key);
+                std::forward<Fn>(_fn)();
                 pop_toml_table(); // keyed
                 pop_toml_table(); // parent
                 return true;
             }
             else
             {
-                auto* pnode = (*m_TomlStack.back()).get(parent);
+                auto* pnode = (*m_TomlStack.back()).get(_parent);
                 if (!pnode || !pnode->is_table())
                     return false;
 
-                auto* childNode = pnode->as_table()->get(key);
+                auto* childNode = pnode->as_table()->get(_key);
                 if (!childNode || !childNode->is_table())
                     return false;
 
                 m_TomlStack.push_back(childNode->as_table());
-                std::forward<Fn>(fn)();
+                std::forward<Fn>(_fn)();
                 pop_toml_table();
                 return true;
             }
@@ -141,20 +141,20 @@ namespace anv
 
         // Primitive + string + trivially copyable structs
         template<typename T>
-        void Field(const std::string& name, T& value)
+        void Field(const std::string & _name, T & _value)
         {
             if constexpr (std::is_same_v<T, std::string>)
             {
-                field_str(name, value);
+                field_str(_name, _value);
             }
             else if constexpr (std::is_arithmetic_v<T> || std::is_enum_v<T>)
             {
-                feild_arithmatic(name, value);
+                feild_arithmatic(_name, _value);
             }
             else if constexpr (std::is_trivially_copyable_v<T>)
             {
                 // e.g. small POD structs (careful with endianness/padding across platforms)
-                field_trivial_blob(name, value);
+                field_trivial_blob(_name, _value);
             }
             else
             {
@@ -166,21 +166,21 @@ namespace anv
         // Usage:
         //   ser.Object("Transform", [&] { ser.Field("X", t.x); ... });
         template<typename Fn>
-        void Object(const std::string& name, Fn&& fn)
+        void Object(const std::string & _name, Fn && _fn)
         {
             if (m_Mode == Mode::SER_MODE_TOML)
             {
                 if (IsWriting())
                 {
                     toml::table child;
-                    push_toml_table(name, child);
-                    std::forward<Fn>(fn)();
+                    push_toml_table(_name, child);
+                    std::forward<Fn>(_fn)();
                     pop_toml_table();
                 }
                 else
                 {
-                    push_toml_table_for_read(name);
-                    std::forward<Fn>(fn)();
+                    push_toml_table_for_read(_name);
+                    std::forward<Fn>(_fn)();
                     pop_toml_table();
                 }
             }
@@ -188,11 +188,11 @@ namespace anv
             {
                 // Binary: write object markers + name, then fields inside.
                 if (IsWriting())
-                    bin_write_obj_begin(name);
+                    bin_write_obj_begin(_name);
                 else
-                    bin_read_obj_begin(name);
+                    bin_read_obj_begin(_name);
 
-                std::forward<Fn>(fn)();
+                std::forward<Fn>(_fn)();
 
                 if (IsWriting())
                     bin_write_obj_end();
@@ -203,19 +203,19 @@ namespace anv
 
         // Vector of arithmetic/enum/trivially-copyable elements
         template<typename T>
-        void Vector(const std::string& name, _vec<T>& v)
+        void Vector(const std::string& _name, _vec<T>& _v)
         {
             if constexpr (std::is_same_v<T, std::string>)
             {
-                vec_string(name, v);
+                vec_string(_name, _v);
             }
             else if constexpr (std::is_arithmetic_v<T> || std::is_enum_v<T>)
             {
-                vec_arithmatic(name, v);
+                vec_arithmatic(_name, _v);
             }
             else if constexpr (std::is_trivially_copyable_v<T>)
             {
-                vec_trivial_blob(name, v);
+                vec_trivial_blob(_name, _v);
             }
             else
             {
@@ -225,138 +225,136 @@ namespace anv
 
         // Non-throwing key read. Returns false if missing or wrong type.
         template<typename T>
-        bool TryField(const std::string& name, T& out)
+        bool TryField(const std::string& _name, T& _out)
         {
             if (IsWriting())
             {
-                Field(name, out);
+                Field(_name, _out);
                 return true;
             }
 
             if (m_Mode == Mode::SER_MODE_TOML)
-                return toml_try_read_val(name, out);
+                return toml_try_read_val(_name, _out);
 
             // Binary mode is ordered/strict in this design.
-            Field(name, out);
+            Field(_name, _out);
             return true;
         }
 
         // Reads with fallback if missing/wrong type (TOML only). Mirrors value_or behavior.
         template<typename T>
-        void FieldOr(const std::string& name, T& value, const T& fallback)
+        void FieldOr(const std::string& _name, T& _value, const T& _fallback)
         {
             if (IsWriting())
             {
-                Field(name, value);
+                Field(_name, _value);
                 return;
             }
 
             if (m_Mode == Mode::SER_MODE_TOML)
             {
-                if (!toml_try_read_val(name, value))
-                    value = fallback;
+                if (!toml_try_read_val(_name, _value))
+                    _value = _fallback;
                 return;
             }
 
             // Binary: strict ordered stream
-            Field(name, value);
+            Field(_name, _value);
         }
 
         template<typename Enum>
-        void EnumFieldOr(const std::string& name, Enum& value,
-            Enum fallback, const char* (*toStr)(Enum),
-            bool (*fromStr)(const std::string&, Enum&)
-        )
+        void EnumFieldOr(const std::string& _name, Enum& _value, Enum _fallback, const char* (*toStr)(Enum),
+            bool (*fromStr)(const std::string&, Enum&))
         {
             static_assert(std::is_enum_v<Enum>);
 
             if (IsWriting())
             {
-                std::string s = toStr(value);
-                Field(name, s);
+                std::string s = toStr(_value);
+                Field(_name, s);
                 return;
             }
 
             std::string s;
-            if (!TryField(name, s))
+            if (!TryField(_name, s))
             {
-                value = fallback;
+                _value = _fallback;
                 return;
             }
 
-            if (!fromStr(s, value))
-                value = fallback;
+            if (!fromStr(s, _value))
+                _value = _fallback;
         }
 
         // Strict versions (will throw on missing/wrong type in TOML)
         template<typename T>
-        void FieldStrict(const std::string& name, T& value)
+        void FieldStrict(const std::string& _name, T& _value)
         {
             if (m_Mode == Mode::SER_MODE_TOML)
             {
-                if (IsWriting()) { Field(name, value); return; }
-                toml_read_value(name, value); // throws if missing/mismatch
+                if (IsWriting()) { Field(_name, _value); return; }
+                toml_read_value(_name, _value); // throws if missing/mismatch
                 return;
             }
 
-            Field(name, value);
+            Field(_name, _value);
         }
 
         // Optional object/table: only enters if table exists in TOML read.
         // In write mode, always creates the table.
         template<typename Fn>
-        bool ObjectIf(const std::string& name, Fn&& fn)
+        bool ObjectIf(const std::string& _name, Fn&& _fn)
         {
             if (m_Mode == Mode::SER_MODE_TOML)
             {
                 if (IsWriting())
                 {
                     toml::table child;
-                    push_toml_table(name, child);
-                    std::forward<Fn>(fn)();
+                    push_toml_table(_name, child);
+                    std::forward<Fn>(_fn)();
                     pop_toml_table();
                     return true;
                 }
                 else
                 {
-                    if (!toml_has_table(name))
+                    if (!toml_has_table(_name))
                         return false;
 
-                    push_toml_table_for_read(name);
-                    std::forward<Fn>(fn)();
+                    push_toml_table_for_read(_name);
+                    std::forward<Fn>(_fn)();
                     pop_toml_table();
                     return true;
                 }
             }
 
             // Binary: objects are strict/ordered here
-            Object(name, std::forward<Fn>(fn));
+            Object(_name, std::forward<Fn>(_fn));
             return true;
         }
 
         // Strict object/table: throws on missing table in TOML read.
         template<typename Fn>
-        void ObjectStrict(const std::string& name, Fn&& fn)
+        void ObjectStrict(const std::string& _name, Fn&& _fn)
         {
             if (m_Mode == Mode::SER_MODE_TOML)
             {
                 if (IsWriting())
                 {
                     toml::table child;
-                    push_toml_table(name, child);
-                    std::forward<Fn>(fn)();
+                    push_toml_table(_name, child);
+                    std::forward<Fn>(_fn)();
                     pop_toml_table();
                 }
                 else
                 {
-                    push_toml_table_for_read(name); // throws if missing
-                    std::forward<Fn>(fn)();
+                    push_toml_table_for_read(_name); // throws if missing
+                    std::forward<Fn>(_fn)();
                     pop_toml_table();
                 }
                 return;
             }
 
-            Object(name, std::forward<Fn>(fn));
+            Object(_name, std::forward<Fn>(_fn));
         }
 
     private:

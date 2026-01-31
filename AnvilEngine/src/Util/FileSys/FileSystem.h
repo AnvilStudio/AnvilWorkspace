@@ -21,7 +21,7 @@ namespace anv
     class File final : public RefCounter
     {
     public:
-        explicit File(std::string path);
+        explicit File(std::string _path);
         ~File();
 
         File(const File&) = delete;
@@ -83,10 +83,10 @@ namespace anv
             return out;
         }
 
-        void Write(const std::string& str) const;
+        void Write(const std::string & _str) const;
 
         template<typename T>
-        void WriteAs(const _vec<T>& data) const
+        void WriteAs(const _vec<T>& _data) const
         {
             static_assert(std::is_trivial_v<T>, "WriteAs<T> requires T to be trivial (POD-like).");
 
@@ -97,12 +97,12 @@ namespace anv
                 return;
             }
 
-            if (!data.empty())
+            if (!_data.empty())
             {
-                const size_t written = std::fwrite(data.data(), sizeof(T), data.size(), f);
+                const size_t written = std::fwrite(_data.data(), sizeof(T), _data.size(), f);
                 std::fclose(f);
 
-                if (written != data.size())
+                if (written != _data.size())
                     ANV_LOG_ERROR("File::WriteAs - failed to write entire buffer: " + m_Path);
             }
             else
@@ -115,7 +115,7 @@ namespace anv
         bool IsDeleteRequested() const { return m_DeleteRequested.load(std::memory_order_acquire); }
 
     private:
-        static size_t GetFileSizeBytes(FILE* f);
+        static size_t GetFileSizeBytes(FILE* _f);
 
     private:
         std::string m_Path;
@@ -126,59 +126,57 @@ namespace anv
     {
     public:
         // Root directory for this sandbox FS (will be created if missing)
-        explicit FileSystem(std::string rootDir);
+        explicit FileSystem(std::string _rootDir);
         ~FileSystem();
 
         FileSystem(const FileSystem&) = delete;
         FileSystem& operator=(const FileSystem&) = delete;
 
         // Sets sandbox root. Resets working dir to root and clears dir stack.
-        bool SetRoot(const std::string& newRoot);
+        bool SetRoot(const std::string & _newRoot);
 
         // Working-directory helpers (logical, NOT OS CWD)
         std::string GetCwd() const;
-        bool SwitchDir(const std::string& dirRelOrAbs); // relative to current working dir
+        bool SwitchDir(const std::string & _dirRelOrAbs); // relative to current working dir
         void PushDir();
         bool PopDir();
 
-        bool CreateDir(const std::string& mkdirRelOrAbs);
-        bool DeleteDir(const std::string& dltRelOrAbs);
+        bool CreateDir(const std::string & _mkdirRelOrAbs);
+        bool DeleteDir(const std::string & _dltRelOrAbs);
 
-        Ref<File> CreateFile(const std::string& mkfileRelOrAbs);
-        bool DeleteFile(Ref<File>& dltfile); // request delete
+        Ref<File> CreateFile(const std::string & _mkfileRelOrAbs);
+        bool DeleteFile(Ref<File>& _dltfile); // request delete
 
-        void CreateKeyDir(const std::string& key, const std::string& dirRelOrAbs);
-        std::string AtKeyDir(const std::string& key);
-        bool MoveToKeyDir(const std::string& key);
+        void CreateKeyDir(const std::string & _key, const std::string & _dirRelOrAbs);
+        std::string AtKeyDir(const std::string & _key);
+        bool MoveToKeyDir(const std::string & _key);
 
         // If you don’t want a background thread, you can stop it and call this manually.
         void PumpDeletes();
 
     private:
         // Resolve a path against working directory, normalize, and enforce sandbox.
-        bool ResolveSandboxed_(const std::string& relOrAbs, std::filesystem::path& outAbs) const;
-        bool IsWithinRoot_(const std::filesystem::path& abs) const;
+        bool ResolveSandboxed_(const std::string & _relOrAbs, std::filesystem::path & _outAbs) const;
+        bool IsWithinRoot_(const std::filesystem::path & _abs) const;
 
-        void EnqueueDelete_(const Ref<File>& file);
+        void EnqueueDelete_(const Ref<File>& _file);
         void DeleteWorkerLoop_();
 
     private:
         std::unordered_map<std::string, std::string> m_KeyDirs;
-
-        std::filesystem::path m_RootDir; // sandbox root
-        std::filesystem::path m_WorkDir; // logical cwd inside root
-        _vec<std::filesystem::path> m_DirStack;
-
+        std::filesystem::path                                       m_RootDir; // sandbox root
+        std::filesystem::path                                       m_WorkDir; // logical cwd inside root
+        _vec<std::filesystem::path>                           m_DirStack;
         // Registry: FileSystem holds 1 persistent ref so we can safely decide "no external refs"
-        mutable std::mutex m_RegistryMutex;
+        mutable std::mutex                                        m_RegistryMutex;
         std::unordered_map<std::string, Ref<File>> m_FilesByAbsPath;
 
         // Delete queue
-        std::mutex m_DeleteMutex;
-        std::condition_variable m_DeleteCv;
+        std::mutex                     m_DeleteMutex;
+        std::condition_variable   m_DeleteCv;
         std::deque<Ref<File>> m_DeleteQueue;
 
         std::atomic<bool> m_StopWorker{ false };
-        std::thread m_DeleteWorker;
+        std::thread             m_DeleteWorker;
     };
 }

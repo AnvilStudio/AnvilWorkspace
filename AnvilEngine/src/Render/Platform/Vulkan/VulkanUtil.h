@@ -1,20 +1,20 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////
-//  VulkanUtil.h                                                                             //
-//  Utility functions and structures for Vulkan API abstraction and validation.              //
-//                                                                                           //
-//  This header file provides a set of utility functions, structures, and macros             //
-//  to simplify the use of Vulkan API. It includes:                                          //
-//  - Validation layer setup and debug utilities.                                            //
-//  - Swapchain support queries and configuration.                                           //
-//  - Vulkan resource conversion utilities for render passes and image formats.              //
-//  - Macros for error checking and logging Vulkan API results.                              //
-//                                                                                           //
-//  Key Features:                                                                            //
-//  - Simplifies validation layer integration using debug callbacks.                         //
-//  - Provides helper functions for selecting suitable physical devices, queue families,     //
-//    and swapchain configurations.                                                          //
-//  - Converts abstract engine resources (e.g., `RenderPass::Attachment`, `Image2D::Format`) //
-//    into Vulkan-compatible structures.                                                     //
+//  VulkanUtil.h                                                                             
+//  Utility functions and structures for Vulkan API abstraction and validation.              
+//                                                                                           
+//  This header file provides a set of utility functions, structures, and macros             
+//  to simplify the use of Vulkan API. It includes:                                          
+//  - Validation layer setup and debug utilities.                                            
+//  - Swapchain support queries and configuration.                                           
+//  - Vulkan resource conversion utilities for render passes and image formats.              
+//  - Macros for error checking and logging Vulkan API results.                              
+//                                                                                           
+//  Key Features:                                                                            
+//  - Simplifies validation layer integration using debug callbacks.                         
+//  - Provides helper functions for selecting suitable physical devices, queue families,     
+//    and swapchain configurations.                                                          
+//  - Converts abstract engine resources (e.g., `RenderPass::Attachment`, `Image2D::Format`) 
+//    into Vulkan-compatible structures.                                                  
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once

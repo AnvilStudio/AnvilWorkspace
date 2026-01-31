@@ -26,7 +26,7 @@ namespace anv
         void Start();                  // starts thread
         void Stop();
 
-        void WriteToBack(Task task);
+        void WriteToBack(Task _task);
         void Swap();
         void WaitForProcessComplete();
 
@@ -40,12 +40,12 @@ namespace anv
         void Flush();
 
         // Provide the active command buffer used by the processing thread
-        void SetActiveCommandBuffer(Ref<CommandBuffer> cmd);
-        void SetActiveFrame(const RenderFrameContext& f);
-        void SetActiveFrameSyncIndex(uint32_t idx);
+        void SetActiveCommandBuffer(Ref<CommandBuffer> _cmd);
+        void SetActiveFrame(const RenderFrameContext & _f);
+        void SetActiveFrameSyncIndex(uint32_t _idx);
 
         // Submit hook (VulkanRenderAPI sets this each frame)
-        void SetSubmitFn(SubmitFn fn);
+        void SetSubmitFn(SubmitFn _fn);
 
     private:
         std::unique_ptr<CmdQueue> m_Front;

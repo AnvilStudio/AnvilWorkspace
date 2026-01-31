@@ -25,15 +25,16 @@ namespace  anv
 
 		virtual ~Swapchain()           = default;
 		virtual SwapExtent GetExtent() = 0;
-		// Recreate the swapchain pretty much
+
+		// Recreate the swapchain, Images, and Image views
 		// Call on window resize
-		virtual void Reset() = 0;
+		virtual void ResetSwap() = 0;
 
 		_vec<Ref<ImageView>> GetImageViews() { return m_ImageViews; };
 
 	protected:
-		_shared<Context>     m_Context;
+		_shared<Context>         m_Context;
 		_vec<Ref<ImageView>> m_ImageViews;
-		_vec<Ref<Image2D>>   m_Images;
+		_vec<Ref<Image2D>>    m_Images;
 	};
 }

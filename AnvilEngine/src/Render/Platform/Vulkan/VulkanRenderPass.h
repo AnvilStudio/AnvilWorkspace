@@ -18,7 +18,7 @@ namespace anv
 		void End()	 override;
 		void Build() override;
 
-		VkRenderPass GetRaw();
+		VkRenderPass Get();
 
 		_vec<VkAttachmentDescription> GetAttachments();
 		void SetFramebuffers(_vec<Ref<Framebuffer>> fbs) { m_Framebuffers = fbs; }

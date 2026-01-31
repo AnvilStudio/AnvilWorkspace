@@ -29,8 +29,7 @@ namespace anv
                 m_Context,
                 Scene::Context::CTX_3D,
                 SceneContextToString,
-                SceneContextFromString
-            );
+                SceneContextFromString);
         });
 
         // Entities
@@ -39,7 +38,7 @@ namespace anv
         {
             ser.ObjectKeyed("Entities", id.uuid, [&] {
                 ser.Field("Name", tag.tag);
-            });
+                });
         }
 
         ser.Close();

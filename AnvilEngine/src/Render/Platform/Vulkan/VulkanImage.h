@@ -11,12 +11,12 @@ namespace anv
 	{
 	public:
 
-		VulkanImageView(_shared<Context> _dv, VkImage _img, VkFormat _fmt);
+		VulkanImageView(_shared<Context> _dv, VkFormat _fmt, VkImage _img = nullptr);
 		~VulkanImageView();
 
 		void OnDestroy() override;
 
-		VkImageView& GetRaw() { return m_ImgView; }
+		VkImageView& Get() { return m_ImgView; }
 
 	private:
 		VkImageView   m_ImgView;
@@ -31,10 +31,10 @@ namespace anv
 		VulkanImage2D(_shared<Context> _ctx, VkImage _img, Format _fmt);
 		~VulkanImage2D();
 
-
+		// Builds an image view for the VkImage
 		Ref<ImageView> MakeImageView() override;
 
-		VkImage GetRaw() { return m_Image; }
+		VkImage Get() { return m_Image; }
 		void SetImage(VkImage _img) { m_Image = _img; };
 
 	private:

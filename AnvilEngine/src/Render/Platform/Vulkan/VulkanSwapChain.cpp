@@ -28,7 +28,7 @@ namespace anv
 	}
 
 
-	void VulkanSwapchain::Reset()
+	void VulkanSwapchain::ResetSwap()
 	{
 		ANV_PROFILE_SCOPE();
 
@@ -144,7 +144,7 @@ namespace anv
 		m_Extent = extent;
 	}
 
-	uint32_t VulkanSwapchain::AcquireNextImage(VkSemaphore imageAvailable, bool& swap_recreate, VkFence fence)
+	uint32_t anv::VulkanSwapchain::AcquireNextImage(VkSemaphore _imageAvailable, bool& _swapRecreate, VkFence _fence)
 	{
 		uint32_t imageIndex = 0;
 		auto dev = m_Context->GetAs<VulkanContext>()->GetDevice();
@@ -153,14 +153,14 @@ namespace anv
 			dev,
 			m_Swapchain,
 			UINT64_MAX,
-			imageAvailable,
-			fence,
+			_imageAvailable,
+			_fence,
 			&imageIndex
 		);
 
 		// Simple now: treat out-of-date as "needs reset" and bail
 		if (r == VK_ERROR_OUT_OF_DATE_KHR || r == VK_SUBOPTIMAL_KHR) {
-			swap_recreate = true;
+			_swapRecreate = true;
 			return 0;
 		}
 

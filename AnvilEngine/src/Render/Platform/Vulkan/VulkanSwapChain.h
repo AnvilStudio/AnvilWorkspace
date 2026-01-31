@@ -23,12 +23,12 @@ namespace anv
 		{
 			return {m_Extent.width, m_Extent.height};
 		}
-		void Reset() override;
+		void ResetSwap() override;
 		void OnDestroy(VkDevice _dev);
 
 		_vec<Ref<Image2D>> GetImages() { return m_Images; }
 
-		uint32_t AcquireNextImage(VkSemaphore imageAvailable, bool& swap_recreate, VkFence fence = VK_NULL_HANDLE);
+		uint32_t AcquireNextImage(VkSemaphore _imageAvailable, bool & _swapRecreate, VkFence _fence = VK_NULL_HANDLE);
 		void Present(VkQueue presentQueue, uint32_t imageIndex, VkSemaphore renderFinished, bool& swap_recreate);
 		VkSwapchainKHR GetHandle() const { return m_Swapchain; }
 

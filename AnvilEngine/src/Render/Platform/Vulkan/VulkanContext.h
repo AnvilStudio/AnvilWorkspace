@@ -29,15 +29,15 @@ namespace anv {
         void CreateSwapchain() override;
 
     public:
-        VkInstance        GetInstance()       { return m_Instance;        } 
-        VkSurfaceKHR      GetSurface()        { return m_Surface;         }
-        VkDevice          GetDevice()         { return m_Device;          }
-        VkPhysicalDevice  GetPhysicalDevice() { return m_PhysicalDevice;  }
-        VkQueue           GetGraphicsQueue()  { return m_GraphicsQueue;   }
-        VkQueue           GetPresentQueue()   { return m_PresentQueue;    }
-        VkCommandPool     GetCommandPool()    { return m_CmdPool;         }
-        GLFWwindow*       GetWinHandle()      { return m_WinHandle;       }
-        void              IdleDevice();
+        VkInstance           GetInstance()            { return m_Instance;            } 
+        VkSurfaceKHR      GetSurface()              { return m_Surface;             }
+        VkDevice              GetDevice()               { return m_Device;              }
+        VkPhysicalDevice  GetPhysicalDevice()   { return m_PhysicalDevice;  }
+        VkQueue              GetGraphicsQueue()  { return m_GraphicsQueue; }
+        VkQueue              GetPresentQueue()    { return m_PresentQueue;   }
+        VkCommandPool  GetCommandPool()   { return m_CmdPool;          }
+        GLFWwindow*       GetWinHandle()         { return m_WinHandle;       }
+        void                      IdleDevice();
 
         // Returned as a VkSwapchain because
         // We're in the abstract class.
@@ -52,13 +52,13 @@ namespace anv {
         void vkc_cmd_pool();
 
     private:
-        VkDevice         m_Device;
-        VkInstance       m_Instance;
-        VkSurfaceKHR     m_Surface;
+        VkDevice                 m_Device;
+        VkInstance              m_Instance;
+        VkSurfaceKHR         m_Surface;
         VkCommandPool    m_CmdPool;
-        VkPhysicalDevice m_PhysicalDevice;
-        VkQueue m_GraphicsQueue;
-        VkQueue m_PresentQueue;
+        VkPhysicalDevice    m_PhysicalDevice;
+        VkQueue                m_GraphicsQueue;
+        VkQueue                m_PresentQueue;
         
         _vec<const char*> m_DeviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,

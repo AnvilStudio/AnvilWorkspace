@@ -247,7 +247,7 @@ namespace anv {
 		}
 		m_RenderPass.Reset();
 		
-		m_Context->GetSwapchain()->Reset();
+		m_Context->GetSwapchain()->ResetSwap();
 
 		create_render_passes();
 		create_frame_buffers();

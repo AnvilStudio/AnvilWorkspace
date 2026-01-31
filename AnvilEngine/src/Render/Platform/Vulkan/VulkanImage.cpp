@@ -6,11 +6,12 @@ namespace anv
 	// VulkanImageView
 	// =================================================================================================
 
-	VulkanImageView::VulkanImageView(_shared<Context> _dv, VkImage _img, VkFormat _fmt)
+	anv::VulkanImageView::VulkanImageView(_shared<Context> _dv, VkFormat _fmt, VkImage _img)
 		: m_VkContext(_dv->GetAs<VulkanContext>())
 	{
+		ANV_ASSERT(_img, "Image was NULL")
 		VkImageViewCreateInfo ivInfo{};
-		ivInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		ivInfo.sType      = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		ivInfo.image = _img;
 		ivInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
 		ivInfo.format = _fmt;
@@ -23,11 +24,11 @@ namespace anv
 
 		// describe pourpose, what part of the image to access
 		// color target, no mipmap levels, one layer
-		ivInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		ivInfo.subresourceRange.baseMipLevel = 0;
-		ivInfo.subresourceRange.levelCount = 1;
+		ivInfo.subresourceRange.aspectMask       = VK_IMAGE_ASPECT_COLOR_BIT;
+		ivInfo.subresourceRange.baseMipLevel    = 0;
+		ivInfo.subresourceRange.levelCount        = 1;
 		ivInfo.subresourceRange.baseArrayLayer = 0;
-		ivInfo.subresourceRange.layerCount = 1;
+		ivInfo.subresourceRange.layerCount        = 1;
 
 		ANV_VK_CHECK_RESULT(vkCreateImageView(m_VkContext->GetDevice(), &ivInfo, nullptr, &m_ImgView),
 			"Failed to create image view!");
@@ -60,18 +61,18 @@ namespace anv
 	{
 		VkImageCreateInfo imgInfo{};
 		
-		imgInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imgInfo.sType             = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		imgInfo.imageType     = VK_IMAGE_TYPE_2D;
 		imgInfo.extent.width  = m_Context->GetAs<VulkanContext>()->GetSwapchain()->GetExtent().width;
 		imgInfo.extent.height = m_Context->GetAs<VulkanContext>()->GetSwapchain()->GetExtent().height;
 		imgInfo.extent.depth  = 1;
-		imgInfo.mipLevels     = 1;
-		imgInfo.arrayLayers   = 1;
-		imgInfo.format        = m_Format;
-		imgInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
-		imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imgInfo.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-		imgInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
+		imgInfo.mipLevels      = 1;
+		imgInfo.arrayLayers    = 1;
+		imgInfo.format            = m_Format;
+		imgInfo.tiling               = VK_IMAGE_TILING_OPTIMAL;
+		imgInfo.initialLayout    = VK_IMAGE_LAYOUT_UNDEFINED;
+		imgInfo.usage              = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imgInfo.samples          = VK_SAMPLE_COUNT_1_BIT;
 		imgInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
 
 		ANV_VK_CHECK_RESULT(vkCreateImage(_ctx->GetAs<VulkanContext>()->GetDevice(), &imgInfo, nullptr, &m_Image),
@@ -93,6 +94,6 @@ namespace anv
 
 	Ref<ImageView> VulkanImage2D::MakeImageView()
 	{
-		return Ref<VulkanImageView>::Create(m_Context, m_Image, m_Format);
+		return Ref<VulkanImageView>::Create(m_Context, m_Format, m_Image);
 	}
 }

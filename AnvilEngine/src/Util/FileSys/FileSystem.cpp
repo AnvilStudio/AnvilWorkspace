@@ -8,8 +8,8 @@ namespace anv
 {
     // -------------------- File --------------------
 
-    File::File(std::string path)
-        : m_Path(std::move(path))
+    anv::File::File(std::string _path)
+        : m_Path(std::move(_path))
     {
     }
 
@@ -34,14 +34,14 @@ namespace anv
         return true;
     }
 
-    size_t File::GetFileSizeBytes(FILE* f)
+    size_t anv::File::GetFileSizeBytes(FILE* _f)
     {
-        if (!f) return 0;
+        if (!_f) return 0;
 
-        const long cur = std::ftell(f);
-        std::fseek(f, 0, SEEK_END);
-        const long end = std::ftell(f);
-        std::fseek(f, cur, SEEK_SET);
+        const long cur = std::ftell(_f);
+        std::fseek(_f, 0, SEEK_END);
+        const long end = std::ftell(_f);
+        std::fseek(_f, cur, SEEK_SET);
 
         return (end < 0) ? 0u : static_cast<size_t>(end);
     }
@@ -102,7 +102,7 @@ namespace anv
         return lines;
     }
 
-    void File::Write(const std::string& str) const
+    void anv::File::Write(const std::string& _str) const
     {
         std::ofstream out(m_Path, std::ios::trunc);
         if (!out.is_open())
@@ -110,13 +110,13 @@ namespace anv
             ANV_LOG_ERROR("File::Write - failed to open: " + m_Path);
             return;
         }
-        out << str;
+        out << _str;
     }
 
     // -------------------- FileSystem --------------------
 
-    FileSystem::FileSystem(std::string rootDir)
-        : m_RootDir(std::move(rootDir))
+    anv::FileSystem::FileSystem(std::string _rootDir)
+        : m_RootDir(std::move(_rootDir))
         , m_WorkDir(m_RootDir)
     {
         std::error_code ec;
@@ -141,9 +141,9 @@ namespace anv
         PumpDeletes();
     }
 
-    bool FileSystem::SetRoot(const std::string& newRoot)
+    bool anv::FileSystem::SetRoot(const std::string& _newRoot)
     {
-        std::filesystem::path p(newRoot);
+        std::filesystem::path p(_newRoot);
         if (p.is_relative())
             p = m_RootDir / p; // relative to current root
 
@@ -194,12 +194,12 @@ namespace anv
         return true;
     }
 
-    bool FileSystem::IsWithinRoot_(const std::filesystem::path& abs) const
+    bool anv::FileSystem::IsWithinRoot_(const std::filesystem::path& _abs) const
     {
         std::error_code ec;
 
         // Compare via path-relative computation (more robust than string prefix)
-        auto rel = std::filesystem::relative(abs, m_RootDir, ec);
+        auto rel = std::filesystem::relative(_abs, m_RootDir, ec);
         if (ec) return false;
 
         // If relative() yields something that starts with "..", it escaped the root
@@ -214,9 +214,9 @@ namespace anv
         return true;
     }
 
-    bool FileSystem::ResolveSandboxed_(const std::string& relOrAbs, std::filesystem::path& outAbs) const
+    bool anv::FileSystem::ResolveSandboxed_(const std::string& _relOrAbs, std::filesystem::path& _outAbs) const
     {
-        std::filesystem::path p(relOrAbs);
+        std::filesystem::path p(_relOrAbs);
 
         // Resolve relative paths against current working directory
         if (p.is_relative())
@@ -231,14 +231,14 @@ namespace anv
         if (!IsWithinRoot_(canon))
             return false;
 
-        outAbs = canon;
+        _outAbs = canon;
         return true;
     }
 
-    bool FileSystem::SwitchDir(const std::string& dirRelOrAbs)
+    bool anv::FileSystem::SwitchDir(const std::string& _dirRelOrAbs)
     {
         std::filesystem::path abs;
-        if (!ResolveSandboxed_(dirRelOrAbs, abs))
+        if (!ResolveSandboxed_(_dirRelOrAbs, abs))
             return false;
 
         std::error_code ec;
@@ -249,10 +249,10 @@ namespace anv
         return true;
     }
 
-    bool FileSystem::CreateDir(const std::string& mkdirRelOrAbs)
+    bool anv::FileSystem::CreateDir(const std::string& _mkdirRelOrAbs)
     {
         std::filesystem::path abs;
-        if (!ResolveSandboxed_(mkdirRelOrAbs, abs))
+        if (!ResolveSandboxed_(_mkdirRelOrAbs, abs))
             return false;
 
         std::error_code ec;
@@ -266,10 +266,10 @@ namespace anv
         return ok || std::filesystem::exists(abs);
     }
 
-    bool FileSystem::DeleteDir(const std::string& dltRelOrAbs)
+    bool anv::FileSystem::DeleteDir(const std::string& _dltRelOrAbs)
     {
         std::filesystem::path abs;
-        if (!ResolveSandboxed_(dltRelOrAbs, abs))
+        if (!ResolveSandboxed_(_dltRelOrAbs, abs))
             return false;
 
         std::error_code ec;
@@ -282,12 +282,12 @@ namespace anv
         return removed > 0;
     }
 
-    Ref<File> FileSystem::CreateFile(const std::string& mkfileRelOrAbs)
+    Ref<File> anv::FileSystem::CreateFile(const std::string& _mkfileRelOrAbs)
     {
         std::filesystem::path abs;
-        if (!ResolveSandboxed_(mkfileRelOrAbs, abs))
+        if (!ResolveSandboxed_(_mkfileRelOrAbs, abs))
         {
-            ANV_LOG_ERROR("CreateFile blocked by sandbox: " + mkfileRelOrAbs);
+            ANV_LOG_ERROR("CreateFile blocked by sandbox: " + _mkfileRelOrAbs);
             return nullptr;
         }
 
@@ -319,30 +319,30 @@ namespace anv
         return f;
     }
 
-    bool FileSystem::DeleteFile(Ref<File>& dltfile)
+    bool anv::FileSystem::DeleteFile(Ref<File>& _dltfile)
     {
-        if (!dltfile)
+        if (!_dltfile)
             return false;
 
         // Enforce: only allow deleting files inside sandbox
-        std::filesystem::path abs = std::filesystem::path(dltfile->Path());
+        std::filesystem::path abs = std::filesystem::path(_dltfile->Path());
         if (!IsWithinRoot_(abs))
         {
-            ANV_LOG_WARN("DeleteFile blocked (outside sandbox): '%s'", dltfile->Path().c_str());
+            ANV_LOG_WARN("DeleteFile blocked (outside sandbox): '%s'", _dltfile->Path().c_str());
             return false;
         }
 
-        dltfile->MarkForDelete();
-        EnqueueDelete_(dltfile);
+        _dltfile->MarkForDelete();
+        EnqueueDelete_(_dltfile);
         return true;
     }
 
-    void FileSystem::CreateKeyDir(const std::string& key, const std::string& dirRelOrAbs)
+    void anv::FileSystem::CreateKeyDir(const std::string& _key, const std::string& _dirRelOrAbs)
     {
         std::filesystem::path abs;
-        if (!ResolveSandboxed_(dirRelOrAbs, abs))
+        if (!ResolveSandboxed_(_dirRelOrAbs, abs))
         {
-            ANV_LOG_WARN("CreateKeyDir blocked by sandbox: key='%s'", key.c_str());
+            ANV_LOG_WARN("CreateKeyDir blocked by sandbox: key='%s'", _key.c_str());
             return;
         }
 
@@ -350,21 +350,21 @@ namespace anv
         std::error_code ec;
         std::filesystem::create_directories(abs, ec);
 
-        m_KeyDirs[key] = abs.string();
+        m_KeyDirs[_key] = abs.string();
     }
 
-    std::string FileSystem::AtKeyDir(const std::string& key)
+    std::string anv::FileSystem::AtKeyDir(const std::string& _key)
     {
-        auto it = m_KeyDirs.find(key);
+        auto it = m_KeyDirs.find(_key);
         if (it == m_KeyDirs.end())
             return {};
         return it->second;
     }
 
 
-    bool FileSystem::MoveToKeyDir(const std::string& key)
+    bool anv::FileSystem::MoveToKeyDir(const std::string& _key)
     {
-        auto it = m_KeyDirs.find(key);
+        auto it = m_KeyDirs.find(_key);
         if (it == m_KeyDirs.end())
             return false;
 
@@ -382,11 +382,11 @@ namespace anv
         return true;
     }
 
-    void FileSystem::EnqueueDelete_(const Ref<File>& file)
+    void anv::FileSystem::EnqueueDelete_(const Ref<File>& _file)
     {
         {
             std::scoped_lock lk(m_DeleteMutex);
-            m_DeleteQueue.push_back(file);
+            m_DeleteQueue.push_back(_file);
         }
         m_DeleteCv.notify_one();
     }

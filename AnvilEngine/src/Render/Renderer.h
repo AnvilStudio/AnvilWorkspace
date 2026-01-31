@@ -158,9 +158,9 @@ namespace anv {
 
 
     protected:
-        inline static _shared<Camera2D>         m_MainCamera       = nullptr;
+        inline static _shared<Camera2D>        m_MainCamera     = nullptr;
         inline static _shared<RenderAPI>        m_RenderAPI        = nullptr;
-        inline static Render2DCreateInfo        m_RenderCreateInfo {};
+        inline static Render2DCreateInfo         m_RenderCreateInfo {};
         
     };
 }

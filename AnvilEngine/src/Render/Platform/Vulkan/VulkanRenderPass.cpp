@@ -35,7 +35,7 @@ void anv::VulkanRenderPass::Build()
 	{
 		VkAttachmentReference attRef = {};
 		attRef.attachment = att.second;
-		attRef.layout = att.first.finalLayout;
+		attRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		color.push_back(attRef);
 	}
 
@@ -62,7 +62,7 @@ void anv::VulkanRenderPass::Build()
 		"Failed to create Vk render pass")
 }
 
-VkRenderPass anv::VulkanRenderPass::GetRaw()
+VkRenderPass anv::VulkanRenderPass::Get()
 {
 	return m_RenderPass;
 }

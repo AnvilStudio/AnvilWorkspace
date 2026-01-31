@@ -8,10 +8,13 @@ namespace anv
     {
     public:
         VulkanCommandBuffer(_shared<Context> _ctx);
-        virtual void Begin()  override;
-        virtual void End()    override;
+        virtual void Begin()   override;
+        virtual void End()      override;
         virtual void Submit() override {};
-        void Submit(VkSemaphore _vkWaitSemaphore, VkSemaphore _vkSignalSemaphore, VkFence _vkFence);
+
+        void Submit(VkSemaphore _vkWaitSemaphore, 
+            VkSemaphore _vkSignalSemaphore, VkFence _vkFence);
+
         virtual void Reset()  override;
         
         VkCommandBuffer Get() { return m_CmdBuffer; }

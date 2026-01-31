@@ -13,10 +13,10 @@ namespace anv
         Stop();
     }
 
-    void QueueChain::SetActiveCommandBuffer(Ref<CommandBuffer> cmd)
+    void anv::QueueChain::SetActiveCommandBuffer(Ref<CommandBuffer> _cmd)
     {
         std::lock_guard<std::mutex> lock(m_Mutex);
-        m_ActiveCmd = cmd;
+        m_ActiveCmd = _cmd;
     }
 
     void QueueChain::Start() {
@@ -40,9 +40,9 @@ namespace anv
         ClearAll();
     }
 
-    void QueueChain::WriteToBack(Task task) {
+    void anv::QueueChain::WriteToBack(Task _task) {
         std::lock_guard<std::mutex> lock(m_Mutex);
-        m_Back->push(std::move(task));
+        m_Back->push(std::move(_task));
     }
 
     void QueueChain::Swap() {
@@ -128,22 +128,22 @@ namespace anv
     }
 
 
-    void QueueChain::SetActiveFrame(const RenderFrameContext& f)
+    void anv::QueueChain::SetActiveFrame(const RenderFrameContext& _f)
     {
         std::lock_guard<std::mutex> lock(m_Mutex);
-        m_ActiveFrame = f;
+        m_ActiveFrame = _f;
     }
 
-    void QueueChain::SetActiveFrameSyncIndex(uint32_t idx)
+    void anv::QueueChain::SetActiveFrameSyncIndex(uint32_t _idx)
     {
         std::lock_guard<std::mutex> lock(m_Mutex);
-        m_ActiveFrameSyncIndex = idx;
+        m_ActiveFrameSyncIndex = _idx;
     }
 
-    void QueueChain::SetSubmitFn(SubmitFn fn)
+    void anv::QueueChain::SetSubmitFn(SubmitFn _fn)
     {
         std::lock_guard<std::mutex> lock(m_Mutex);
-        m_SubmitFn = std::move(fn);
+        m_SubmitFn = std::move(_fn);
     }
 
     void QueueChain::ClearBack() {

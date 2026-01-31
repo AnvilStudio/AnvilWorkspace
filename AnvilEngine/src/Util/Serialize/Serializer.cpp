@@ -5,11 +5,11 @@
 
 namespace anv
 {
-    Serializer::Serializer(std::string path, Mode mode, Direction dir)
-        : m_Path(std::move(path)), m_Mode(mode), m_Dir(dir)
+    anv::Serializer::Serializer(std::string _path, Mode _mode, Direction _dir)
+        : m_Path(std::move(_path)), m_Mode(_mode), m_Dir(_dir)
     {
         ANV_PROFILE_SCOPE()
-        ANV_LOG_INFO("Opening Serializable File %s\n - In Mode %i\n - with direction %i", m_Path.c_str(), mode, dir)
+            ANV_LOG_INFO("Opening Serializable File %s\n - In Mode %i\n - with direction %i", m_Path.c_str(), _mode, _dir)
 
         if (m_Mode == Mode::SER_MODE_TOML)
         {
@@ -166,7 +166,7 @@ namespace anv
     void Serializer::bin_save()
     {
         File f(m_Path);
-        f.WriteAs<uint8_t>(m_BinBuffer);
+        f.WriteAs(m_BinBuffer);
     }
 
     void Serializer::bin_write_bytes(const void* data, size_t n)

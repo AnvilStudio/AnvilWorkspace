@@ -12,6 +12,7 @@ namespace anv
         VkFence     inFlightFence = VK_NULL_HANDLE;
     };
 
+    // Holds the Command buffer and sync resources
     struct VulkanFrameResources
     {
         Ref<CommandBuffer> cmd;   
