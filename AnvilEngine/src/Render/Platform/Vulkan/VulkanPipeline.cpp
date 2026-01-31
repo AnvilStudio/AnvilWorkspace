@@ -1,6 +1,7 @@
 #include "VulkanPipeline.h"
 #include "VulkanShader.h"
 #include "VulkanRenderPass.h"
+#include "VulkanCommandBuffer.h"
 
 namespace anv
 {
@@ -210,5 +211,14 @@ namespace anv
 			vkCreateGraphicsPipelines(m_VkContext->GetDevice(), VK_NULL_HANDLE, 1, info, nullptr, &m_Pipeline),
 			"Failed to create Vk graphics pipeline"
 		);
+	}
+
+	void VulkanPipeline::Bind(_shared<QueueChain> _cmdq)
+	{
+		_cmdq->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext& frame) {
+
+			vkCmdBindPipeline(cmd.As<VulkanCommandBuffer>()->Get(),
+				VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
+		});
 	}
 }

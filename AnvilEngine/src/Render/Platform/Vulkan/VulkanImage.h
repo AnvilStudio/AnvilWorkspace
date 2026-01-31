@@ -16,7 +16,7 @@ namespace anv
 
 		void OnDestroy() override;
 
-		VkImageView GetRaw() { return m_ImgView; }
+		VkImageView& GetRaw() { return m_ImgView; }
 
 	private:
 		VkImageView   m_ImgView;

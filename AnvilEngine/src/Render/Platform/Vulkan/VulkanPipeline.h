@@ -57,6 +57,7 @@ namespace anv
 		void SetColorBlendSettings(const ColorBlendSettings* _colbld)       override;
 		void SetRenderPass(const Ref<RenderPass> _rps)                      override;
 		void Build()      override;
+		void Bind(_shared<QueueChain> _cmdq)       override;
 
 	private:
 		VulkanPipelineCreateInfos m_CreateInfo{};

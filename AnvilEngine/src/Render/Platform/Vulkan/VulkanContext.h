@@ -35,7 +35,9 @@ namespace anv {
         VkPhysicalDevice  GetPhysicalDevice() { return m_PhysicalDevice;  }
         VkQueue           GetGraphicsQueue()  { return m_GraphicsQueue;   }
         VkQueue           GetPresentQueue()   { return m_PresentQueue;    }
+        VkCommandPool     GetCommandPool()    { return m_CmdPool;         }
         GLFWwindow*       GetWinHandle()      { return m_WinHandle;       }
+        void              IdleDevice();
 
         // Returned as a VkSwapchain because
         // We're in the abstract class.
@@ -47,7 +49,7 @@ namespace anv {
         void vkc_surface (); // rendering surface
         void vkc_physical(); // select gpu
         void vkc_logical (); // create logical device
-        void vkc_create_cmd_pool();
+        void vkc_cmd_pool();
 
     private:
         VkDevice         m_Device;

@@ -12,6 +12,7 @@ namespace anv
 		ANV_PROFILE_SCOPE()
 		query_support();
 		create_vk_swapchain();
+		create_vk_img_views();
 	}
 
 	VulkanSwapchain::~VulkanSwapchain()
@@ -27,16 +28,25 @@ namespace anv
 	}
 
 
-	// TODO: IMPL BETTER!!!
-	void VulkanSwapchain::Reset() 
+	void VulkanSwapchain::Reset()
 	{
-		ANV_LOG_WARN("Swapchain::Reset() Is not yet impl properly, use caution...")
-		ANV_PROFILE_SCOPE()
+		ANV_PROFILE_SCOPE();
 
-		delete m_Swapchain;
-		m_Swapchain = nullptr;
+		auto dev = m_Context->GetAs<VulkanContext>()->GetDevice();
+		vkDeviceWaitIdle(dev);
+
+		for (auto& img : m_ImageViews)
+			img->OnDestroy();
+		m_ImageViews.clear();
+
+		vkDestroySwapchainKHR(dev, m_Swapchain, nullptr);
+		m_Swapchain = VK_NULL_HANDLE;
+
+		query_support();
 		create_vk_swapchain();
+		create_vk_img_views();
 	}
+
 
 	void VulkanSwapchain::OnDestroy(VkDevice _dev)
 	{
@@ -134,4 +144,56 @@ namespace anv
 		m_Extent = extent;
 	}
 
+	uint32_t VulkanSwapchain::AcquireNextImage(VkSemaphore imageAvailable, bool& swap_recreate, VkFence fence)
+	{
+		uint32_t imageIndex = 0;
+		auto dev = m_Context->GetAs<VulkanContext>()->GetDevice();
+
+		VkResult r = vkAcquireNextImageKHR(
+			dev,
+			m_Swapchain,
+			UINT64_MAX,
+			imageAvailable,
+			fence,
+			&imageIndex
+		);
+
+		// Simple now: treat out-of-date as "needs reset" and bail
+		if (r == VK_ERROR_OUT_OF_DATE_KHR || r == VK_SUBOPTIMAL_KHR) {
+			swap_recreate = true;
+			return 0;
+		}
+
+		return imageIndex;
+	}
+
+	void VulkanSwapchain::Present(VkQueue presentQueue, uint32_t imageIndex, VkSemaphore renderFinished, bool& swap_recreate)
+	{
+		VkPresentInfoKHR pi{};
+		pi.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		pi.waitSemaphoreCount = 1;
+		pi.pWaitSemaphores = &renderFinished;
+
+		VkSwapchainKHR sc = m_Swapchain;
+		pi.swapchainCount = 1;
+		pi.pSwapchains = &sc;
+		pi.pImageIndices = &imageIndex;
+
+		VkResult r = vkQueuePresentKHR(presentQueue, &pi);
+		if (r == VK_ERROR_OUT_OF_DATE_KHR || r == VK_SUBOPTIMAL_KHR) {
+			swap_recreate = true;
+			return;
+		}
+	}
+
+	void VulkanSwapchain::create_vk_img_views()
+	{
+		m_ImageViews.resize(m_Images.size());
+
+		for (size_t i = 0; i < m_Images.size(); i++)
+		{
+			// VulkanImage2D::MakeImageView() returns Ref<ImageView>
+			m_ImageViews[i] = m_Images[i].As<VulkanImage2D>()->MakeImageView();
+		}
+	}
 }

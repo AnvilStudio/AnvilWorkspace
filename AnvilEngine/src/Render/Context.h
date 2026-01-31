@@ -1,52 +1,36 @@
 #pragma once
 #include "../Util/UMacros.h"
 #include "Swapchain.h"
-#include "RenderAPI.h"
 
 struct GLFWwindow;
 
 namespace anv {
 
-	class Window;
+    class RenderAPI;
+    class Window;
+    struct Render2DCreateInfo;
 
-	
-	/// <summary>
-	/// initializes the Graphics API,
-	/// Creates the swapchain
-	/// </summary>
-	class Context
-	{
+    class Context
+    {
+    public:
+        static _shared<Context> Create(Window* _win);
+        virtual ~Context() = default;
 
-	public:
-		static _shared<Context> Create(Window* _win);
-		virtual ~Context() = default;
+        _shared<RenderAPI> InitAPI(Render2DCreateInfo _info);
 
-		_shared<RenderAPI> InitAPI(RenderAPICreateInfo _info);
+        virtual void CreateSwapchain() = 0;
 
-		virtual void CreateSwapchain() = 0;
+        inline Ref<Swapchain> GetSwapchain() { return m_Swapchain; }
+        inline _shared<RenderAPI> GetAPI() { return m_API; }
 
-		inline Ref<Swapchain> GetSwapchain()
-		{
-			return m_Swapchain;
-		}
+        template<typename T>
+        inline T* GetAs() { return static_cast<T*>(this); }
 
-		inline _shared<RenderAPI> GetAPI()
-		{
-			// Dynamic cast because API class is pure virtual
-			return m_API;
-		}
+        Context(Window* _win);
 
-		template<typename T>
-		inline T* GetAs()
-		{
-			return static_cast<T*>(this);
-		}
-
-		Context(Window* _win);
-	
-	protected:
-		GLFWwindow*        m_WinHandle;
-		Ref<Swapchain>     m_Swapchain;
-		_shared<RenderAPI> m_API;
-	};
+    protected:
+        GLFWwindow* m_WinHandle;
+        Ref<Swapchain>     m_Swapchain;
+        _shared<RenderAPI> m_API;
+    };
 }

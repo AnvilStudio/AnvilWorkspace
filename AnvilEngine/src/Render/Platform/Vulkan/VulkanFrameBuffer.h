@@ -13,6 +13,8 @@ namespace anv
     public:
         VulkanFrameBuffer(_shared<Context> _ctx, Ref<ImageView> _imgv, Ref<RenderPass> _rp);
         ~VulkanFrameBuffer();
+
+        VkFramebuffer Get() { return m_FrameBuffer; }
     private:
         void create_frame_buffer();
 

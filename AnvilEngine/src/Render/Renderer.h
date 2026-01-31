@@ -13,12 +13,11 @@
 #pragma once
 
 #include "../Util/UMacros.h"
-#include "../Core/QueueChain.h"
 #include "Context.h"
 #include "Swapchain.h"
 #include "GraphicsPipeline.h"
 #include "Camera.h"
-
+#include "RenderAPI.h"
 #include <string>
 #include "Framebuffer.h"
 
@@ -147,8 +146,7 @@ namespace anv {
         // API //
         static void Init(Render2DCreateInfo _info);
         static void Shutdown();
-        static void BeginFrame();
-        static void EndFrame();
+        static void DrawFrame();
 
         static Render2DCreateInfo GetSettings() { return m_RenderCreateInfo; }
 
@@ -158,19 +156,11 @@ namespace anv {
         //static void CmdDrawQuadWithTexture(Texture& _text, VertexBuffer& _vb, IndexBuffer& _ib);
         //static void CmdSubmit();
 
-    private:
-        static void create_frame_buffers();
-        static void set_pipeline();
-        static void set_shaders();
 
-    private:
+    protected:
         inline static _shared<Camera2D>         m_MainCamera       = nullptr;
         inline static _shared<RenderAPI>        m_RenderAPI        = nullptr;
-        inline static Ref<GraphicsPipeline>     m_Pipeline         = nullptr;
-        inline static Ref<RenderPass>           m_RenderPass       = nullptr;
-        inline static _vec<Ref<Framebuffer>>    m_FrameBuffers     {};
         inline static Render2DCreateInfo        m_RenderCreateInfo {};
         
-        //inline static QueueChain* m_RenderCmdChain = nullptr;
     };
 }

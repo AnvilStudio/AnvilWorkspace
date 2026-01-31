@@ -1,9 +1,12 @@
 #pragma once
-
 #include "../Core/Reference.h"
-#include "RenderPass.h"
+#include "Image.h"
+#include "Context.h"
 
 namespace anv {
+
+	class RenderPass;
+
 	class Framebuffer
 		: public RefCounter
 	{

@@ -14,7 +14,10 @@ namespace anv
 	{
 		ANV_PROFILE_SCOPE()
 
-		vkDestroyFramebuffer(m_Context->GetAs<VulkanContext>()->GetDevice(), m_FrameBuffer, nullptr);
+		if (m_FrameBuffer != VK_NULL_HANDLE) {
+			vkDestroyFramebuffer(m_Context->GetAs<VulkanContext>()->GetDevice(), m_FrameBuffer, nullptr);
+			m_FrameBuffer = VK_NULL_HANDLE;
+		}
 	}
 
 	void VulkanFrameBuffer::create_frame_buffer()
@@ -24,8 +27,8 @@ namespace anv
 		fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		fb_info.renderPass      = m_RenderPass.As<VulkanRenderPass>()->GetRaw();
 		fb_info.attachmentCount = 1;
-		VkImageView iv = m_ImageView.As<VulkanImageView>()->GetRaw();
-		fb_info.pAttachments    = &iv;
+		VkImageView attachments[] = { m_ImageView.As<VulkanImageView>()->GetRaw() };
+		fb_info.pAttachments = attachments;
 		fb_info.width = m_Context->GetSwapchain()->GetExtent().width;
 		fb_info.height = m_Context->GetSwapchain()->GetExtent().height;
 		fb_info.layers = 1;

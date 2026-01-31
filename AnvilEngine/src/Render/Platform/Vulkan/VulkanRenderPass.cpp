@@ -1,7 +1,10 @@
 #include "VulkanRenderPass.h"
+#include "VulkanCommandBuffer.h"
+#include <Render/RenderFrameCtx.h>
+#include "VulkanFrameBuffer.h"
 
 anv::VulkanRenderPass::VulkanRenderPass(RenderPassCreateInfo _rpinfo, _shared<Context> _ctx)
-	: RenderPass(_rpinfo.d_name), m_VkContext(_ctx->GetAs<VulkanContext>())
+	: RenderPass(_rpinfo), m_VkContext(_ctx->GetAs<VulkanContext>())
 {
 	m_VkContext = _ctx->GetAs<VulkanContext>();
 	init_render_pass(_rpinfo);
@@ -93,4 +96,46 @@ void anv::VulkanRenderPass::init_render_pass(RenderPassCreateInfo _rpinfo)
 		d_att_index++;
 	}
 }
+
+void anv::VulkanRenderPass::Begin()
+{
+	ANV_ASSERT(m_RenderQueue, "VulkanRenderPass::m_RenderQueue is null");
+
+	m_RenderQueue->WriteToBack([&](Ref<CommandBuffer> cmd, const RenderFrameContext& frame) {
+
+		ANV_ASSERT(frame.imageIndex < m_Framebuffers.size(), "imageIndex out of range");
+
+		auto vkCmd = cmd.As<VulkanCommandBuffer>();
+		ANV_ASSERT(vkCmd, "CommandBuffer cast failed!");
+
+		auto vkFb = m_Framebuffers[frame.imageIndex].As<VulkanFrameBuffer>();
+		ANV_ASSERT(vkFb, "Framebuffer cast failed!");
+
+		VkRenderPassBeginInfo rp{};
+		rp.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		rp.renderPass = m_RenderPass;
+		rp.framebuffer = vkFb->Get();
+		auto ext = m_VkContext->GetSwapchain()->GetExtent();
+		rp.renderArea.offset = { 0, 0 };
+		rp.renderArea.extent = { ext.width, ext.height };
+
+		VkClearValue clearValues[1]{};
+		clearValues[0].color = { {0.f, 0.f, 0.f, 1.f} };
+		rp.clearValueCount = 1;
+		rp.pClearValues = clearValues;
+
+		vkCmdBeginRenderPass(vkCmd->Get(), &rp, VK_SUBPASS_CONTENTS_INLINE);
+		});
+}
+
+
+void anv::VulkanRenderPass::End()
+{
+	m_RenderQueue->WriteToBack([](Ref<CommandBuffer> cmd, const RenderFrameContext&) {
+		auto vkCmd = cmd.As<VulkanCommandBuffer>();
+		vkCmdEndRenderPass(vkCmd->Get());
+	});
+}
+
+
 

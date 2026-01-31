@@ -18,8 +18,8 @@ namespace anv
 		}
     }
 
-	RenderPass::RenderPass(std::string _dname)
-		: m_DName(_dname)
+	RenderPass::RenderPass(RenderPassCreateInfo _info)
+		: m_RenderQueue(_info.commandQueue)
 	{
 	}
 }

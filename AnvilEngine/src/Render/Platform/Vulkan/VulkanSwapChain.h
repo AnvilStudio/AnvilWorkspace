@@ -28,10 +28,15 @@ namespace anv
 
 		_vec<Ref<Image2D>> GetImages() { return m_Images; }
 
+		uint32_t AcquireNextImage(VkSemaphore imageAvailable, bool& swap_recreate, VkFence fence = VK_NULL_HANDLE);
+		void Present(VkQueue presentQueue, uint32_t imageIndex, VkSemaphore renderFinished, bool& swap_recreate);
+		VkSwapchainKHR GetHandle() const { return m_Swapchain; }
+
+
 	private:
 		void query_support();
 		void create_vk_swapchain();
-
+		void create_vk_img_views();
 	private:
 		vk_util::SwapchainSupportDetails m_SupportDetails;
 

@@ -1,6 +1,7 @@
 #pragma once
 #include "../Util/UMacros.h"
 #include "../Core/Reference.h"
+#include "QueueChain.h"
 #include "Context.h"
 
 namespace anv
@@ -65,7 +66,7 @@ namespace anv
 		ANV_NO_DSCRD
 		static Ref<RenderPass> Create(RenderPassCreateInfo& _createinfo, _shared<Context> _ctx);
 
-		RenderPass(std::string _dname);
+		RenderPass(RenderPassCreateInfo _info);
 		RenderPass() = default;
 
 		//virtual void AddAttachment(RenderPassCreateInfo::Attachment _new_att) = 0;
@@ -74,19 +75,15 @@ namespace anv
 		virtual void End()   = 0;
 		virtual void Build() = 0;
 
-		
-		template<typename T>
-		ANV_DEPRECATE("GetAs() is no longer needed... use As() for ref counted classes")
-		inline T* GetAs() const 
-		{
-			return dynamic_cast<T*>(this);
-		}
-
 		std::string m_DName;
+
+	protected:
+		_shared<QueueChain> m_RenderQueue = nullptr;
 	};
 
 	struct RenderPassCreateInfo
 	{
+		_shared<QueueChain> commandQueue;
 		struct SubpassInfo {
 			std::vector<int> colorAttachments;       // Indices of color attachments
 			int depthStencilAttachment = -1;         // Index of depth/stencil attachment
@@ -94,7 +91,8 @@ namespace anv
 
 		std::vector<RenderPass::Attachment> attachments;    // Attachments for the render pass
 		std::vector<SubpassInfo> subpasses;        // Subpasses in the render pass
-		const char* d_name;
+		const char* d_name;                        // debug name
 	};
+
     
 }

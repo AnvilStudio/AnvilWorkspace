@@ -15,6 +15,7 @@ namespace anv {
 		vkc_surface   (); // rendering surface
 		vkc_physical  (); // select gpu
 		vkc_logical   (); // create logical device
+		vkc_cmd_pool  ();
 	}
 
 	VulkanContext::~VulkanContext()
@@ -43,6 +44,11 @@ namespace anv {
 
 	void VulkanContext::CreateSwapchain()
 	{
+		if (m_Swapchain)
+		{
+			m_Swapchain.Reset();
+		}
+
 		m_Swapchain = Ref<VulkanSwapchain>::Create(shared_from_this());
 	}
 
@@ -224,7 +230,7 @@ namespace anv {
 		vkGetDeviceQueue(m_Device, indices.presentFamily.value(), 0, &m_PresentQueue);
 	}
 
-	void VulkanContext::vkc_create_cmd_pool()
+	void VulkanContext::vkc_cmd_pool()
 	{
 		ANV_PROFILE_SCOPE();
 
@@ -238,5 +244,9 @@ namespace anv {
 		ANV_VK_CHECK_RESULT(vkCreateCommandPool(m_Device, &cpinfo, nullptr, &m_CmdPool),
 			"Failed to create a VkCommandPool!");
 	}
-
+	
+	void VulkanContext::IdleDevice()
+	{
+		vkDeviceWaitIdle(m_Device);
+	}
 }

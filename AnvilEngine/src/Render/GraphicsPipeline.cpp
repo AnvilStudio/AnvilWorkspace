@@ -1,5 +1,6 @@
 #include "GraphicsPipeline.h"
 #include "Platform/Vulkan/VulkanPipeline.h"
+#include "RenderAPI.h"
 
 namespace anv
 {

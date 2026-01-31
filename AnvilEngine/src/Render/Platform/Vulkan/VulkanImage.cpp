@@ -35,14 +35,20 @@ namespace anv
 
 	VulkanImageView::~VulkanImageView()
 	{
-		vkDestroyImageView(m_VkContext->GetDevice(), m_ImgView, nullptr);
+		if (m_ImgView != VK_NULL_HANDLE) {
+			vkDestroyImageView(m_VkContext->GetDevice(), m_ImgView, nullptr);
+			m_ImgView = VK_NULL_HANDLE;
+		}
 	}
 
 	void VulkanImageView::OnDestroy()
 	{
 		ANV_PROFILE_SCOPE()
 
-		vkDestroyImageView(m_VkContext->GetDevice(), m_ImgView, nullptr);
+		if (m_ImgView != VK_NULL_HANDLE) {
+			vkDestroyImageView(m_VkContext->GetDevice(), m_ImgView, nullptr);
+			m_ImgView = VK_NULL_HANDLE;
+		}
 	}
 
 

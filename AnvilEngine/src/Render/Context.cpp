@@ -1,7 +1,8 @@
 #include "Context.h"
 #include "Core/Window.h"
+#include "Renderer.h"
 #include "Render/Platform/Vulkan/VulkanContext.h"
-
+#include "RenderAPI.h"
 #include <GLFW/glfw3.h>
 
 namespace anv {
@@ -27,7 +28,7 @@ namespace anv {
 
 	}
 
-	_shared<RenderAPI> Context::InitAPI(RenderAPICreateInfo _info)
+	_shared<RenderAPI> Context::InitAPI(Render2DCreateInfo _info)
 	{
 		m_API = RenderAPI::Create(_info);
 		return m_API;
