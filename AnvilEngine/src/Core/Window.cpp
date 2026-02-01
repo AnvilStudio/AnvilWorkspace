@@ -55,4 +55,22 @@ namespace anv {
 		return e;
 	}
 
+	bool Window::GetKeyState(int _code)
+	{
+		auto state = glfwGetKey(m_WinPtr, _code);
+		return state == GLFW_PRESS || state == GLFW_REPEAT;
+	}
+
+	bool Window::GetMouseButtonState(int _button)
+	{
+		auto state = glfwGetMouseButton(m_WinPtr, _button);
+		return state == GLFW_PRESS;
+	}
+
+	std::pair<float, float> Window::GetMousePos()
+	{
+		double x, y;
+		glfwGetCursorPos(m_WinPtr, &x, &y);
+		return { x, y };
+	}
 }

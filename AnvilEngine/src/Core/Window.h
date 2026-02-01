@@ -40,6 +40,10 @@ namespace anv {
 		GLFWwindow* GetNativeWindow() { return m_WinPtr; }
 		_shared<Context> GetContext();
 
+		bool GetKeyState(int _code);
+		bool GetMouseButtonState(int _button);
+		std::pair<float, float> GetMousePos();
+
 	private:
 		GLFWwindow*        m_WinPtr    = nullptr;
 		_shared<Context>   m_Context   = nullptr;

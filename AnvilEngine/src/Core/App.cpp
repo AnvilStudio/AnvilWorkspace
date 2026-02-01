@@ -92,6 +92,7 @@ namespace anv {
 		InitializeFileSys();
 
 		m_AppWin = Window::Create(m_Settings.WindowCreateInfo);
+		m_InputSystem = InputSystem::Create(m_AppWin);
 
 		// TODO: prototyping...
 		Render2DCreateInfo r_info{};
@@ -119,6 +120,49 @@ namespace anv {
 		{
 			// Polls input
 			m_AppWin->OnUpdate();
+
+			// input test //
+
+			// Keys
+			if (m_InputSystem->IsKeyPressed(ANV_KEY_A))
+			{
+				ANV_LOG_DEBUG("A was pressed")
+			}
+			if (m_InputSystem->IsKeyPressed(ANV_KEY_W))
+			{
+				ANV_LOG_DEBUG("W was pressed")
+			}
+			if (m_InputSystem->IsKeyPressed(ANV_KEY_S))
+			{
+				ANV_LOG_DEBUG("S was pressed")
+			}
+			if (m_InputSystem->IsKeyPressed(ANV_KEY_D))
+			{
+				ANV_LOG_DEBUG("D was pressed")
+			}
+
+			// Mouse btn
+			if (m_InputSystem->IsMouseButtonPressed(ANV_MOUSE_BUTTON_LEFT))
+			{
+				ANV_LOG_DEBUG("Left Mouse")
+			}
+			if (m_InputSystem->IsMouseButtonPressed(ANV_MOUSE_BUTTON_MIDDLE))
+			{
+				ANV_LOG_DEBUG("Middle Mouse")
+			}
+			if (m_InputSystem->IsMouseButtonPressed(ANV_MOUSE_BUTTON_RIGHT))
+			{
+				ANV_LOG_DEBUG("Right Mouse")
+			}
+
+			// Mouse Pos
+			if (m_InputSystem->IsKeyPressed(ANV_KEY_LEFT_SHIFT))
+			{
+				auto [x, y] = m_InputSystem->GetMousePos();
+				ANV_LOG_DEBUG("Mouse Pos: [ %f, %f ]", x, y)
+			}
+			//////////////
+
 
 			// OnUpdate should hapen after input polling
 			OnUpdate();

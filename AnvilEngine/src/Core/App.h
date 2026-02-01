@@ -2,6 +2,7 @@
 #include "../Render/Renderer.h"
 #include "../Scene/Scene.h"
 #include "../Scene/Manager.h"
+#include "../Input/Input.h"
 #include "Window.h"
 #include <string>
 
@@ -50,6 +51,7 @@ namespace anv
 		void PopulateSettings(const std::string prjPath);
 
 	private:
+		_shared<InputSystem> m_InputSystem;
 		std::unique_ptr<FileSystem> m_FileSystem;
 		AppSettings        m_Settings;
 		SceneManager       m_ScnMngr;

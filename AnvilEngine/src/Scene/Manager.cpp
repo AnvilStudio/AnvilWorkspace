@@ -5,7 +5,7 @@ namespace anv
 {
 	SceneManager::SceneManager()
 	{
-		ANV_LOG_INFO("Initialiting Scene Manager")
+		ANV_LOG_INFO("Initializing Scene Manager")
 	}
 
 	SceneManager::~SceneManager()
