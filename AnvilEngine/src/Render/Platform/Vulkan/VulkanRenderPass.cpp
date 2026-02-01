@@ -125,7 +125,7 @@ void anv::VulkanRenderPass::Begin()
 		rp.pClearValues = clearValues;
 
 		vkCmdBeginRenderPass(vkCmd->Get(), &rp, VK_SUBPASS_CONTENTS_INLINE);
-		});
+	});
 }
 
 

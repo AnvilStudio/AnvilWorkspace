@@ -51,16 +51,8 @@ namespace anv {
 			std::exit(EXIT_SUCCESS);
 		}
 
-		ANV_LOG_DEBUG("Arg Count: %i", arg_c);
-
 		for (int i = 0; i < arg_c; i++)
 		{
-			ANV_LOG_DEBUG("%i> %s", i, arg_v[i]);
-		}
-
-		for (int i = 0; i < arg_c; i++)
-		{
-
 			if ((strcmp(arg_v[i], "--projectPath") || strcmp(arg_v[i], "-prj")) && i + 1 < arg_c)
 			{
 				i += 2;
@@ -90,15 +82,18 @@ namespace anv {
 		PopulateSettings(m_Settings.projectPath);
 
 		InitializeFileSys();
-
+		
+		m_AssetManager = std::make_shared<AssetManager>();
 		m_AppWin = Window::Create(m_Settings.WindowCreateInfo);
 		m_InputSystem = InputSystem::Create(m_AppWin);
 
-		// TODO: prototyping...
+		// FIX: prototyping...
 		Render2DCreateInfo r_info{};
 		r_info.pTarget = m_AppWin;
 
 		Renderer2D::Init(r_info);
+
+		Ref<Asset> Text = m_AssetManager->GetOrCreate(m_FileSystem->AtKeyDir("Assets") + "\\TestText.png");
 
 		// Jump to client side setup
 		OnSetup();
@@ -120,49 +115,6 @@ namespace anv {
 		{
 			// Polls input
 			m_AppWin->OnUpdate();
-
-			// input test //
-
-			// Keys
-			if (m_InputSystem->IsKeyPressed(ANV_KEY_A))
-			{
-				ANV_LOG_DEBUG("A was pressed")
-			}
-			if (m_InputSystem->IsKeyPressed(ANV_KEY_W))
-			{
-				ANV_LOG_DEBUG("W was pressed")
-			}
-			if (m_InputSystem->IsKeyPressed(ANV_KEY_S))
-			{
-				ANV_LOG_DEBUG("S was pressed")
-			}
-			if (m_InputSystem->IsKeyPressed(ANV_KEY_D))
-			{
-				ANV_LOG_DEBUG("D was pressed")
-			}
-
-			// Mouse btn
-			if (m_InputSystem->IsMouseButtonPressed(ANV_MOUSE_BUTTON_LEFT))
-			{
-				ANV_LOG_DEBUG("Left Mouse")
-			}
-			if (m_InputSystem->IsMouseButtonPressed(ANV_MOUSE_BUTTON_MIDDLE))
-			{
-				ANV_LOG_DEBUG("Middle Mouse")
-			}
-			if (m_InputSystem->IsMouseButtonPressed(ANV_MOUSE_BUTTON_RIGHT))
-			{
-				ANV_LOG_DEBUG("Right Mouse")
-			}
-
-			// Mouse Pos
-			if (m_InputSystem->IsKeyPressed(ANV_KEY_LEFT_SHIFT))
-			{
-				auto [x, y] = m_InputSystem->GetMousePos();
-				ANV_LOG_DEBUG("Mouse Pos: [ %f, %f ]", x, y)
-			}
-			//////////////
-
 
 			// OnUpdate should hapen after input polling
 			OnUpdate();
@@ -216,8 +168,12 @@ namespace anv {
 				// --- directories ---
 				ser.ObjectIf("Directories", [&] {
 					ser.Field("EngineRes", m_Settings.assetDir);
-					ser.Field("Assets", m_Settings.assetDir);
-					ser.Field("Cache", m_Settings.cacheDir);
+
+					std::string assets = m_FileSystem->AtKeyDir("Assets");
+					std::string cache = m_FileSystem->AtKeyDir("Cache");
+
+					ser.Field("Assets", assets);
+					ser.Field("Cache", cache);
 					});
 			});
 

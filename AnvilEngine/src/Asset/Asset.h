@@ -3,42 +3,32 @@
 #include "../Core/Uuid.h"
 
 namespace anv{
+    class Asset : public RefCounter
+    {
+    public:
+        Asset(const std::string& _resource)
+            : m_Uuid(uuid::uuid_GenAssetID())
+        {
+            SetResource(_resource);
+            GenAssetFile(); // IMPORTANT
+        }
 
-	class Asset
-		: public RefCounter
-	{
-	public:
+        uuid::AssetUUID GetAssetID() const { return m_Uuid; }
 
-		enum class Type
-		{
-			SHADER,
-			MODEL,
-			TEXTURE,
-			IMAGE
-		};
+        const std::string& GetName() const { return m_Name; }
+        const std::string& GetResourcePath() const { return m_ResourcePath; }
+        const std::string& GetMetaPath() const { return m_Meta; }
 
-		Asset(std::string& _name)
-			: m_Name(_name), m_Uuid(uuid::uuid_GenAssetID())
-		{
-			ANV_LOG_INFO("Creating Asset" + m_Name)
-			RetrieveFileName(_name);
-		}
+        void Save();
 
-		uuid::AssetUUID GetAssetID()
-		{
-			return m_Uuid;
-		}
+    protected:
+        void SetResource(const std::string& _path);
+        void GenAssetFile();
 
-		void Save();
-	
-	protected:
-		std::string RetrieveFileName(std::string& _path);
-		void GenAssetFile();
-
-	private:
-		uuid::AssetUUID m_Uuid{};
-		std::string m_ResPath;
-		std::string m_Name;
-		std::string m_Meta;
-	};
+    protected:
+        uuid::AssetUUID m_Uuid{};
+        std::string m_ResourcePath; // full path to file
+        std::string m_Name;         // filename
+        std::string m_Meta;         // full path to .aamta
+    };
 }

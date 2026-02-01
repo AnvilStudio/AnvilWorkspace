@@ -41,8 +41,10 @@ namespace anv {
 
 		// acquire
 		uint32_t imageIndex = m_Context->GetAs<VulkanContext>()->GetSwapchain()->AcquireNextImage(fr.sync.imageAvailable, m_SwapRecreateFlag, VK_NULL_HANDLE);
+		
 		if (m_SwapRecreateFlag)
 		{
+			ANV_LOG_INFO("SwapChain Recreation due to winow resize")
 			recreate_swap();
 			m_SwapRecreateFlag = false;
 			return;

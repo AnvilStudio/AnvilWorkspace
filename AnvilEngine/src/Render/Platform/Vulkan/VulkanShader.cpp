@@ -163,25 +163,7 @@ namespace anv
 	void VulkanShader::save_files()
 	{
 		auto& fs = App::GetInstance()->GetFS();
-		//fs.Save(
-		//	fs.AtKeyDir("ShaderCache") + m_Name + ".shade",
-		//	Serializer::Mode::SER_MODE_BINARY,
-		//	[&](Serializer& ser)
-		//	{
 
-		//		auto vert = m_VertCode.second;
-		//		auto frag = m_FragCode.second;
-
-		//		ser.Object("ShaderCache", [&]
-		//			{
-		//				ser.Field("Magic", kShaderCacheMagic);
-		//				ser.Field("Version", kShaderCacheVersion);
-		//				ser.Field("Name", m_Name);
-		//				ser.Vector("VertSpv", vert);
-		//				ser.Vector("FragSpv", frag);
-		//			});
-		//	}
-		//);
 		std::string path;
 		path = fs.AtKeyDir("ShaderCache") + m_Name.substr(m_Name.find_last_of("\\/")) + ".shade";
 		auto file = fs.CreateFile(path);

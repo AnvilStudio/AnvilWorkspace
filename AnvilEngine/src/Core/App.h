@@ -1,5 +1,6 @@
 #pragma once
 #include "../Render/Renderer.h"
+#include "../Asset/AssetManager.h"
 #include "../Scene/Scene.h"
 #include "../Scene/Manager.h"
 #include "../Input/Input.h"
@@ -57,6 +58,7 @@ namespace anv
 		SceneManager       m_ScnMngr;
 		inline static App* m_This  = nullptr;
 		_shared<Window>    m_AppWin   = nullptr;
+		_shared<AssetManager>    m_AssetManager = nullptr;
 	};
 
 }

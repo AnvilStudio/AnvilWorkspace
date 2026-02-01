@@ -2,49 +2,42 @@
 #include "Core/App.h"
 
 namespace anv {
-	void Asset::GenAssetFile()
-	{
-		auto& fs = App::GetInstance()->GetFS();
-		m_Meta = fs.AtKeyDir("AssetMeta") + m_Name + ".aamta";
-		ANV_ASSERT(!m_Meta.empty(), "AssetMeta directory not registered");
+    void Asset::SetResource(const std::string& _path)
+    {
+        m_ResourcePath = _path;
 
-		Serializer ser(m_Meta,
-			Serializer::Mode::SER_MODE_TOML,
-			Serializer::Direction::Write);
+        size_t pos = _path.find_last_of("/\\");
+        if (pos != std::string::npos)
+            m_Name = _path.substr(pos + 1);
+        else
+            m_Name = _path;
+    }
 
-		ser.Object("Asset", [&]
-			{
-				ser.Field("Name", m_Name);
-				ser.Field("Resource", m_ResPath);
-				ser.Field("UUID", m_Uuid.uuid);
-			});
-	}
+    void Asset::GenAssetFile()
+    {
+        auto& fs = App::GetInstance()->GetFS();
 
-	void Asset::Save() 
-	{
-		Serializer ser(m_Meta,
-			Serializer::Mode::SER_MODE_TOML,
-			Serializer::Direction::Write);
+        const std::string metaDir = fs.AtKeyDir("AssetMeta");
+        ANV_ASSERT(!metaDir.empty(), "AssetMeta directory not registered");
 
-		ser.Object("Asset", [&]
-			{
-				ser.Field("Name", m_Name);
-				ser.Field("Resource", m_ResPath);
-				ser.Field("UUID", m_Uuid.uuid);
-			});
-	}
+        m_Meta = metaDir + "/" + m_Name + ".aamta";
 
+        Save(); // write initial meta
+    }
 
-	std::string Asset::RetrieveFileName(std::string& _path)
-	{
-		size_t pos = _path.find_last_of("/\\");
+    void Asset::Save()
+    {
+        ANV_ASSERT(!m_Meta.empty(), "Asset meta path not generated");
 
-		if (pos != std::string::npos)
-		{
-			m_ResPath = _path.substr(0, pos);
-			m_Name = _path.substr(pos + 1);
-		}
+        Serializer ser(m_Meta,
+            Serializer::Mode::SER_MODE_TOML,
+            Serializer::Direction::Write);
 
-		return m_Name;
-	}
+        ser.Object("Asset", [&]
+            {
+                ser.Field("Name", m_Name);
+                ser.Field("Resource", m_ResourcePath); // full file path now
+                ser.Field("UUID", m_Uuid.uuid);
+            });
+    }
 }
