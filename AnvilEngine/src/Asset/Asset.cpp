@@ -2,7 +2,8 @@
 #include "Core/App.h"
 
 namespace anv {
-    void Asset::SetResource(const std::string& _path)
+
+    void Asset::set_resource(const std::string& _path)
     {
         m_ResourcePath = _path;
 
@@ -13,14 +14,19 @@ namespace anv {
             m_Name = _path;
     }
 
+    Asset::Asset(Deserialized& _dser)
+        : m_Name(_dser.name), m_ResourcePath(_dser.resource), m_Uuid(_dser.uuid)
+    {
+    }
+
     void Asset::GenAssetFile()
     {
         auto& fs = App::GetInstance()->GetFS();
 
-        const std::string metaDir = fs.AtKeyDir("AssetMeta");
+        const std::filesystem::path metaDir = fs.GetKeyVal("AssetMeta");
         ANV_ASSERT(!metaDir.empty(), "AssetMeta directory not registered");
 
-        m_Meta = metaDir + "/" + m_Name + ".aamta";
+        m_Meta = metaDir / (m_Name + ".aamta");
 
         Save(); // write initial meta
     }
@@ -38,6 +44,8 @@ namespace anv {
                 ser.Field("Name", m_Name);
                 ser.Field("Resource", m_ResourcePath); // full file path now
                 ser.Field("UUID", m_Uuid.uuid);
+
+                this->OnSave(ser);
             });
     }
 }
