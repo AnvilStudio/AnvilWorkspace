@@ -15,3 +15,6 @@
 [submodule "AnvilEngine/vendor/tomlplusplus"]
 	path = AnvilEngine/vendor/tomlplusplus
 	url = https://github.com/marzer/tomlplusplus.git
+[submodule "AnvilEngine/vendor/stb"]
+	path = AnvilEngine/vendor/stb
+	url = https://github.com/nothings/stb.git
