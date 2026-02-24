@@ -6,114 +6,6 @@
 
 namespace anv
 {
-    // -------------------- File --------------------
-
-    anv::File::File(std::string _path)
-        : m_Path(std::move(_path))
-    {
-    }
-
-    File::~File() = default;
-
-    void File::MarkForDelete()
-    {
-        m_DeleteRequested.store(true, std::memory_order_release);
-    }
-
-    bool File::DeleteNow()
-    {
-        std::error_code ec;
-        const bool removed = std::filesystem::remove(std::filesystem::path(m_Path), ec);
-
-        if (!removed)
-        {
-            if (ec)
-                ANV_LOG_WARN("Failed to delete file '%s': %s", m_Path.c_str(), ec.message().c_str());
-            return false;
-        }
-        return true;
-    }
-
-    size_t anv::File::GetFileSizeBytes(FILE* _f)
-    {
-        if (!_f) return 0;
-
-        const long cur = std::ftell(_f);
-        std::fseek(_f, 0, SEEK_END);
-        const long end = std::ftell(_f);
-        std::fseek(_f, cur, SEEK_SET);
-
-        return (end < 0) ? 0u : static_cast<size_t>(end);
-    }
-
-    size_t File::Size() const
-    {
-        std::error_code ec;
-        const auto sz = std::filesystem::file_size(std::filesystem::path(m_Path), ec);
-        if (ec) return 0;
-        return static_cast<size_t>(sz);
-    }
-
-    bool File::Exists() const
-    {
-        std::error_code ec;
-        return std::filesystem::exists(std::filesystem::path(m_Path), ec) && !ec;
-    }
-
-    bool File::CreateIfMissing(bool binary) const
-    {
-        if (Exists())
-            return true;
-
-        // Ensure parent exists
-        std::error_code ec;
-        std::filesystem::create_directories(std::filesystem::path(m_Path).parent_path(), ec);
-
-        FILE* f = std::fopen(m_Path.c_str(), binary ? "wb" : "w");
-        if (!f)
-        {
-            ANV_LOG_ERROR("File::CreateIfMissing - failed to create: " + m_Path);
-            return false;
-        }
-
-        std::fclose(f);
-        return true;
-    }
-
-    _vec<std::string> File::Read() const
-    {
-        _vec<std::string> lines;
-
-        std::ifstream in(m_Path);
-        if (!in.is_open())
-        {
-            ANV_LOG_ERROR("File::Read - failed to open: " + m_Path);
-            return lines;
-        }
-
-        std::string line;
-        while (std::getline(in, line))
-        {
-            if (!line.empty() && line.back() == '\r')
-                line.pop_back();
-            lines.push_back(std::move(line));
-        }
-
-        return lines;
-    }
-
-    void anv::File::Write(const std::string& _str) const
-    {
-        std::ofstream out(m_Path, std::ios::trunc);
-        if (!out.is_open())
-        {
-            ANV_LOG_ERROR("File::Write - failed to open: " + m_Path);
-            return;
-        }
-        out << _str;
-    }
-
-    // -------------------- FileSystem --------------------
 
     anv::FileSystem::FileSystem(std::string _rootDir)
         : m_RootDir(std::move(_rootDir))
@@ -166,7 +58,7 @@ namespace anv
             std::scoped_lock lk(m_DeleteMutex);
             m_DeleteQueue.clear();
         }
-        m_KeyDirs.clear();
+        m_KeyMap.clear();
         m_DirStack.clear();
 
         m_RootDir = canon;
@@ -212,6 +104,49 @@ namespace anv
             return false;
 
         return true;
+    }
+
+    std::filesystem::path FileSystem::ResolveKey_(const std::string& _key)
+    {
+        if (_key.empty())
+            return {};
+
+        // If it doesn't start with '@', treat it as a normal path
+        if (_key[0] != '@')
+            return std::filesystem::path(_key);
+
+        // Find the first slash/backslash after the '@Key'
+        const size_t slashPos = _key.find_first_of("/\\", 1);
+
+        // Extract key name WITHOUT '@'
+        std::string keyName;
+        std::string relativePath;
+
+        if (slashPos == std::string::npos)
+        {
+            // "@Assets"
+            keyName = _key.substr(1);
+            relativePath = "";
+        }
+        else
+        {
+            // "@Assets/folder/file"
+            keyName = _key.substr(1, slashPos - 1);
+            relativePath = _key.substr(slashPos + 1);
+        }
+
+        // Lookup key
+        auto it = m_KeyMap.find(keyName); // m_KeyMap: "Assets" -> base path
+        if (it == m_KeyMap.end())
+        {
+            ANV_LOG_ERROR("FileSystem: Unknown key '{}'", keyName);
+            return {};
+        }
+
+        std::filesystem::path resolved = it->second;
+        if (!relativePath.empty())
+            resolved /= std::filesystem::path(relativePath); // lets filesystem handle separators
+        return resolved;
     }
 
     bool anv::FileSystem::ResolveSandboxed_(const std::string& _relOrAbs, std::filesystem::path& _outAbs) const
@@ -337,49 +272,173 @@ namespace anv
         return true;
     }
 
-    void anv::FileSystem::CreateKeyDir(const std::string& _key, const std::string& _dirRelOrAbs)
+    void anv::FileSystem::MountKey(const std::string& _key, const std::string& _dirRelOrAbs)
     {
-        std::filesystem::path abs;
-        if (!ResolveSandboxed_(_dirRelOrAbs, abs))
+        if (_key.empty() || _dirRelOrAbs.empty())
         {
-            ANV_LOG_WARN("CreateKeyDir blocked by sandbox: key='%s'", _key.c_str());
+            ANV_LOG_WARN("MountKey: empty key or dir");
             return;
         }
 
-        // Create immediately (optional but handy)
-        std::error_code ec;
-        std::filesystem::create_directories(abs, ec);
+        // 1) Resolve @Key paths into a real path; otherwise just treat as a path
+        std::filesystem::path resolved =
+            (_dirRelOrAbs[0] == '@')
+            ? ResolveKey_(_dirRelOrAbs)
+            : std::filesystem::path(_dirRelOrAbs);
 
-        m_KeyDirs[_key] = abs.string();
+        if (resolved.empty())
+        {
+            ANV_LOG_WARN("MountKey: failed to resolve path for key='%s' input='%s'",
+                _key.c_str(), _dirRelOrAbs.c_str());
+            return;
+        }
+
+        // 2) Sandbox the RESOLVED path (not the raw input string)
+        std::filesystem::path abs;
+        if (resolved.is_absolute())
+        {
+            abs = resolved;
+        }
+        else
+        {
+            // If ResolveSandboxed_ expects a relative path, pass the resolved RELATIVE path
+            if (!ResolveSandboxed_(resolved.string(), abs))
+            {
+                ANV_LOG_WARN("MountKey blocked by sandbox: key='%s' path='%s'",
+                    _key.c_str(), resolved.string().c_str());
+                return;
+            }
+        }
+
+        // 3) Normalize and optionally ensure the directory exists
+        std::error_code ec;
+        abs = std::filesystem::weakly_canonical(abs, ec);
+        if (ec)
+        {
+            ANV_LOG_WARN("MountKey: failed to canonicalize '%s' (ec=%d)", abs.string().c_str(), (int)ec.value());
+            return;
+        }
+
+        // Optional: create if missing (choose what you want)
+        if (!std::filesystem::exists(abs, ec) || ec)
+        {
+            std::filesystem::create_directories(abs, ec);
+            if (ec)
+            {
+                ANV_LOG_WARN("MountKey: failed to create dir '%s' (ec=%d)", abs.string().c_str(), (int)ec.value());
+                return;
+            }
+        }
+
+        if (!std::filesystem::is_directory(abs, ec) || ec)
+        {
+            ANV_LOG_WARN("MountKey: not a directory '%s'", abs.string().c_str());
+            return;
+        }
+
+        // 4) Store key WITHOUT '@' (based on your earlier rule)
+        std::string cleanKey = _key;
+        if (!cleanKey.empty() && cleanKey[0] == '@')
+            cleanKey.erase(cleanKey.begin());
+
+        m_KeyMap[cleanKey] = abs.string();
     }
 
-    std::string anv::FileSystem::AtKeyDir(const std::string& _key)
+    std::filesystem::path anv::FileSystem::GetKeyVal(const std::string& _key)
     {
-        auto it = m_KeyDirs.find(_key);
-        if (it == m_KeyDirs.end())
+        auto it = m_KeyMap.find(_key);
+        if (it == m_KeyMap.end())
             return {};
         return it->second;
     }
 
 
-    bool anv::FileSystem::MoveToKeyDir(const std::string& _key)
+    bool anv::FileSystem::MoveToKey(const std::string& _key)
     {
-        auto it = m_KeyDirs.find(_key);
-        if (it == m_KeyDirs.end())
-            return false;
-
-        const std::string& absStr = it->second;
+        const std::filesystem::path resolved = ResolveKey_(_key);
 
         std::filesystem::path abs;
-        if (!ResolveSandboxed_(absStr, abs))
+        if (!ResolveSandboxed_(resolved.string(), abs))
             return false;
 
         std::error_code ec;
+
+        // Normalize the final directory (optional but recommended)
+        abs = std::filesystem::weakly_canonical(abs, ec);
+        if (ec) return false;
+
         if (!std::filesystem::exists(abs, ec) || ec) return false;
         if (!std::filesystem::is_directory(abs, ec) || ec) return false;
 
         m_WorkDir = abs;
         return true;
+    }
+
+    void FileSystem::ForEach(const std::filesystem::path _dirRelOrAbs, _ForEachFn _Fn)
+    {
+        ANV_ASSERT(_Fn, "ForEach function is null");
+
+        // if using keys
+        // lowk hate this
+        // TODO: Fix all the ".string()"s
+        std::filesystem::path resolved =
+            (_dirRelOrAbs.string()[0] == '@')
+            ? ResolveKey_(_dirRelOrAbs.string())
+            : std::filesystem::path(_dirRelOrAbs);
+
+        if (resolved.empty())
+        {
+            ANV_LOG_WARN("MountKey: failed to resolve path for key='%s' input='%s'",
+                resolved.c_str(), _dirRelOrAbs.c_str());
+            return;
+        }
+
+        // Resolve without mutating working directory (no side effects)
+        std::filesystem::path absDir;
+        if (!ResolveSandboxed_(resolved.string(), absDir))
+        {
+            ANV_LOG_WARN("ForEach blocked by sandbox: '%s'", _dirRelOrAbs.string().c_str());
+            return;
+        }
+
+        std::error_code ec;
+
+        if (!std::filesystem::exists(absDir, ec) || ec)
+        {
+            ANV_LOG_WARN("ForEach: directory does not exist: '%s'", absDir.string().c_str());
+            return;
+        }
+
+        if (!std::filesystem::is_directory(absDir, ec) || ec)
+        {
+            ANV_LOG_WARN("ForEach: path is not a directory: '%s'", absDir.string().c_str());
+            return;
+        }
+
+        // Recursive scan, yielding only regular files
+        for (auto it = std::filesystem::recursive_directory_iterator(absDir, ec);
+            it != std::filesystem::recursive_directory_iterator();
+            it.increment(ec))
+        {
+            if (ec)
+            {
+                ec.clear();
+                continue;
+            }
+
+            if (!it->is_regular_file(ec) || ec)
+            {
+                ec.clear();
+                continue;
+            }
+
+            // Use CreateFile to reuse registry refs (1 persistent ref per abs path)
+            Ref<File> file = CreateFile(it->path().string());
+            if (!file)
+                continue;
+
+            _Fn(file);
+        }
     }
 
     void anv::FileSystem::EnqueueDelete_(const Ref<File>& _file)
