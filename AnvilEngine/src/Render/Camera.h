@@ -32,6 +32,6 @@ namespace anv
 
     private:
         CameraUBO m_CameraUBO;
-        Component::Transform m_Transform;
+        Component::Transform2d m_Transform;
     };
 }
