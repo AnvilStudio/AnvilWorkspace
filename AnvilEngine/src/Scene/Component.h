@@ -23,18 +23,35 @@ namespace anv
             }
         };
 
-        struct Transform
-        {
-            glm::vec3 Position{0.0f, 0.0f, 0.0f};
-            glm::vec3 Rotation{0.0f, 0.0f, 0.0f};
-            glm::vec3 Scale{1.0f, 1.0f, 1.0f};
-        };
+        //struct Transform3d
+        //{
+        //    glm::vec3 Position{0.0f};
+        //    glm::vec3 Rotation{0.0f};
+        //    glm::vec3 Scale{1.0f};
+        //};
 
         struct Transform2d
         {
-            glm::vec2 Position{ 0.0f, 0.0f};
-            glm::vec2 Rotation{ 0.0f, 0.0f};
-            glm::vec2 Scale{ 1.0f, 1.0f};
+            glm::vec2 Position{0.0f};
+            glm::vec2 Rotation{0.0f};
+            glm::vec2 Scale{1.0f};
+
+            Transform2d()
+            {
+
+            }
+
+            Transform2d(glm::vec2 _pos, glm::vec2 _rot, glm::vec2 _scale)
+                : Position(_pos), Rotation(_rot), Scale(_scale)
+            {
+            }
+        };
+
+        struct SpriteRenderer
+        {
+            uuid::AssetUUID Texture;
+            glm::vec4 color{ 1, 1, 1, 1 };
+            int layer;
         };
         
     } // namespace Component
