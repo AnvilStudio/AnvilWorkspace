@@ -2,6 +2,7 @@
 #include "../FileSys/FileSystem.h"
 #include "../../vendor/tomlplusplus/include/toml++/toml.hpp"
 
+
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -11,6 +12,8 @@
 
 namespace anv
 {
+    class File;
+
     class Serializer
     {
     public:
@@ -27,6 +30,9 @@ namespace anv
         };
 
         Serializer(std::string _path, Mode _mode, Direction _dir);
+        Serializer(std::filesystem::path _path, Mode _mode, Direction _dir);
+        Serializer(Ref<File> _file, Mode _mode, Direction _dir);
+        Serializer() {};
         ~Serializer();
 
         // For Write: flush to disk. For Read: no-op.
@@ -136,6 +142,28 @@ namespace anv
                 pop_toml_table();
                 return true;
             }
+        }
+
+        // Handles "Texture" (const char[N]) and "Texture" (const char*)
+        void Field(const std::string& name, const char* value)
+        {
+            if (IsWriting())
+            {
+                std::string s(value ? value : "");
+                Field(name, s); // reuse your std::string Field
+            }
+            else
+            {
+                std::string read;
+                Field(name, read); // read from file
+                ANV_ASSERT(read == (value ? value : ""), "Field mismatch: %s", name.c_str());
+            }
+        }
+
+        template<size_t N>
+        void Field(const std::string& name, const char(&value)[N])
+        {
+            Field(name, static_cast<const char*>(value));
         }
 
 

@@ -9,22 +9,93 @@ namespace anv
         : m_Path(std::move(_path)), m_Mode(_mode), m_Dir(_dir)
     {
         ANV_PROFILE_SCOPE()
-            ANV_LOG_INFO("Opening Serializable File %s\n - In Mode %i\n - with direction %i", m_Path.c_str(), _mode, _dir)
+            std::string mode, dir;
 
         if (m_Mode == Mode::SER_MODE_TOML)
         {
+            mode = "TOML";
             m_TomlStack.clear();
             m_TomlStack.push_back(&m_TomlRoot);
 
+            dir = "Write";
             if (IsReading())
-                toml_load();
+                dir = "Read";
+            toml_load();
         }
 
         else
         {
+            mode = "Bin";
+            dir = "Write";
             if (IsReading())
-                bin_load();
+                mode = "Read";
+            bin_load();
         }
+
+        ANV_LOG_INFO("Opening Serializable File %s\n - In Mode %s\n - with direction %s",
+            m_Path.c_str(), mode.c_str(), dir.c_str())
+    }
+
+    Serializer::Serializer(std::filesystem::path _path, Mode _mode, Direction _dir)
+        : m_Path(_path.string()), m_Mode(_mode), m_Dir(_dir)
+    {
+        ANV_PROFILE_SCOPE()
+        std::string mode, dir;
+
+        if (m_Mode == Mode::SER_MODE_TOML)
+        {
+            mode = "TOML";
+            m_TomlStack.clear();
+            m_TomlStack.push_back(&m_TomlRoot);
+
+            dir = "Write";
+            if (IsReading())
+                dir = "Read";
+            toml_load();
+        }
+
+        else
+        {
+            mode = "Bin";
+            dir = "Write";
+            if (IsReading())
+                mode = "Read";
+            bin_load();
+        }
+
+        ANV_LOG_INFO("Opening Serializable File %s\n - In Mode %s\n - with direction %s",
+            m_Path.c_str(), mode.c_str(), dir.c_str())
+    }
+
+    anv::Serializer::Serializer(Ref<File> _file, Mode _mode, Direction _dir)
+        : m_Path(_file->Path()), m_Mode(_mode), m_Dir(_dir)
+    {
+        ANV_PROFILE_SCOPE()
+            std::string mode, dir;
+
+            if (m_Mode == Mode::SER_MODE_TOML)
+            {
+                mode = "TOML";
+                m_TomlStack.clear();
+                m_TomlStack.push_back(&m_TomlRoot);
+
+                dir = "Write";
+                if (IsReading())
+                    dir = "Read";
+                    toml_load();
+            }
+
+            else
+            {
+                mode = "Bin";
+                dir = "Write";
+                if (IsReading())
+                    mode = "Read";
+                    bin_load();
+            }
+
+            ANV_LOG_INFO("Opening Serializable File %s\n - In Mode %s\n - with direction %s", 
+                m_Path.c_str(), mode.c_str(), dir.c_str())
     }
 
     Serializer::~Serializer()
