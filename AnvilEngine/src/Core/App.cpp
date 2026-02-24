@@ -2,12 +2,15 @@
 #include <filesystem>
 #include <Util/Serialize/Serializer.h>
 
+//tmp
+#include "../Asset/AssetTypes/Texture.h" 
+
 namespace anv {
 
 	App::App()
 	{
-		if (m_This == nullptr)
-			m_This = this;
+		if (s_This == nullptr)
+			s_This = this;
 
 		// init logging
 		{
@@ -34,14 +37,12 @@ namespace anv {
 
 		m_AppWin = Window::Create(i);
 
-		// Setup should happen after App setup
-		OnSetup();
 	}
 
 	App::App(int arg_c, char* arg_v[])
 	{
-		if (m_This == nullptr)
-			m_This = this;
+		if (s_This == nullptr)
+			s_This = this;
 
 		// Navigate to project directory
 		if ((arg_c - 1) <= 0)
@@ -83,9 +84,14 @@ namespace anv {
 
 		InitializeFileSys();
 		
-		m_AssetManager = std::make_shared<AssetManager>();
+		// window needs to be created before assets.
 		m_AppWin = Window::Create(m_Settings.WindowCreateInfo);
+
+		m_AssetManager = std::make_shared<AssetManager>();
 		m_InputSystem = InputSystem::Create(m_AppWin);
+
+		//auto t_path = m_FileSystem->GetKeyVal("Assets") / "TestText.png";
+		//Ref<Texture> text = m_AssetManager->Create<Texture>(t_path.string());
 
 		// FIX: prototyping...
 		Render2DCreateInfo r_info{};
@@ -93,17 +99,12 @@ namespace anv {
 
 		Renderer2D::Init(r_info);
 
-		Ref<Asset> Text = m_AssetManager->GetOrCreate(m_FileSystem->AtKeyDir("Assets") + "\\TestText.png");
-
-		// Jump to client side setup
-		OnSetup();
 	}
 
 	App::~App()
 	{
 		ANV_PROFILE_SCOPE()
 		SaveStates();
-		OnDestroy();
 
 		// Everything should be deleted before the app itself gets deleted
 		Renderer2D::Shutdown();
@@ -111,21 +112,25 @@ namespace anv {
 
 	void App::Run()
 	{
+		s_This->OnSetup();
+
 		while (!m_AppWin->ShouldClose())
 		{
 			// Polls input
 			m_AppWin->OnUpdate();
 
 			// OnUpdate should hapen after input polling
-			OnUpdate();
+			s_This->OnUpdate();
 
 			Renderer2D::DrawFrame();
 		}
+
+		s_This->OnDestroy();
 	}
 
 	App* App::GetInstance()
 	{
-		return m_This;
+		return s_This;
 	}
 
 	_shared<Window> App::GetMainWindow()
@@ -169,8 +174,8 @@ namespace anv {
 				ser.ObjectIf("Directories", [&] {
 					ser.Field("EngineRes", m_Settings.assetDir);
 
-					std::string assets = m_FileSystem->AtKeyDir("Assets");
-					std::string cache = m_FileSystem->AtKeyDir("Cache");
+					std::string assets = m_FileSystem->GetKeyVal("Assets").string();
+					std::string cache = m_FileSystem->GetKeyVal("Cache").string();
 
 					ser.Field("Assets", assets);
 					ser.Field("Cache", cache);
@@ -203,9 +208,12 @@ namespace anv {
 
 					// --- directories ---
 					ser.ObjectIf("Directories", [&] {
-						ser.FieldOr<std::string>("EngineRes", m_Settings.assetDir, "Assets/com.anvstu.engine/");
-						ser.FieldOr<std::string>("Assets", m_Settings.assetDir, "Assets/");
-						ser.FieldOr<std::string>("Cache", m_Settings.cacheDir, "Assets/com.anvstu.engine/Cache/");
+						ser.FieldOr<std::string>("Assets",       m_Settings.assetDir, "Assets/");
+						ser.FieldOr<std::string>("EngineRes",  m_Settings.engineRes, "Assets/com.anvstu.engine/");
+						ser.FieldOr<std::string>("Cache",        m_Settings.cacheDir, "Assets/com.anvstu.engine/Cache/");
+						ser.FieldOr<std::string>("AssetMeta", m_Settings.assetMeta, "Assets/com.anvstu.engine/AssetMeta");
+						ser.FieldOr<std::string>("Settings",     m_Settings.settings, "Assets/com.anvstu.engine/Settings");
+
 						});
 
 					// --- Start scene ---
@@ -249,8 +257,11 @@ namespace anv {
 	void App::InitializeFileSys()
 	{
 		m_FileSystem = std::make_unique<FileSystem>(m_Settings.projectDir);
-		m_FileSystem->CreateKeyDir("Assets", m_Settings.assetDir);
-		m_FileSystem->CreateKeyDir("AnvRes", m_Settings.engineRes);
-		m_FileSystem->CreateKeyDir("AnvCache", m_Settings.cacheDir);
+		m_FileSystem->MountKey("Assets", m_Settings.assetDir);
+		m_FileSystem->MountKey("Res", m_Settings.engineRes);
+		m_FileSystem->MountKey("Cache", m_Settings.cacheDir);
+		m_FileSystem->MountKey("ShaderCache", "@Cache/ShaderCache");
+		m_FileSystem->MountKey("AssetMeta", m_Settings.assetMeta);
+		m_FileSystem->MountKey("Setting", m_Settings.settings);
 	}
 }

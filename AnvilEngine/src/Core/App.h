@@ -21,9 +21,11 @@ namespace anv
 
 		std::string startScene = "";
 
-		std::string engineRes = "";
-		std::string assetDir = "";
-		std::string cacheDir = "";
+		std::string assetDir     = "Assets/";
+		std::string engineRes  = "Assets/com.anvstu.engine/";
+		std::string cacheDir    = "Assets/com.anvstu.engine/Cache";
+		std::string assetMeta  =  "Assets/com.anvstu.engine/AssetMeta";
+		std::string settings     = "Assets/com.anvstu.engine/Settings";
 
 		WindowCreateInfo WindowCreateInfo;
 	};
@@ -42,22 +44,24 @@ namespace anv
 		_shared<Window> GetMainWindow();
 
 	public:
-		virtual void OnSetup()   {};
-		virtual void OnUpdate()  {};
-		virtual void OnDestroy() {};
+		virtual void OnSetup()     = 0;
+		virtual void OnUpdate()   = 0;
+		virtual void OnDestroy()  = 0;
 
-	private:
+	protected:
 		void SaveStates();
 		void InitializeFileSys();
 		void PopulateSettings(const std::string prjPath);
 
-	private:
-		_shared<InputSystem> m_InputSystem;
-		std::unique_ptr<FileSystem> m_FileSystem;
-		AppSettings        m_Settings;
-		SceneManager       m_ScnMngr;
-		inline static App* m_This  = nullptr;
-		_shared<Window>    m_AppWin   = nullptr;
+	protected:
+		inline static App*   s_This  = nullptr;
+
+		AppSettings           m_Settings;
+		SceneManager        m_ScnMngr;
+
+		_unique<FileSystem>        m_FileSystem    = nullptr;
+		_shared<InputSystem>      m_InputSystem = nullptr;
+		_shared<Window>             m_AppWin        = nullptr;
 		_shared<AssetManager>    m_AssetManager = nullptr;
 	};
 

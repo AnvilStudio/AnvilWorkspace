@@ -157,12 +157,23 @@ namespace anv{
 		{
 			DecRef();
 			m_Instance = instance;
+			IncRef();
 		}
 
 		template<typename T2>
 		Ref<T2> As() const
 		{
 			return Ref<T2>(*this);
+		}
+
+		template<typename T2>
+		Ref<T2> Cast() const
+		{
+			static_assert(std::is_base_of_v<RefCounter, T2>);
+			if (!m_Instance) return nullptr;
+
+			T2* p = dynamic_cast<T2*>(m_Instance);
+			return p ? Ref<T2>(p) : Ref<T2>(nullptr);
 		}
 
 		template<typename... Args>
