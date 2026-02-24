@@ -17,28 +17,34 @@ namespace anv
 	{
 	public:
 		VulkanShader(std::string _path, _shared<Context> _ctx);
+		VulkanShader(Deserialized & _dser);
 		~VulkanShader();
 
 		_vec<VkPipelineShaderStageCreateInfo> GetShaderStages();
+
 	private:
 		void set_name();
 		void load(std::string& _file);
 		// Shaders consist of both vert and frag.
 		void pre_process();
 		void compile_to_spv();
-		void save_files(); // save the compiled output
+		void write_spv_cache_file(); // save the compiled output
 		void create_module();
 
+	protected:
+		void OnSave(Serializer& _ser) override;
+
 	private:
-		std::string              m_Name;
-		std::string				 m_FilePath;
+		std::string                   m_Name;
+		std::string				       m_FilePath;
+		std::filesystem::path		m_Cache;
 		_vec<std::string>        m_SrcCode;
 		std::pair<std::string, _vec<uint32_t>>
-		                         m_VertCode;
+		                                   m_VertCode;
 		std::pair<std::string, _vec<uint32_t>>
-		                         m_FragCode;
+		                                    m_FragCode;
 		VkShaderModule           m_VModule;
 		VkShaderModule           m_FModule;
-		VulkanContext*           m_VkContext;
+		VulkanContext*             m_VkContext;
 	};
 }

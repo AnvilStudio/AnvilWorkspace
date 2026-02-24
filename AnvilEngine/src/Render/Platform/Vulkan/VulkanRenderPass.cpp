@@ -57,7 +57,7 @@ void anv::VulkanRenderPass::Build()
 	rpinfo.subpassCount =1;
 	rpinfo.pSubpasses = &subpass;
 
-	ANV_LOG_INFO("Creating Vk render pass \"%s\"", m_DName.c_str())
+	ANV_LOG_INFO("Creating Vk render pass " + m_DName)
 	ANV_VK_CHECK_RESULT(vkCreateRenderPass(m_VkContext->GetDevice(), &rpinfo, nullptr, &m_RenderPass), 
 		"Failed to create Vk render pass")
 }

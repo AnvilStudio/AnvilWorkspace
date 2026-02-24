@@ -1,4 +1,5 @@
 #include "VulkanRenderAPI.h"
+#include "Core/App.h"
 #include "Core/Window.h"
 #include "VulkanSwapChain.h"
 #include "VulkanRenderPass.h"
@@ -154,7 +155,8 @@ namespace anv {
 	void VulkanRenderAPI::load_shader_lib()
 	{
 		// TODO: need to update this when we actually have more shaders
-		m_Shader = Shader::Create(m_CreateInfo.shaderPath + "/shader.glsl", m_CreateInfo.pTarget->GetContext());
+		auto path = App::GetInstance()->GetFS().GetKeyVal("Assets") / "ShaderLib" / "shader.glsl";
+		m_Shader = Shader::Create(path.string(), m_CreateInfo.pTarget->GetContext());
 	}
 
 	void VulkanRenderAPI::build_pipeline()

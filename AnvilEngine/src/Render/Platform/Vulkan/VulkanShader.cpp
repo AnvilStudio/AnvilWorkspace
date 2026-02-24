@@ -1,4 +1,5 @@
 #include "VulkanShader.h"
+#include "Asset/Asset.h"
 #include "VulkanUtil.h"
 #include <Core/App.h>
 #include <Util/FileSys/FileSystem.h>
@@ -14,13 +15,53 @@ namespace anv
 		: Shader(_path), m_Name(_path)
 	{
 		ANV_PROFILE_SCOPE()
-		App::GetInstance()->GetFS().CreateKeyDir("ShaderCache", 
-			"Assets/com.anvstu.engine/Cache/ShaderCache/");
+		auto& fs = App::GetInstance()->GetFS();
+
+		std::filesystem::path namePath = m_Name;
+
+		m_Cache =
+			fs.GetKeyVal("ShaderCache") /
+			(namePath.filename().string() + ".shade");
 
 		m_VkContext = _ctx->GetAs<VulkanContext>();
+
 		load(_path);
 		pre_process();
 		compile_to_spv();
+		create_module();
+	}
+
+	VulkanShader::VulkanShader(Deserialized& _dser)
+		: Shader(_dser)
+	{
+		_dser.ser.ObjectStrict("Asset", [&] {
+			_dser.ser.ObjectStrict("Spec", [&] {
+				std::string cache;
+				_dser.ser.FieldStrict("ShaderName", m_Name);
+				_dser.ser.FieldStrict("Cache", cache);
+				m_Cache = std::filesystem::path(cache);
+			}); 
+		});
+
+		Serializer ser(m_Cache, Serializer::Mode::SER_MODE_TOML, Serializer::Direction::Read);
+		uint32_t version, magic;
+
+		ser.ObjectStrict(_dser.resource, [&] {
+			ser.FieldStrict("Version", version);
+			ser.FieldStrict("Magic", magic);
+
+			if (version != kShaderCacheVersion || magic != kShaderCacheMagic)
+			{
+				ANV_LOG_WARN("Shader cache version missmatch, this can cause undefined behavior!")
+			}
+
+			ser.Vector<uint32_t>("Vertex", m_VertCode.second);
+			ser.Vector<uint32_t>("Fragment", m_FragCode.second);
+		});
+
+		m_VkContext = App::GetInstance()->GetMainWindow()->
+			GetContext()->GetAs<VulkanContext>();
+
 		create_module();
 	}
 
@@ -66,9 +107,8 @@ namespace anv
 	void VulkanShader::load(std::string& _file)
 	{
 		ANV_LOG_DEBUG("Loading Shader: %s", m_Name.c_str())
-		auto& fs = App::GetInstance()->GetFS();
 		// No need to call "close" as it happens automatically
-		auto shader_file = fs.CreateFile(_file);
+		Ref<File> shader_file = Ref<File>::Create(_file);
 		m_SrcCode = shader_file->Read();
 	}
 
@@ -157,23 +197,30 @@ namespace anv
 			m_FragCode.second = { fresult.begin(), fresult.end() };
 		}
 
-		save_files();
+		write_spv_cache_file();
 	}
+
+	void VulkanShader::OnSave(Serializer& _ser)
+	{
+		_ser.Object("Spec", [&] {
+			_ser.Field("Type", "Shader");
+			_ser.Field("ShaderName", m_Name);
+			_ser.Field("Cache", m_Cache.string().c_str());
+		});
+	}
+
 	
-	void VulkanShader::save_files()
+	void VulkanShader::write_spv_cache_file()
 	{
 		auto& fs = App::GetInstance()->GetFS();
-
-		std::string path;
-		path = fs.AtKeyDir("ShaderCache") + m_Name.substr(m_Name.find_last_of("\\/")) + ".shade";
-		auto file = fs.CreateFile(path);
-		Serializer ser(path, Serializer::Mode::SER_MODE_TOML, Serializer::Direction::Write);
+		auto file = fs.CreateFile(m_Cache.string());
+		Serializer ser(file, Serializer::Mode::SER_MODE_TOML, Serializer::Direction::Write);
 		ser.Object(m_Name, [&]()
 			{
 				ser.Field("Magic", kShaderCacheMagic);
 				ser.Field("Version", kShaderCacheVersion);
-				ser.Vector("Vertex", m_VertCode.second);
-				ser.Vector("Fragment", m_FragCode.second);
+				ser.Vector<uint32_t>("Vertex", m_VertCode.second);
+				ser.Vector<uint32_t>("Fragment", m_FragCode.second);
 			});
 	}
 
