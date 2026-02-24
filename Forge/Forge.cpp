@@ -10,16 +10,20 @@ public:
 		// Initialize Forge specific components here if needed
 	}
 
-	void OnSetup()   override 
+	inline void OnSetup()   override 
 	{
 		ANV_LOG_INFO("hello from forge!");
+	}
 
-	};
+	inline void OnUpdate()  override 
+	{
 
-	void OnUpdate()  override {
-	};
+	}
 
-	void OnDestroy() override {};
+	inline void OnDestroy() override
+	{
+	
+	}
 
 };
 
