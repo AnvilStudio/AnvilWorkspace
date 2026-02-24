@@ -91,7 +91,7 @@ namespace anv
 
 		std::vector<RenderPass::Attachment> attachments;    // Attachments for the render pass
 		std::vector<SubpassInfo> subpasses;        // Subpasses in the render pass
-		const char* d_name;                        // debug name
+		std::string d_name;                        // debug name
 	};
 
     

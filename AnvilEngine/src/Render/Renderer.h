@@ -25,6 +25,11 @@ namespace anv {
 
     struct Color {
         float r, g, b, a;
+
+        //glm::vec4 operator=(const Color&& _col)
+        //{
+        //    return glm::vec4(_col.r, _col.g, _col.b, _col.a);
+        //}
     };
 
     enum class RenderingPipeline {
@@ -97,6 +102,7 @@ namespace anv {
         int width = 1920;
         int height = 1080;
         bool vsyncEnabled = true;
+
         // 0 - Unlimited F.R.
         int targetFrameRate = 60;
 
@@ -108,7 +114,6 @@ namespace anv {
         int swapchainImageCount = 3;
 
         // Depth and Stencil
-        // Not Set Up!
         bool enableDepthBuffer = false;
         int depthBits = 24;
         int stencilBits = 8;
@@ -122,18 +127,11 @@ namespace anv {
         // Debug
         bool enableDebugMode = false;
 
-        // Rendering Pipeline
-        RenderingPipeline pipeline = RenderingPipeline::TWD;
-
         // Asset paths
         std::string assetPath   = "Assets";
 
-        // AnvEngine specific assets
-        std::string shaderPath  = "Assets/com.anvstu.engine/shaders";
-        std::string texturePath = "Assets/com.anvstu.engine/textures";
-
         // Shadows
-        //int shadowMapResolution = 1024;
+        int shadowMapResolution = 1024;
 
         // Camera / Projection settings
         float fov = 45.0f;
