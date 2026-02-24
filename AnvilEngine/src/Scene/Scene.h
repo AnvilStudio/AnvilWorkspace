@@ -34,7 +34,7 @@ namespace anv
         template<typename comp, typename ...Args>
         comp& AddComponent(entt::entity _entity, Args&&... args)
         {
-            m_Registry.emplace<comp>(_entity, std::forward<Args>(args)...);
+            return m_Registry.emplace<comp>(_entity, std::forward<Args>(args)...);
         }
 
         void DestroyEntity(entt::entity);

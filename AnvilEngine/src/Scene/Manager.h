@@ -27,12 +27,13 @@ namespace anv
 		// Register is for "create a scene with externally supplied info"
 		// e.g. from disk metadata, editor registry, etc.
 		Ref<Scene> Register(std::string _path);
+		void Register(Ref<Scene> _scene);
 
-		Ref<Scene> Load(std::string _path);
+
 		Ref<Scene> GetActive();
-
 		void SetActive(uuid::AssetUUID _sceneUUID);
-		void Unload(uuid::AssetUUID _sceneUUID);
+
+		//void Unload(uuid::AssetUUID _sceneUUID);
 
 	private:
 		uuid::AssetUUID  m_Active;

@@ -4,7 +4,7 @@
 namespace anv
 {
     Scene::Scene(std::string _name)
-        : m_Name(std::move(_name))
+        : m_Name(_name)
     {
         ANV_LOG_INFO("Creating scene: %s", m_Name.c_str())
         m_UUID = uuid::uuid_GenAssetID();
@@ -13,12 +13,22 @@ namespace anv
 
     void Scene::Init()
     {
-
+        m_Path = "Assets/Scenes";
     }
 
     void Scene::Shutdown()
     {
         Serializer ser(m_Path, Serializer::Mode::SER_MODE_TOML, Serializer::Direction::Write);
+        
+        // Entities
+        auto view = m_Registry.view<uuid::EntityUUID, Component::Tag>();
+        for (auto [e, id, tag] : view.each())
+        {
+            ser.ObjectKeyed("Entities", id.uuid, [&] {
+                ser.Field("Name", tag.tag);
+                });
+        }
+        
         // Header
         ser.Object("Scene", [&] {
             ser.Field("Name", m_Name);
@@ -31,15 +41,6 @@ namespace anv
                 SceneContextToString,
                 SceneContextFromString);
         });
-
-        // Entities
-        auto view = m_Registry.view<uuid::EntityUUID, Component::Tag>();
-        for (auto [e, id, tag] : view.each())
-        {
-            ser.ObjectKeyed("Entities", id.uuid, [&] {
-                ser.Field("Name", tag.tag);
-                });
-        }
 
         ser.Close();
     }

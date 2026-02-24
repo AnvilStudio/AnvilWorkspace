@@ -73,14 +73,26 @@ namespace anv
 
 				auto ent = scene->RegisterEntity(name, uuid::EntityUUID(entUUID));
 
-				//ser.ObjectIf("Transform2D", [&] {
-				//	
-				//	scene->AddComponent<Component::Transform2d>(ent, );
+				//ser.ObjectIf("Transform2d", [&] {
+				     // TODO: Need to retrieve transform2d data then pass it in to AddCompnent 
+				//	scene->AddComponent<Component::Transform2d>(ent);
 				//});
 
 				// Create entity using entUUID + name
 			});
 
 		return scene;
+	}
+
+	void SceneManager::Register(Ref<Scene> _scene)
+	{
+		m_Registry.emplace(_scene->GetUUID(), _scene);
+	}
+
+	void SceneManager::SetActive(uuid::AssetUUID _sceneUUID)
+	{
+		ANV_ASSERT(m_Registry.find(_sceneUUID) != m_Registry.end(), 
+			"Scene must be registered with the scene manager in order to be set as the active scene")
+		m_Active = _sceneUUID;
 	}
 }

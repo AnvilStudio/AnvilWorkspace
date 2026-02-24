@@ -1,5 +1,7 @@
 #pragma once
-class SceneRenderer2D
-{
-};
+#include "SceneRendererTypes.h"
 
+namespace anv
+{
+
+}
