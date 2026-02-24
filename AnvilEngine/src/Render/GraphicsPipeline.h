@@ -68,6 +68,8 @@ namespace anv
 		ANV_NO_DSCRD
 		static Ref<GraphicsPipeline> Create(_shared<Context> _ctx);
 
+		// static Ref<GraphicsPipeline> Load(Ref<File> _cache)
+
 		GraphicsPipeline(_shared<Context> _ctx) 
 			: m_Context(_ctx) {}
 
@@ -80,6 +82,8 @@ namespace anv
 		virtual void SetRenderPass(const Ref<RenderPass> _rps) = 0;
 		virtual void Build() = 0;
 		virtual void Bind(_shared<QueueChain> _cmdq) = 0;
+
+		// virtual void CachePipeline(Ref<File> _cache);
 		
 	private:
 		_shared<Context> m_Context;
