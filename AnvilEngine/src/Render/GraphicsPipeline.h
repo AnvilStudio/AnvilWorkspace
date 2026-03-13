@@ -62,17 +62,9 @@ namespace anv
 		ColorBlendSettings colorBlendSettings{};     // Color blending settings
 	};
 
-	class GraphicsPipeline : public RefCounter
+	class GraphicsPipeline : public Asset
 	{
 	public:
-		ANV_NO_DSCRD
-		static Ref<GraphicsPipeline> Create(_shared<Context> _ctx);
-
-		// static Ref<GraphicsPipeline> Load(Ref<File> _cache)
-
-		GraphicsPipeline(_shared<Context> _ctx) 
-			: m_Context(_ctx) {}
-
 		virtual ~GraphicsPipeline() = default;
 
 		virtual void SetShaderStages(const Ref<Shader> _shader)                     = 0;
@@ -83,9 +75,18 @@ namespace anv
 		virtual void Build() = 0;
 		virtual void Bind(_shared<QueueChain> _cmdq) = 0;
 
-		// virtual void CachePipeline(Ref<File> _cache);
+		virtual void OnSave(Serializer& _ser) = 0;
+
+	protected:
+		ANV_NO_DSCRD
+			static Ref<GraphicsPipeline> Create(_shared<Context> _ctx);
+		// static Ref<GraphicsPipeline> Load(Ref<File> _cache)
+		GraphicsPipeline(_shared<Context> _ctx, std::string _dName);
 		
+		std::string m_Name;
+
 	private:
 		_shared<Context> m_Context;
+		friend class AssetManager;
 	};
 }

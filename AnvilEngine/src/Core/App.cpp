@@ -90,8 +90,9 @@ namespace anv {
 		m_AssetManager = std::make_shared<AssetManager>();
 		m_InputSystem = InputSystem::Create(m_AppWin);
 
-		//auto t_path = m_FileSystem->GetKeyVal("Assets") / "TestText.png";
-		//Ref<Texture> text = m_AssetManager->Create<Texture>(t_path.string());
+		// Test
+		auto t_path = m_FileSystem->GetKeyVal("Assets") / "TestText.png";
+		Ref<Texture> text = m_AssetManager->Create<Texture>(t_path);
 
 		// FIX: prototyping...
 		Render2DCreateInfo r_info{};
@@ -138,6 +139,11 @@ namespace anv {
 		return m_AppWin;
 	}
 
+	_shared<AssetManager> App::GetAssetManager()
+	{
+		return m_AssetManager;
+	}
+
 	// Serialize all settings
 	void App::SaveStates()
 	{
@@ -172,14 +178,19 @@ namespace anv {
 
 				// --- directories ---
 				ser.ObjectIf("Directories", [&] {
-					ser.Field("EngineRes", m_Settings.assetDir);
 
 					std::string assets = m_FileSystem->GetKeyVal("Assets").string();
+					std::string res = m_FileSystem->GetKeyVal("Res").string();
 					std::string cache = m_FileSystem->GetKeyVal("Cache").string();
+					std::string ameta = m_FileSystem->GetKeyVal("AssetMeta").string();                                  
+					std::string settings = m_FileSystem->GetKeyVal("Settings").string();
 
-					ser.Field("Assets", assets);
-					ser.Field("Cache", cache);
-					});
+					ser.FieldOr<std::string>("Assets",  assets, "Assets/");
+					ser.FieldOr<std::string>("EngineRes", res, "Assets/com.anvstu.engine/");
+					ser.FieldOr<std::string>("Cache", cache, "Assets/com.anvstu.engine/Cache/");
+					ser.FieldOr<std::string>("AssetMeta", ameta, "Assets/com.anvstu.engine/AssetMeta");
+					ser.FieldOr<std::string>("Settings", settings, "Assets/com.anvstu.engine/Settings");
+				});
 			});
 
 		ser.Close();
@@ -258,10 +269,11 @@ namespace anv {
 	{
 		m_FileSystem = std::make_unique<FileSystem>(m_Settings.projectDir);
 		m_FileSystem->MountKey("Assets", m_Settings.assetDir);
-		m_FileSystem->MountKey("Res", m_Settings.engineRes);
-		m_FileSystem->MountKey("Cache", m_Settings.cacheDir);
+		m_FileSystem->MountKey("Res", "@Assets/com.anvstu.engine");
+		m_FileSystem->MountKey("Cache", "@Res/Cache");
 		m_FileSystem->MountKey("ShaderCache", "@Cache/ShaderCache");
-		m_FileSystem->MountKey("AssetMeta", m_Settings.assetMeta);
-		m_FileSystem->MountKey("Setting", m_Settings.settings);
+		m_FileSystem->MountKey("ShaderLib", "@Res/ShaderLib");
+		m_FileSystem->MountKey("AssetMeta", "@Res/AssetMeta");
+		m_FileSystem->MountKey("Setting", "@Res/Settings");
 	}
 }

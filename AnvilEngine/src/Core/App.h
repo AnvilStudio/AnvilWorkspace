@@ -39,10 +39,10 @@ namespace anv
 
 		void Run();
 
-		static App* GetInstance();
-		FileSystem& GetFS();
+		static App*             GetInstance();
+		FileSystem&            GetFS();
 		_shared<Window> GetMainWindow();
-
+		_shared<AssetManager> GetAssetManager();
 	public:
 		virtual void OnSetup()     = 0;
 		virtual void OnUpdate()   = 0;

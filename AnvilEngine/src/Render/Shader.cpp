@@ -13,7 +13,7 @@ namespace anv
 		if (api == GraphicsAPI::VK)
 		{
 			auto shader = Ref<VulkanShader>::Create(_shaderPath, _ctx);
-			shader->GenAssetFile();
+			shader->GenMetaFile();
 			return shader;
 		}
 		else

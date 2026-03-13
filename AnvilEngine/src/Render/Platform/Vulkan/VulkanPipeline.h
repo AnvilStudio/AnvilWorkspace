@@ -48,7 +48,7 @@ namespace anv
 		: public GraphicsPipeline
 	{
 	public:
-		VulkanPipeline(_shared<Context> _ctx);
+		VulkanPipeline(_shared<Context> _ctx, std::string& _dName);
 		virtual ~VulkanPipeline() override;
 
 		void SetShaderStages(const Ref<Shader> _shader)                          override;
@@ -58,6 +58,8 @@ namespace anv
 		void SetRenderPass(const Ref<RenderPass> _rps)                           override;
 		void Build()                                                                                      override;
 		void Bind(_shared<QueueChain> _cmdq)                                        override;
+
+		virtual void OnSave(Serializer& _ser) override;
 
 	private:
 		VulkanPipelineCreateInfos m_CreateInfo{};

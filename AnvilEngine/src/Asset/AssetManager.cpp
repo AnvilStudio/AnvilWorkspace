@@ -34,14 +34,14 @@ namespace anv
 		if (_dser.type == "Shader")
 		{
 			auto shader = Shader::Create(_dser);
-			shader->GenAssetFile();
+			shader->GenMetaFile();
 			m_AssetReg.try_emplace(shader->GetAssetID(), shader);
 		}
 
 		if (_dser.type == "Texture")
 		{
 			ANV_LOG_DEBUG("Texture");
-			Create<Texture>(_dser)->GenAssetFile();
+			Create<Texture>(_dser)->GenMetaFile();
 		}
 	}
 

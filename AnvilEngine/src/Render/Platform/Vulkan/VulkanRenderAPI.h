@@ -3,6 +3,7 @@
 #include "Render/Renderer.h"
 #include "Render/QueueChain.h"
 #include "VulkanFrameResources.h"
+#include "Core/App.h"
 
 namespace anv
 {
@@ -19,7 +20,7 @@ namespace anv
 	private:
 		void create_render_passes();
 		void load_shader_lib();
-		void build_pipeline();
+		void build_2D_pipelines();
 		void create_frame_buffers();
 		void create_frames();
 		void destroy_frames();
@@ -32,6 +33,7 @@ namespace anv
 		Ref<Shader>                       m_Shader              = nullptr;
 		_vec<Ref<Framebuffer>>   m_FrameBuffers    {};
 		_shared<QueueChain>        m_RenderCmdChain  = nullptr;
+		_shared<AssetManager>     m_AssetManager = nullptr;
 
 		// sync //
 		std::vector<VulkanFrameResources> m_Frames;

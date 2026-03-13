@@ -17,30 +17,30 @@ namespace anv{
     class Asset : public RefCounter
     {
     public:
-        Asset(const std::string& _resource)
-            : m_Uuid(uuid::uuid_GenAssetID())
-        {
-            set_resource(_resource);
-        }
-
+        // Asset has no resource bound
+        Asset(const std::string& _name);
+        // register a resource as an engine asset for use
+        Asset(const std::filesystem::path& _resource);
+        // Seserialize from a file
         Asset(Deserialized& _dser);
 
         uuid::AssetUUID GetAssetID() const { return m_Uuid; }
 
         const std::string& GetName() const { return m_Name; }
-        const std::string& GetResourcePath() const { return m_ResourcePath; }
+        const std::string& GetResourcePath() const { return m_ResourcePath.string(); }
         const std::filesystem::path& GetMetaPath() const { return m_Meta; }
-        void GenAssetFile();
+        void GenMetaFile();
 
         void Save();
 
     protected:
-        void set_resource(const std::string& _path);
+        void set_resource(const std::filesystem::path& _path);
+        void set_nonres_asset(const std::string& _name);
         virtual void OnSave(Serializer& _ser) = 0;
 
     protected:
         uuid::AssetUUID m_Uuid{};
-        std::string m_ResourcePath; // full path to file
+        std::filesystem::path m_ResourcePath; // full path to file, empty if meta-only assets
         std::string m_Name;         // filename
         std::filesystem::path m_Meta;         // full path to .aamta
     };

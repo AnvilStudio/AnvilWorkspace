@@ -5,8 +5,8 @@
 
 namespace anv
 {
-	VulkanPipeline::VulkanPipeline(_shared<Context> _ctx)
-		: GraphicsPipeline(_ctx),
+	VulkanPipeline::VulkanPipeline(_shared<Context> _ctx, std::string& _dName)
+		: GraphicsPipeline(_ctx, _dName),
 		m_Pipeline(VK_NULL_HANDLE),
   		m_PipelineLayout(VK_NULL_HANDLE),
   		m_RenderPass(VK_NULL_HANDLE)
@@ -219,6 +219,18 @@ namespace anv
 
 			vkCmdBindPipeline(cmd.As<VulkanCommandBuffer>()->Get(),
 				VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
+			});
+	}
+	void VulkanPipeline::OnSave(Serializer& _ser)
+	{
+		_ser.Object("PipelineSettings", [&]
+			{
+				_ser.Field("API", "VK");
+				_ser.Field("Name", m_Name);
+				_ser.Object("PipelineInfo", [&] {
+					
+
+					});
 			});
 	}
 }

@@ -6,7 +6,7 @@
 namespace anv
 {
 
-	Texture::Texture(std::string _path)
+	Texture::Texture(const std::filesystem::path& _path)
 		: Asset(_path)
 	{
 		Load();
@@ -27,13 +27,15 @@ namespace anv
 	void Texture::Load()
 	{
 		stbi_set_flip_vertically_on_load(true);
-		m_Data = stbi_load(m_ResourcePath.c_str(), &m_Width, &m_Height, &m_Channels, 0);
+		m_Data = stbi_load(m_ResourcePath.string().c_str(), 
+			&m_Width, &m_Height, &m_Channels, 0);
 
 		if (!m_Data)
 		{
 			const char* failure_reason = stbi_failure_reason();
 			ANV_LOG_ERROR("Failed to load texture: %s\nReason: %s", m_ResourcePath.c_str(), failure_reason);
 		}
+
 		ANV_LOG_DEBUG("Loaded Text: " + m_Name)
 	}
 	

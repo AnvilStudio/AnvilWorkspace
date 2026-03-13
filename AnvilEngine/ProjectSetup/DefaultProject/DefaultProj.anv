@@ -4,6 +4,9 @@ ProjDir = ''
 ProjName = 'NewProject'
 Version = '0.0.0'
 
+[Settings.Directories]
+Assets = ''
+
 [Settings.StartScene]
 Name = 'NewScene'
 Path = 'Assets/Scenes/NewScene.ascn'

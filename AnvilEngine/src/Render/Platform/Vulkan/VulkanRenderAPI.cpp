@@ -13,14 +13,16 @@ namespace anv {
 	{
 		ANV_PROFILE_SCOPE();
 
+		// TODO: should probably be done in the parent class. all children of RenderAPI will use these
 		m_Context = m_CreateInfo.pTarget->GetContext();
-
+		m_AssetManager = App::GetInstance()->GetAssetManager();
 		m_RenderCmdChain = std::make_shared<QueueChain>();
+
 		m_RenderCmdChain->Start();
 
 		create_render_passes();
 		load_shader_lib();
-		build_pipeline();
+		build_2D_pipelines();
 		create_frame_buffers();
 		create_frames();
 
@@ -155,19 +157,24 @@ namespace anv {
 	void VulkanRenderAPI::load_shader_lib()
 	{
 		// TODO: need to update this when we actually have more shaders
-		auto path = App::GetInstance()->GetFS().GetKeyVal("Assets") / "ShaderLib" / "shader.glsl";
-		m_Shader = Shader::Create(path.string(), m_CreateInfo.pTarget->GetContext());
+		auto path = App::GetInstance()->GetFS().GetKeyVal("ShaderLib") / "shader.glsl";
+		m_Shader = m_AssetManager->Create<Shader>(path.string(), m_CreateInfo.pTarget->GetContext());
 	}
 
-	void VulkanRenderAPI::build_pipeline()
+	void VulkanRenderAPI::build_2D_pipelines()
 	{
-		m_Pipeline = GraphicsPipeline::Create(m_CreateInfo.pTarget->GetContext());
+		// Basic pipeline (triangle)
+		m_Pipeline = m_AssetManager->Create<GraphicsPipeline>(m_CreateInfo.pTarget->GetContext(),
+			"Test Pipeline");
 		m_Pipeline->SetShaderStages(m_Shader);
 		m_Pipeline->SetVertexInputLayout({});
 		m_Pipeline->SetRasterizationSettings({});
 		m_Pipeline->SetColorBlendSettings({});
 		m_Pipeline->SetRenderPass(m_RenderPass);
 		m_Pipeline->Build();
+
+		// Sprite Pipeline
+		// Post Processing
 	}
 
 	void VulkanRenderAPI::create_frames()

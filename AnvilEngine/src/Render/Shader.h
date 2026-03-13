@@ -16,12 +16,6 @@ namespace anv
 	class Shader : public Asset
 	{
 	public:
-		ANV_NO_DSCRD
-		static Ref<Shader> Create(const std::string& _shaderPath, _shared<Context> _ctx);
-
-		ANV_NO_DSCRD
-		static Ref<Shader> Create(Deserialized& _dser);
-
 		template<typename T>
 		inline T* GetAs() const
 		{
@@ -29,10 +23,15 @@ namespace anv
 		}
 
 	protected:
+		ANV_NO_DSCRD
+			static Ref<Shader> Create(const std::string& _shaderPath, _shared<Context> _ctx);
+		ANV_NO_DSCRD
+			static Ref<Shader> Create(Deserialized& _dser);
+
 		Shader(std::string& _name);
 		Shader(Deserialized& _dser);
-
-	private:
+	
+		friend class AssetManager;
 	};
 }
 

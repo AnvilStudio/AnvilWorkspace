@@ -3,23 +3,38 @@
 
 namespace anv {
 
-    void Asset::set_resource(const std::string& _path)
+    Asset::Asset(const std::string& _name)
+        : m_Uuid(uuid::uuid_GenAssetID())
     {
-        m_ResourcePath = _path;
+        set_resource(_name);
+    }
 
-        size_t pos = _path.find_last_of("/\\");
-        if (pos != std::string::npos)
-            m_Name = _path.substr(pos + 1);
-        else
-            m_Name = _path;
+    Asset::Asset(const std::filesystem::path& _resource)
+        : m_Uuid(uuid::uuid_GenAssetID())
+    {
+        set_resource(_resource);
     }
 
     Asset::Asset(Deserialized& _dser)
-        : m_Name(_dser.name), m_ResourcePath(_dser.resource), m_Uuid(_dser.uuid)
+        : m_Name(_dser.name), m_Uuid(_dser.uuid)
     {
+        set_resource(_dser.resource);
     }
 
-    void Asset::GenAssetFile()
+    // helper to find the name and set resource path of a source file
+    void Asset::set_resource(const std::filesystem::path& _path)
+    {
+        m_ResourcePath = _path;
+
+        m_Name = _path.filename().string();
+    }
+
+    void Asset::set_nonres_asset(const std::string& _name)
+    {
+        m_Name = _name;
+    }
+
+    void Asset::GenMetaFile()
     {
         auto& fs = App::GetInstance()->GetFS();
 
@@ -42,7 +57,7 @@ namespace anv {
         ser.Object("Asset", [&]
             {
                 ser.Field("Name", m_Name);
-                ser.Field("Resource", m_ResourcePath); // full file path now
+                ser.Field("Resource", m_ResourcePath.string().c_str()); // full file path now
                 ser.Field("UUID", m_Uuid.uuid);
 
                 this->OnSave(ser);

@@ -32,7 +32,7 @@ namespace anv
             Ref<TAsset> asset = Ref<TAsset>::Create(std::forward<Args>(_args)...);
             const uuid::AssetUUID id = asset->GetAssetID();
 
-            asset->GenAssetFile();
+            asset->GenMetaFile();
 
             // push to registry
             m_AssetReg.try_emplace(id, asset.As<Asset>());

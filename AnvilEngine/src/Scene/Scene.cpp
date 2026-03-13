@@ -19,16 +19,7 @@ namespace anv
     void Scene::Shutdown()
     {
         Serializer ser(m_Path, Serializer::Mode::SER_MODE_TOML, Serializer::Direction::Write);
-        
-        // Entities
-        auto view = m_Registry.view<uuid::EntityUUID, Component::Tag>();
-        for (auto [e, id, tag] : view.each())
-        {
-            ser.ObjectKeyed("Entities", id.uuid, [&] {
-                ser.Field("Name", tag.tag);
-                });
-        }
-        
+
         // Header
         ser.Object("Scene", [&] {
             ser.Field("Name", m_Name);
@@ -40,8 +31,17 @@ namespace anv
                 Scene::Context::CTX_3D,
                 SceneContextToString,
                 SceneContextFromString);
-        });
 
+            // Entities
+            // Could probably impl a Serialize component to gather all data of the entity and serialize it
+            auto view = m_Registry.view<uuid::EntityUUID, Component::Tag>();
+            for (auto [e, id, tag] : view.each())
+            {
+                ser.ObjectKeyed("Entities", id.uuid, [&] {
+                    ser.Field("Name", tag.tag);
+                });
+            }
+        });
         ser.Close();
     }
 

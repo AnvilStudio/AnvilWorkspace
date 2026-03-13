@@ -13,4 +13,7 @@ namespace anv
 			break;
 		}
 	}
+
+	GraphicsPipeline::GraphicsPipeline(_shared<Context> _ctx, std::string _dName)
+		: Asset(_dName), m_Context(_ctx) {}
 }
