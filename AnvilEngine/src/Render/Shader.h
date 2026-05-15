@@ -16,11 +16,9 @@ namespace anv
 	class Shader : public Asset
 	{
 	public:
-		template<typename T>
-		inline T* GetAs() const
-		{
-			return dynamic_cast<T*>(this);
-		}
+
+		virtual void OnSave(Serializer& _ser) = 0;
+
 
 	protected:
 		ANV_NO_DSCRD

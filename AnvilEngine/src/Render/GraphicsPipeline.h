@@ -78,10 +78,10 @@ namespace anv
 		virtual void OnSave(Serializer& _ser) = 0;
 
 	protected:
-		ANV_NO_DSCRD
-			static Ref<GraphicsPipeline> Create(_shared<Context> _ctx);
-		// static Ref<GraphicsPipeline> Load(Ref<File> _cache)
 		GraphicsPipeline(_shared<Context> _ctx, std::string _dName);
+		ANV_NO_DSCRD
+		static Ref<GraphicsPipeline> create_pipeline_asset(_shared<Context> _ctx, std::string _dName);
+		// static Ref<GraphicsPipeline> Load(Ref<File> _cache)
 		
 		std::string m_Name;
 
