@@ -1,0 +1,18 @@
+[Settings]
+Description = 'Test Build'
+ProjDir = '<YOUR DIR>'
+ProjName = 'MyProject'
+Version = '0.0.0'
+
+    [Settings.Directories]
+    Assets = 'Assets'
+
+
+    [Settings.StartScene]
+    Name = 'NewScene'
+    Path = '@Assets/Scenes/NewScene.ascn'
+    UUID = '08c1ae50-090f-4043-9c2a-e1a5e9dd2eb05672'
+
+    [Settings.WindowInfo]
+    Height = 739
+    Width = 1077
