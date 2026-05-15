@@ -11,13 +11,23 @@ namespace anv
         Init();
     }
 
+    Scene::~Scene()
+    {
+        //Shutdown();
+    }
+
     void Scene::Init()
     {
-        m_Path = "Assets/Scenes";
+        m_Path = "Assets/Scenes/" + m_Name + ".ascn";
     }
 
     void Scene::Shutdown()
     {
+        if (m_HasShutdown)
+            return;
+
+        m_HasShutdown = true;
+
         Serializer ser(m_Path, Serializer::Mode::SER_MODE_TOML, Serializer::Direction::Write);
 
         // Header

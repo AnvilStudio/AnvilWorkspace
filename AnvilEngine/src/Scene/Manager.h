@@ -32,10 +32,11 @@ namespace anv
 
 		Ref<Scene> GetActive();
 		void SetActive(uuid::AssetUUID _sceneUUID);
-
+		void Shutdown();
 		//void Unload(uuid::AssetUUID _sceneUUID);
 
 	private:
+		bool m_HasShutdown = false;
 		uuid::AssetUUID  m_Active;
 		std::unordered_map<uuid::AssetUUID, Ref<Scene>> m_Registry;
 	};

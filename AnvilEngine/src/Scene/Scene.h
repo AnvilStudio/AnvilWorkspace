@@ -17,6 +17,7 @@ namespace anv
         };
 
         Scene(std::string _name);
+        ~Scene();
 
         void Init();
         void Shutdown();
@@ -41,6 +42,7 @@ namespace anv
 
     
     protected:
+        bool m_HasShutdown = false;
         std::string m_Name;
         Context     m_Context;
         uuid::AssetUUID m_UUID;

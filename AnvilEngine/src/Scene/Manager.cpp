@@ -1,5 +1,6 @@
 #include "Manager.h"
 #include "Scene.h"
+#include "Core/App.h"
 
 namespace anv
 {
@@ -10,12 +11,7 @@ namespace anv
 
 	SceneManager::~SceneManager()
 	{
-		for (auto& [uuid, scene] : m_Registry)
-		{
-			scene->Shutdown();
-		}
-
-		m_Registry.clear();
+		Shutdown();
 	}
 
 	Ref<Scene> SceneManager::GetActive()
@@ -40,10 +36,17 @@ namespace anv
 
 	Ref<Scene> SceneManager::Register(std::string _path)
 	{
+		auto& fs = App::GetInstance()->GetFS();
+
+		std::filesystem::path newPath;
+		if (_path[0] == '@')
+			 newPath = fs.ResolveKey(_path);
+
 		SceneRegInfo info{
 			.path = _path
 		};
-		Serializer ser(_path, Serializer::Mode::SER_MODE_TOML,
+
+		Serializer ser(newPath, Serializer::Mode::SER_MODE_TOML,
 			Serializer::Direction::Read);
 		ser.ObjectStrict("Scene", [&] {
 			ser.FieldOr<std::string>("Name", info.name, "NewScene");
@@ -94,5 +97,21 @@ namespace anv
 		ANV_ASSERT(m_Registry.find(_sceneUUID) != m_Registry.end(), 
 			"Scene must be registered with the scene manager in order to be set as the active scene")
 		m_Active = _sceneUUID;
+	}
+
+	void SceneManager::Shutdown()
+	{
+		if (m_HasShutdown)
+			return;
+
+		m_HasShutdown = true;
+
+		for (auto& [uuid, scene] : m_Registry)
+		{
+			if (scene)
+				scene->Shutdown();
+		}
+
+		m_Registry.clear();
 	}
 }
