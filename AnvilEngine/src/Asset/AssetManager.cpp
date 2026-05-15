@@ -1,7 +1,9 @@
 #include "AssetManager.h"
 #include "Util/FileSys/FileSystem.h"
-#include <Core/App.h>
 #include "AssetTypes/Texture.h"
+#include "Render/RenderAPI.h"
+#include "Render/Platform/Vulkan/VulkanPipeline.h"
+#include <Core/App.h>
 
 namespace anv
 {
@@ -33,6 +35,7 @@ namespace anv
 	{
 		if (_dser.type == "Shader")
 		{
+			// needs to use asset manager to create
 			auto shader = Shader::Create(_dser);
 			shader->GenMetaFile();
 			m_AssetReg.try_emplace(shader->GetAssetID(), shader);
@@ -43,6 +46,26 @@ namespace anv
 			ANV_LOG_DEBUG("Texture");
 			Create<Texture>(_dser)->GenMetaFile();
 		}
+	}
+
+	Ref<GraphicsPipeline> AssetManager::CreateGraphicsPipeline(_shared<Context> _ctx, std::string _dName)
+	{
+		auto p = GraphicsPipeline::create_pipeline_asset(_ctx, _dName);
+
+		const uuid::AssetUUID id = p->GetAssetID();
+		p->GenMetaFile();
+		m_AssetReg.try_emplace(id, p.As<Asset>());
+		return p;
+	}
+
+	Ref<Shader> AssetManager::CreateShader(const std::string& _shaderPath, _shared<Context> _ctx)
+	{
+		auto s = Shader::Create(_shaderPath, _ctx);
+
+		const uuid::AssetUUID id = s->GetAssetID();
+		s->GenMetaFile();
+		m_AssetReg.try_emplace(id, s.As<Asset>());
+		return s;
 	}
 
 	void AssetManager::resolve_assets()

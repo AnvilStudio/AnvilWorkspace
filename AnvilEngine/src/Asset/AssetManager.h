@@ -1,6 +1,8 @@
 #pragma once
 #include "Asset.h"
+#include "../Render/GraphicsPipeline.h"
 #include "../Core/Reference.h"
+
 #include <unordered_map>
 
 namespace anv
@@ -39,6 +41,8 @@ namespace anv
             return asset;
         }
 
+        Ref<GraphicsPipeline> CreateGraphicsPipeline(_shared<Context> _ctx, std::string _dName);
+        Ref<Shader> CreateShader(const std::string& _shaderPath, _shared<Context> _ctx);
 
     private:
         void resolve_assets();

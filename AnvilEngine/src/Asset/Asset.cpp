@@ -41,7 +41,9 @@ namespace anv {
         const std::filesystem::path metaDir = fs.GetKeyVal("AssetMeta");
         ANV_ASSERT(!metaDir.empty(), "AssetMeta directory not registered");
 
-        m_Meta = metaDir / (m_Name + ".aamta");
+        std::string fname = m_Name;
+        std::replace(fname.begin(), fname.end(), ' ', '_');
+        m_Meta = metaDir / (fname + ".aamta");
 
         Save(); // write initial meta
     }

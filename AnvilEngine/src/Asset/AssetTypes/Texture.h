@@ -25,6 +25,7 @@ namespace anv
 		void OnSave(Serializer& _ser) override;
 
 		friend class AssetManager;
+		friend class Ref <Texture>;
 
 	private:
 		int m_Width;
