@@ -209,7 +209,6 @@ namespace anv
 		});
 	}
 
-	
 	void VulkanShader::write_spv_cache_file()
 	{
 		auto& fs = App::GetInstance()->GetFS();
@@ -223,7 +222,6 @@ namespace anv
 				ser.Vector<uint32_t>("Fragment", m_FragCode.second);
 			});
 	}
-
 
 	void VulkanShader::create_module()
 	{

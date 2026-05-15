@@ -158,13 +158,13 @@ namespace anv {
 	{
 		// TODO: need to update this when we actually have more shaders
 		auto path = App::GetInstance()->GetFS().GetKeyVal("ShaderLib") / "shader.glsl";
-		m_Shader = m_AssetManager->Create<Shader>(path.string(), m_CreateInfo.pTarget->GetContext());
+		m_Shader = m_AssetManager->CreateShader(path.string(), m_CreateInfo.pTarget->GetContext());
 	}
 
 	void VulkanRenderAPI::build_2D_pipelines()
 	{
 		// Basic pipeline (triangle)
-		m_Pipeline = m_AssetManager->Create<GraphicsPipeline>(m_CreateInfo.pTarget->GetContext(),
+		m_Pipeline = m_AssetManager->CreateGraphicsPipeline(m_CreateInfo.pTarget->GetContext(),
 			"Test Pipeline");
 		m_Pipeline->SetShaderStages(m_Shader);
 		m_Pipeline->SetVertexInputLayout({});

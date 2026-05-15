@@ -223,14 +223,15 @@ namespace anv
 	}
 	void VulkanPipeline::OnSave(Serializer& _ser)
 	{
-		_ser.Object("PipelineSettings", [&]
+		_ser.Object("Spec", [&]
 			{
+				_ser.Field("Type", "GraphicsPipeline");
 				_ser.Field("API", "VK");
 				_ser.Field("Name", m_Name);
 				_ser.Object("PipelineInfo", [&] {
 					
 
-					});
+				});
 			});
 	}
 }
