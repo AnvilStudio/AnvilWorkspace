@@ -1,10 +1,15 @@
 #include "File.h"
+#include "Core/App.h"
 
 namespace anv
 {
     anv::File::File(std::string _path)
-        : m_Path(_path)
     {
+        if (_path[0] == '@')
+            m_Path = App::GetInstance()->GetFS().ResolveKey(_path).string();
+        else {
+            m_Path = _path;
+        }
     }
 
     File::~File() = default;

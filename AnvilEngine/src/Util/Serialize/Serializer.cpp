@@ -160,7 +160,7 @@ namespace anv
     {
         auto* node = (*m_TomlStack.back()).get(name);
         if (!node || !node->is_table())
-        ANV_LOG_ERROR("TOML missing table: " + name);
+            ANV_LOG_ERROR("TOML missing table: " + name);
 
         m_TomlStack.push_back(node->as_table());
     }

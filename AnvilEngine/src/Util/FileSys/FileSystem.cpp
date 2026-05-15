@@ -106,7 +106,7 @@ namespace anv
         return true;
     }
 
-    std::filesystem::path FileSystem::ResolveKey_(const std::string& _key)
+    std::filesystem::path FileSystem::ResolveKey(const std::string& _key)
     {
         if (_key.empty())
             return {};
@@ -272,6 +272,11 @@ namespace anv
         return true;
     }
 
+    std::filesystem::path FileSystem::ResolveDir(std::string _dir)
+    {
+        return std::filesystem::path();
+    }
+
     void anv::FileSystem::MountKey(const std::string& _key, const std::string& _dirRelOrAbs)
     {
         if (_key.empty() || _dirRelOrAbs.empty())
@@ -283,7 +288,7 @@ namespace anv
         // 1) Resolve @Key paths into a real path; otherwise just treat as a path
         std::filesystem::path resolved =
             (_dirRelOrAbs[0] == '@')
-            ? ResolveKey_(_dirRelOrAbs)
+            ? ResolveKey(_dirRelOrAbs)
             : std::filesystem::path(_dirRelOrAbs);
 
         if (resolved.empty())
@@ -355,7 +360,7 @@ namespace anv
 
     bool anv::FileSystem::MoveToKey(const std::string& _key)
     {
-        const std::filesystem::path resolved = ResolveKey_(_key);
+        const std::filesystem::path resolved = ResolveKey(_key);
 
         std::filesystem::path abs;
         if (!ResolveSandboxed_(resolved.string(), abs))
@@ -383,7 +388,7 @@ namespace anv
         // TODO: Fix all the ".string()"s
         std::filesystem::path resolved =
             (_dirRelOrAbs.string()[0] == '@')
-            ? ResolveKey_(_dirRelOrAbs.string())
+            ? ResolveKey(_dirRelOrAbs.string())
             : std::filesystem::path(_dirRelOrAbs);
 
         if (resolved.empty())

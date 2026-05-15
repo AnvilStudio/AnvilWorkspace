@@ -47,6 +47,8 @@ namespace anv
         Ref<File> CreateFile(const std::string & _mkfileRelOrAbs);
         bool         DeleteFile(Ref<File>& _dltfile); // request delete
 
+        std::filesystem::path ResolveDir(std::string _dir);
+
         // Stores a reference to the directory as a key for fast movement
         void          MountKey(const std::string & _key, const std::string & _dirRelOrAbs);
         std::filesystem::path GetKeyVal(const std::string & _key);
@@ -57,11 +59,11 @@ namespace anv
         // If you don’t want a background thread, you can stop it and call this manually.
         void PumpDeletes();
 
+        std::filesystem::path ResolveKey(const std::string& _key);
     private:
         // Resolve a path against working directory, normalize, and enforce sandbox.
         bool ResolveSandboxed_(const std::string & _relOrAbs, std::filesystem::path & _outAbs) const;
         bool IsWithinRoot_(const std::filesystem::path & _abs) const;
-        std::filesystem::path ResolveKey_(const std::string& _key);
         void EnqueueDelete_(const Ref<File>& _file);
         void DeleteWorkerLoop_();
 
