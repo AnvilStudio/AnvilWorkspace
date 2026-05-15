@@ -57,7 +57,7 @@ namespace anv
 		inline static App*   s_This  = nullptr;
 
 		AppSettings           m_Settings;
-		SceneManager        m_ScnMngr;
+		_unique<SceneManager>  m_ScnMngr = nullptr;
 
 		_unique<FileSystem>        m_FileSystem    = nullptr;
 		_shared<InputSystem>      m_InputSystem = nullptr;

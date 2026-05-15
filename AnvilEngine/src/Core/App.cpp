@@ -83,6 +83,9 @@ namespace anv {
 		PopulateSettings(m_Settings.projectPath);
 
 		InitializeFileSys();
+
+		m_ScnMngr = std::make_unique<SceneManager>();
+		m_ScnMngr->Register(m_Settings.startScene);
 		
 		// window needs to be created before assets.
 		m_AppWin = Window::Create(m_Settings.WindowCreateInfo);
@@ -109,6 +112,7 @@ namespace anv {
 
 		// Everything should be deleted before the app itself gets deleted
 		Renderer2D::Shutdown();
+		m_ScnMngr->Shutdown();
 	}
 
 	void App::Run()
@@ -125,7 +129,7 @@ namespace anv {
 
 			Renderer2D::DrawFrame();
 		}
-
+		ANV_LOG_INFO("App Closing...")
 		s_This->OnDestroy();
 	}
 
@@ -147,7 +151,7 @@ namespace anv {
 	// Serialize all settings
 	void App::SaveStates()
 	{
-		Serializer ser(m_Settings.projectPath, 
+		Serializer ser(s_This->m_Settings.projectPath, 
 			Serializer::Mode::SER_MODE_TOML, 
 			Serializer::Direction::Write);
 
@@ -160,12 +164,20 @@ namespace anv {
 
 				ser.Object("StartScene", [&]
 					{
-						auto name = m_ScnMngr.GetActive()->GetName();
-						auto UUID = m_ScnMngr.GetActive()->GetUUID();
-						auto pth = m_ScnMngr.GetActive()->GetPath();
-						ser.Field("Name", name);
-						ser.Field("UUID", UUID.uuid);
-						ser.Field("Path", pth);
+						auto active = m_ScnMngr->GetActive();
+
+						if (!active)
+						{
+							ANV_LOG_ERROR("'SceneManager->GetActive() returned nullptr!'")
+						}
+						else {
+							auto name = active->GetName();
+							auto UUID = active->GetUUID();
+							auto pth = active->GetPath();
+							ser.Field("Name", name);
+							ser.Field("UUID", UUID.uuid);
+							ser.Field("Path", pth);
+						}
 					});
 
 				ser.Object("WindowInfo", [&] {
@@ -234,11 +246,6 @@ namespace anv {
 
 							ser.FieldOr<std::string>("Path", path, "");
 							m_Settings.startScene = path;
-
-							if (!path.empty())
-							{
-								m_ScnMngr.Register(path);
-							}
 						});
 				});
 
