@@ -8,6 +8,7 @@
 #include <Util/Time/Time.h>
 #include "VulkanBuffer.h"
 #include "Render/Vertex.h"
+#include "VulkanPipeline.h"
 
 namespace anv {
 
@@ -26,17 +27,23 @@ namespace anv {
 		create_render_passes();
 		load_shader_lib();
 		create_quad_buffers();
-		build_2D_pipelines();
-		create_frame_buffers();
-		create_frames();
 
-		m_RenderPass.As<VulkanRenderPass>()->SetFramebuffers(m_FrameBuffers);
-
+		// create camera UBO
 		BufferCreateInfo camera_info{};
 		camera_info.Usage = BufferUsage::Uniform;
 		camera_info.Size = sizeof(CameraUBO);
 		camera_info.Dynamic = true;
 		m_CameraUBO = Buffer::Create(m_Context, camera_info);
+		
+		create_descriptor_set_layout();
+		create_descriptor_pool();
+		create_camera_descriptor_set();
+
+		build_2D_pipelines();
+		create_frame_buffers();
+		create_frames();
+
+		m_RenderPass.As<VulkanRenderPass>()->SetFramebuffers(m_FrameBuffers);
 	}
 
 	void VulkanRenderAPI::DrawFrame()
@@ -118,6 +125,17 @@ namespace anv {
 				VkBuffer vertexBuffers[] = { vkVB->GetBuffer()};
 				VkDeviceSize offsets[] = { 0 };
 
+				vkCmdBindDescriptorSets(
+					vkCmd->Get(),
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					m_SpritePipeline.As<VulkanPipeline>()->GetPipelineLayout(),
+					0,
+					1,
+					&m_CameraDescriptorSet,
+					0,
+					nullptr
+				);
+
 				// bind buffers
 				vkCmdBindVertexBuffers(
 					vkCmd->Get(),
@@ -181,7 +199,10 @@ namespace anv {
 		m_Camera->Update(Time::DeltaTime());
 
 		// Upload CameraUBO
-		
+		m_CameraUBO->SetData(
+			&m_Camera->GetCameraUBO(),
+			sizeof(CameraUBO)
+		);
 	}
 
 	void VulkanRenderAPI::DrawQuad(const glm::vec2& position, const glm::vec2& size, glm::vec4 color)
@@ -206,7 +227,7 @@ namespace anv {
 
 		RenderPass::Attachment colatt;
 		colatt.type = RenderPass::Attachment::Type::ATT_TY_COLOR;
-		colatt.loadOp = RenderPass::Attachment::LoadOp::LOAD_OP_UNDEF;
+		colatt.loadOp = RenderPass::Attachment::LoadOp::LOAD_OP_CLEAR;
 		colatt.storeOp = RenderPass::Attachment::StoreOp::STORE_OP_STORE;
 		colatt.beginLayout = RenderPass::Attachment::ImgLayout::IMG_LAYOUT_UNDEF;
 		colatt.endLayout = RenderPass::Attachment::ImgLayout::IMG_LAYOUT_PRES;
@@ -277,6 +298,9 @@ namespace anv {
 		m_SpritePipeline->SetShaderStages(m_SpriteShader);
 		m_SpritePipeline->SetVertexInputLayout(&quadLayout);
 		m_SpritePipeline->SetRasterizationSettings(nullptr);
+		m_SpritePipeline.As<VulkanPipeline>()->SetDescriptorSetLayouts({
+			m_CameraDescriptorSetLayout
+		});
 		m_SpritePipeline->SetColorBlendSettings(nullptr);
 		m_SpritePipeline->SetRenderPass(m_RenderPass);
 		m_SpritePipeline->Build();
@@ -389,5 +413,92 @@ namespace anv {
 		ibi.Size = sizeof(Quad::indices);
 		ibi.InitialData = Quad::indices;
 		m_QuadIB = Buffer::Create(m_Context, ibi);
+	}
+	void VulkanRenderAPI::create_descriptor_set_layout()
+	{
+		VkDescriptorSetLayoutBinding cameraBinding{};
+		cameraBinding.binding = 0;
+		cameraBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		cameraBinding.descriptorCount = 1;
+		cameraBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		cameraBinding.pImmutableSamplers = nullptr;
+
+		VkDescriptorSetLayoutCreateInfo layoutInfo{};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = 1;
+		layoutInfo.pBindings = &cameraBinding;
+
+		ANV_VK_CHECK_RESULT(
+			vkCreateDescriptorSetLayout(
+				m_Context->GetAs<VulkanContext>()->GetDevice(),
+				&layoutInfo,
+				nullptr,
+				&m_CameraDescriptorSetLayout
+			),
+			"Failed to create camera descriptor set layout!"
+		);
+	}
+	void VulkanRenderAPI::create_descriptor_pool()
+	{
+		VkDescriptorPoolSize poolSize{};
+		poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSize.descriptorCount = 1;
+
+		VkDescriptorPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.poolSizeCount = 1;
+		poolInfo.pPoolSizes = &poolSize;
+		poolInfo.maxSets = 1;
+
+		ANV_VK_CHECK_RESULT(
+			vkCreateDescriptorPool(
+				m_Context->GetAs<VulkanContext>()->GetDevice(),
+				&poolInfo,
+				nullptr,
+				&m_DescriptorPool
+			),
+			"Failed to create descriptor pool!"
+		);
+	}
+	void VulkanRenderAPI::create_camera_descriptor_set()
+	{
+		VkDescriptorSetAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool = m_DescriptorPool;
+		allocInfo.descriptorSetCount = 1;
+		allocInfo.pSetLayouts = &m_CameraDescriptorSetLayout;
+
+		ANV_VK_CHECK_RESULT(
+			vkAllocateDescriptorSets(
+				m_Context->GetAs<VulkanContext>()->GetDevice(),
+				&allocInfo,
+				&m_CameraDescriptorSet
+			),
+			"Failed to allocate camera descriptor set!"
+		);
+
+		auto vkUBO = m_CameraUBO.As<VulkanBuffer>();
+
+		VkDescriptorBufferInfo bufferInfo{};
+		bufferInfo.buffer = vkUBO->GetBuffer();
+		bufferInfo.offset = 0;
+		bufferInfo.range = sizeof(CameraUBO);
+
+		VkWriteDescriptorSet descriptorWrite{};
+		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrite.dstSet = m_CameraDescriptorSet;
+		descriptorWrite.dstBinding = 0;
+		descriptorWrite.dstArrayElement = 0;
+		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrite.descriptorCount = 1;
+		descriptorWrite.pBufferInfo = &bufferInfo;
+
+		vkUpdateDescriptorSets(
+			m_Context->GetAs<VulkanContext>()->GetDevice(),
+			1,
+			&descriptorWrite,
+			0,
+			nullptr
+		);
 	}
 }

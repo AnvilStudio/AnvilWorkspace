@@ -35,6 +35,9 @@ namespace anv
 		void recreate_swap();
 
 		void create_quad_buffers();
+		void create_descriptor_set_layout();
+		void create_descriptor_pool();
+		void create_camera_descriptor_set();
 
 	private:
 		Render2DCreateInfo            m_CreateInfo         {};
@@ -48,10 +51,13 @@ namespace anv
 		_shared<AssetManager>     m_AssetManager = nullptr;
 
 		// tmp
-
 		Ref<Buffer> m_QuadVB;
 		Ref<Buffer> m_QuadIB;
 		Ref<Buffer> m_CameraUBO;
+
+		VkDescriptorSetLayout m_CameraDescriptorSetLayout = VK_NULL_HANDLE;
+		VkDescriptorPool m_DescriptorPool = VK_NULL_HANDLE;
+		VkDescriptorSet m_CameraDescriptorSet = VK_NULL_HANDLE;
 
 		// sync //
 		std::vector<VulkanFrameResources> m_Frames;
