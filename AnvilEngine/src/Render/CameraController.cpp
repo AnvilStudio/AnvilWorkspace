@@ -16,10 +16,10 @@ namespace anv
         glm::vec2 movement(0.0f);
 
         if (m_InputSystem->IsKeyPressed(ANV_KEY_W))
-            movement.y += 1.0f;
+            movement.y -= 1.0f;
 
         if (m_InputSystem->IsKeyPressed(ANV_KEY_S))
-            movement.y -= 1.0f;
+            movement.y += 1.0f;
 
         if (m_InputSystem->IsKeyPressed(ANV_KEY_D))
             movement.x += 1.0f;

@@ -1,5 +1,7 @@
 #include "Scene.h"
+#include <Core/App.h>
 #include <Util/Serialize/Serializer.h>
+#include <Render/CameraController.h>
 
 namespace anv
 {
@@ -19,6 +21,12 @@ namespace anv
     void Scene::Init()
     {
         m_Path = "Assets/Scenes/" + m_Name + ".ascn";
+
+        m_MainCamera = std::make_shared<Camera2D>();
+        m_CameraController = std::make_unique<CameraController>( 
+            App::GetInstance()->GetInputSystem(), 
+            m_MainCamera
+        );
     }
 
     void Scene::Shutdown()
@@ -57,7 +65,7 @@ namespace anv
 
     void Scene::OnUpdate(float _deltaTime)
     {
-
+        m_CameraController->Update(_deltaTime);
     }
 
     void Scene::Render()

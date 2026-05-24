@@ -1,6 +1,7 @@
 #pragma once
 #include "../vendor/entt/single_include/entt/entt.hpp"
 #include "../Render/Camera.h"
+#include "../Render/CameraController.h"
 
 namespace anv
 {
@@ -40,6 +41,7 @@ namespace anv
 
         void DestroyEntity(entt::entity);
 
+        _shared<Camera2D> GetMainCamera() { return m_MainCamera; }
     
     protected:
         bool m_HasShutdown = false;
@@ -48,7 +50,10 @@ namespace anv
         uuid::AssetUUID m_UUID;
         entt::registry  m_Registry;
         std::string m_Path;
+        _shared<Camera2D> m_MainCamera = nullptr;
+        _unique<CameraController> m_CameraController = nullptr;
 
+        
         friend class SceneManager;
     };
    
