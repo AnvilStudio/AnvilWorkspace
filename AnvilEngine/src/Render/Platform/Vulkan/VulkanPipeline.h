@@ -51,11 +51,14 @@ namespace anv
 		VulkanPipeline(_shared<Context> _ctx, std::string& _dName);
 		virtual ~VulkanPipeline() override;
 
+		VkPipelineLayout GetPipelineLayout();
+
 		void SetShaderStages(const Ref<Shader> _shader)                          override;
 		void SetVertexInputLayout(const VertexInputLayout* _layout = nullptr)          override;
 		void SetRasterizationSettings(const RasterizationSettings* _raster)  override;
 		void SetColorBlendSettings(const ColorBlendSettings* _colbld)        override;
 		void SetRenderPass(const Ref<RenderPass> _rps)                           override;
+		void SetDescriptorSetLayouts(const _vec<VkDescriptorSetLayout>& layouts);
 		void Build()                                                                                      override;
 		void Bind(_shared<QueueChain> _cmdq)                                        override;
 
@@ -85,5 +88,6 @@ namespace anv
 
 		VkVertexInputBindingDescription m_VertexBindingDescription{};
 		_vec<VkVertexInputAttributeDescription> m_VertexAttributeDescriptions{};
+		_vec<VkDescriptorSetLayout> m_DescriptorSetLayouts;
 	};
 }

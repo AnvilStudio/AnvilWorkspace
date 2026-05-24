@@ -76,6 +76,11 @@ namespace anv
 
 	}
 
+	VkPipelineLayout VulkanPipeline::GetPipelineLayout()
+	{
+		return m_PipelineLayout;
+	}
+
 	void VulkanPipeline::SetShaderStages(const Ref<Shader> _shader)
 	{
 		m_Shader = _shader; // keep alive through Build()
@@ -198,6 +203,12 @@ namespace anv
 		m_CreateInfo.pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
 		m_CreateInfo.pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
+		m_CreateInfo.pipelineLayoutInfo.setLayoutCount =
+			static_cast<uint32_t>(m_DescriptorSetLayouts.size());
+
+		m_CreateInfo.pipelineLayoutInfo.pSetLayouts =
+			m_DescriptorSetLayouts.data();
+
 		ANV_VK_CHECK_RESULT(vkCreatePipelineLayout(m_VkContext->GetDevice(), &m_CreateInfo.pipelineLayoutInfo, 
 			nullptr, &m_PipelineLayout), "Failed to create pipeline layout!")
 
@@ -208,6 +219,11 @@ namespace anv
     {
 		m_RenderPass = _rps.As<VulkanRenderPass>()->Get();
     }
+
+	void VulkanPipeline::SetDescriptorSetLayouts(const _vec<VkDescriptorSetLayout>& layouts)
+	{
+		m_DescriptorSetLayouts = layouts;
+	}
 
 	void VulkanPipeline::Build()
 	{
