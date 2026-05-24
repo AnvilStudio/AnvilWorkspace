@@ -153,7 +153,7 @@ namespace anv {
         static void BeginScene(_shared<Camera2D> camera);
         static void EndScene();
 
-        static void DrawQuad(const glm::vec2& position, const glm::vec2& size, Color color);
+        static void DrawQuad(const glm::vec2& position, const glm::vec2& size, glm::vec4 color);
         
         //static void CmdDrawQuadWithMaterial(Material& _mat, VertexBuffer& _vb, IndexBuffer& _ib);
         //static void CmdDrawQuadWithTexture(Texture& _text, VertexBuffer& _vb, IndexBuffer& _ib);
