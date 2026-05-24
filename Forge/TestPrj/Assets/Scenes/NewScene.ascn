@@ -3,9 +3,3 @@ Context = '2D'
 Name = 'NewScene'
 Path = '@Assets/Scenes/NewScene.ascn'
 UUID = '08c1ae50-090f-4043-9c2a-e1a5e9dd2eb05672'
-
-    [Scene.Entities.0040ef4293-00979-04a84-088a5-d763d9d16369aa71]
-    Name = 'Environment'
-
-    [Scene.Entities.8a43ef4293-609d9-04d84-03ga5-d774d1d46365ha71]
-    Name = 'Main Camera'
