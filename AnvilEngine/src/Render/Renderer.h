@@ -150,7 +150,7 @@ namespace anv {
 
         static void SetCamera(_shared<Camera2D> _main);
 
-        static void BeginScene(_shared<Camera2D> camera);
+        static void BeginScene();
         static void EndScene();
 
         static void DrawQuad(const glm::vec2& position, const glm::vec2& size, glm::vec4 color);

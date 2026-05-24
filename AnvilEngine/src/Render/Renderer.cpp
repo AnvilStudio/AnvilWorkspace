@@ -25,7 +25,7 @@ namespace anv
 		m_RenderAPI->SetMainCamera(_main);
 	}
 
-	void Renderer2D::BeginScene(_shared<Camera2D> camera)
+	void Renderer2D::BeginScene()
 	{
 		m_RenderAPI->BeginScene();
 	}
