@@ -25,6 +25,7 @@ namespace anv {
 
 		create_render_passes();
 		load_shader_lib();
+		create_quad_buffers();
 		build_2D_pipelines();
 		create_frame_buffers();
 		create_frames();
@@ -35,7 +36,7 @@ namespace anv {
 		camera_info.Usage = BufferUsage::Uniform;
 		camera_info.Size = sizeof(CameraUBO);
 		camera_info.Dynamic = true;
-		m_CameraUBO = Buffer::Create<VulkanBuffer>(m_Context, camera_info);
+		m_CameraUBO = Buffer::Create(m_Context, camera_info);
 	}
 
 	void VulkanRenderAPI::DrawFrame()
@@ -88,7 +89,7 @@ namespace anv {
 					fr2.sync.inFlightFence);
 			});
 
-		m_Pipeline->Bind(m_RenderCmdChain);
+		m_SpritePipeline->Bind(m_RenderCmdChain);
 		m_RenderPass->Begin();
 
 		m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext& frame)
@@ -183,7 +184,7 @@ namespace anv {
 		
 	}
 
-	void VulkanRenderAPI::DrawQuad(const glm::vec2& position, const glm::vec2& size, Color color)
+	void VulkanRenderAPI::DrawQuad(const glm::vec2& position, const glm::vec2& size, glm::vec4 color)
 	{
 	}
 
@@ -227,6 +228,9 @@ namespace anv {
 		// TODO: need to update this when we actually have more shaders
 		auto path = App::GetInstance()->GetFS().GetKeyVal("ShaderLib") / "shader.glsl";
 		m_Shader = m_AssetManager->CreateShader(path.string(), m_CreateInfo.pTarget->GetContext());
+		// sprite
+		auto spritepath = App::GetInstance()->GetFS().GetKeyVal("ShaderLib") / "sprite.glsl";
+		m_SpriteShader = m_AssetManager->CreateShader(spritepath.string(), m_CreateInfo.pTarget->GetContext());
 	}
 
 	void VulkanRenderAPI::build_2D_pipelines()
@@ -241,7 +245,41 @@ namespace anv {
 		m_Pipeline->SetRenderPass(m_RenderPass);
 		m_Pipeline->Build();
 
+		VertexInputLayout sprite_layout{};
+
 		// Sprite Pipeline
+		VertexInputLayout quadLayout{};
+		quadLayout.binding = 0;
+		quadLayout.stride = sizeof(QuadVertex);
+
+		quadLayout.AddAttribute(
+			"Position",
+			0,
+			offsetof(QuadVertex, Position),
+			sizeof(glm::vec2),
+			sizeof(QuadVertex)
+		);
+
+		quadLayout.AddAttribute(
+			"Color",
+			1,
+			offsetof(QuadVertex, Color),
+			sizeof(glm::vec4),
+			sizeof(QuadVertex)
+		);
+
+		m_SpritePipeline =
+			m_AssetManager->CreateGraphicsPipeline(
+				m_Context,
+				"Sprite Pipeline"
+			);
+
+		m_SpritePipeline->SetShaderStages(m_SpriteShader);
+		m_SpritePipeline->SetVertexInputLayout(&quadLayout);
+		m_SpritePipeline->SetRasterizationSettings(nullptr);
+		m_SpritePipeline->SetColorBlendSettings(nullptr);
+		m_SpritePipeline->SetRenderPass(m_RenderPass);
+		m_SpritePipeline->Build();
 		// Post Processing
 	}
 
@@ -337,16 +375,19 @@ namespace anv {
 
 	void VulkanRenderAPI::create_quad_buffers()
 	{
+		ANV_LOG_INFO("IB size: {}", sizeof(Quad::indices));
+		ANV_LOG_INFO("VB size: {}", sizeof(Quad::vertices));
+
+		BufferCreateInfo vbi{};
+		vbi.Usage = BufferUsage::Vertex;
+		vbi.Size = sizeof(Quad::vertices);
+		vbi.InitialData = Quad::vertices;
+		m_QuadVB = Buffer::Create(m_Context, vbi);
+
 		BufferCreateInfo ibi{};
 		ibi.Usage = BufferUsage::Index;
 		ibi.Size = sizeof(Quad::indices);
 		ibi.InitialData = Quad::indices;
-		m_QuadIB = Buffer::Create<VulkanBuffer>(m_Context, ibi);
-
-		BufferCreateInfo vbi{};
-		ibi.Usage = BufferUsage::Vertex;
-		ibi.Size = sizeof(Quad::vertices);
-		ibi.InitialData = Quad::vertices;
-		m_QuadVB = Buffer::Create<VulkanBuffer>(m_Context, ibi);
+		m_QuadIB = Buffer::Create(m_Context, ibi);
 	}
 }

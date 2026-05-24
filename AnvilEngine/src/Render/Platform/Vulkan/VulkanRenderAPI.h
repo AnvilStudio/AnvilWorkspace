@@ -20,7 +20,7 @@ namespace anv
 		virtual void OnShutdown() override;
 
 		virtual void BeginScene() override;
-		virtual void DrawQuad(const glm::vec2& position, const glm::vec2& size, Color color) override;
+		virtual void DrawQuad(const glm::vec2& position, const glm::vec2& size, glm::vec4 color) override;
 		virtual void EndScene() override;
 
 		virtual void SetMainCamera(_shared<Camera2D> camera) override;
