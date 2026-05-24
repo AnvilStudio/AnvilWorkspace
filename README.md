@@ -3,7 +3,7 @@
 # Anvil Engine 
 - `Anvil Engine` is built with a powerful, flexible toolset designed to empower developers in creating immersive experiences, whether you're building games, interactive simulations, or lightweight applications. <br> 
 
-- Anvil provides a solid foundation with multi-window support, a range of customizable components
+- Anvil provides a solid foundation with a range of customizable components
 and a versatile renderer that balances performance with simplicity. <br>
 
 - With Anvil, you’ll have the freedom to focus on crafting your vision without unnecessary overhead, thanks to our lightweight, hardware-focused renderer. Our mission is to support developers by offering both high-level tools for rapid development and fine-tuned, API-specific functionality for those who want to dive deeper.
