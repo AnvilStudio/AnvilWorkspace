@@ -5,8 +5,11 @@
 namespace anv
 {
 	VulkanBuffer::VulkanBuffer(_shared<Context> _ctx, BufferCreateInfo _info)
-		: Buffer(_ctx)
+		: Buffer(_ctx), m_Info(_info)
 	{
+		ANV_ASSERT(m_Info.Size > 0, "Cannot create VulkanBuffer with size 0!");
+		ANV_LOG_INFO("Creating VK buffer with size: %i", m_Info.Size);
+
 		set_vk_usage();
 
 		m_Properties =
@@ -77,7 +80,7 @@ namespace anv
 
 	uint64_t VulkanBuffer::GetSize() const
 	{
-		m_Info.Size;
+		return m_Info.Size;
 	}
 
 	BufferUsage VulkanBuffer::GetUsage() const
