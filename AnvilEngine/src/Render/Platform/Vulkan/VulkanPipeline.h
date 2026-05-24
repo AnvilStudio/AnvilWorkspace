@@ -61,6 +61,19 @@ namespace anv
 
 		virtual void OnSave(Serializer& _ser) override;
 
+		static VkFormat AttributeFormat(uint32_t size)
+		{
+			switch (size)
+			{
+			case sizeof(float) * 2: return VK_FORMAT_R32G32_SFLOAT;
+			case sizeof(float) * 3: return VK_FORMAT_R32G32B32_SFLOAT;
+			case sizeof(float) * 4: return VK_FORMAT_R32G32B32A32_SFLOAT;
+			default:
+				ANV_LOG_FATAL("Unsupported vertex attribute size");
+				return VK_FORMAT_UNDEFINED;
+			}
+		}
+
 	private:
 		VulkanPipelineCreateInfos m_CreateInfo{};
 		VkPipeline                         m_Pipeline;

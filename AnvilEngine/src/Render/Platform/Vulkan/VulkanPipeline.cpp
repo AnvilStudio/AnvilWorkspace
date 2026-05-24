@@ -116,7 +116,7 @@ namespace anv
 				VkVertexInputAttributeDescription desc{};
 				desc.binding = _layout->binding;
 				desc.location = att.location;
-				desc.format = VK_FORMAT_R32G32_SFLOAT;
+				desc.format = AttributeFormat(att.size);
 				desc.offset = att.offset;
 
 				m_VertexAttributeDescriptions.push_back(desc);
