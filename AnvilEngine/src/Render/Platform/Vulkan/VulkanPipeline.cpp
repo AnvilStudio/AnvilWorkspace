@@ -95,12 +95,39 @@ namespace anv
 
 	void VulkanPipeline::SetVertexInputLayout(const VertexInputLayout* _layout)
 	{
-		m_CreateInfo.vertexInputInfo = {};
-		m_CreateInfo.vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		m_CreateInfo.vertexInputInfo.vertexBindingDescriptionCount = 0;
-		m_CreateInfo.vertexInputInfo.pVertexBindingDescriptions = nullptr; // Optional
-		m_CreateInfo.vertexInputInfo.vertexAttributeDescriptionCount = 0;
-		m_CreateInfo.vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
+		if (_layout == nullptr)
+		{
+			m_CreateInfo.vertexInputInfo = {};
+			m_CreateInfo.vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+			m_CreateInfo.vertexInputInfo.vertexBindingDescriptionCount = 0;
+			m_CreateInfo.vertexInputInfo.pVertexBindingDescriptions = nullptr; // Optional
+			m_CreateInfo.vertexInputInfo.vertexAttributeDescriptionCount = 0;
+			m_CreateInfo.vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
+		}
+		else
+		{
+			
+			m_VertexBindingDescription.binding = _layout->binding;
+			m_VertexBindingDescription.stride = _layout->stride;
+			m_VertexBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+			for (VertexAttribute att : _layout->attributes)
+			{
+				VkVertexInputAttributeDescription desc{};
+				desc.binding = _layout->binding;
+				desc.location = att.location;
+				desc.format = VK_FORMAT_R32G32_SFLOAT;
+				desc.offset = att.offset;
+
+				m_VertexAttributeDescriptions.push_back(desc);
+			}
+
+			m_CreateInfo.vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+			m_CreateInfo.vertexInputInfo.vertexBindingDescriptionCount = 1;
+			m_CreateInfo.vertexInputInfo.pVertexBindingDescriptions = &m_VertexBindingDescription;
+			m_CreateInfo.vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_VertexAttributeDescriptions.size());
+			m_CreateInfo.vertexInputInfo.pVertexAttributeDescriptions = m_VertexAttributeDescriptions.data();
+		}
 
 		ANV_LOG_DEBUG("Set Pipeline Vertex Input");
 	}

@@ -28,6 +28,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 
+
 // validates that a VK API call returns VK_SUCCESS. otherwise, throws an error
 #define ANV_VK_CHECK_RESULT(f, msg) {                                                            \
     VkResult res = (f);                                                                          \
@@ -84,16 +85,16 @@ namespace vk_util {
             switch (messageSeverity)
             {
             case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-                ANV_LOG_INFO("== VK VERBOSE ==\n%s", pCallbackData->pMessage)
+                ANV_LOG_INFO("== VK VERBOSE ==\n%s\n", pCallbackData->pMessage)
                 break;
             case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-                ANV_LOG_INFO("== VK INFO ==\n%s", pCallbackData->pMessage)
+                ANV_LOG_INFO("== VK INFO ==\n%s\n", pCallbackData->pMessage)
                 break;
             case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-                ANV_LOG_WARN("== VK VALIDATION LAYER WARNING ==\n%s", pCallbackData->pMessage)
+                ANV_LOG_WARN("== VK VALIDATION LAYER WARNING ==\n%s\n", pCallbackData->pMessage)
                 break;
             case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-                ANV_LOG_ERROR("== VK VALIDATION LAYER ERROR ==\n%s", pCallbackData->pMessage)
+                ANV_LOG_ERROR("== VK VALIDATION LAYER ERROR ==\n%s\n", pCallbackData->pMessage)
                 break;
             default:
                 break;
@@ -121,10 +122,21 @@ namespace vk_util {
         vku_CheckDeviceExtensionSupport
         (VkPhysicalDevice _device, const _vec<const char*> _extensions);
 
+    void create_buffer(
+            VkPhysicalDevice _pdev,
+            VkDevice _dev,
+            VkDeviceSize size,
+            VkBufferUsageFlags usage,
+            VkMemoryPropertyFlags properties,
+            VkBuffer& buffer,
+            VkDeviceMemory& bufferMemory);
+
     VkPhysicalDevice 
         vku_FindSuitableDevice
         (_vec<VkPhysicalDevice> _devices, 
         VkSurfaceKHR _surface, const _vec<const char*> _extensions);
+
+    uint32_t vku_FindMemoryType(VkPhysicalDevice _dev, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
     QueueFamilyIndices 
         vku_FindQueueFamilies
@@ -151,6 +163,7 @@ namespace vk_util {
     void vku_ToRenderPassLayout(RenderPass::Attachment* _att, VkAttachmentDescription* _desc);
 
     VkFormat vku_ToImageFormat(Image2D::Format _fmt);
+
     Image2D::Format vku_ToEngineImgFormat(VkFormat _fmt);
 }
 }

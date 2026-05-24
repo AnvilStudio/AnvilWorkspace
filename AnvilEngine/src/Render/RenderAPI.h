@@ -29,9 +29,16 @@ namespace anv
 		virtual void DrawFrame() = 0;
 		virtual void OnShutdown() = 0;
 
+		virtual void BeginScene() = 0;
+		virtual void DrawQuad(const glm::vec2& position, const glm::vec2& size, Color color) = 0;
+		virtual void EndScene() = 0;
+
+		virtual void SetMainCamera(_shared<Camera2D> camera) = 0;
+
 	protected:
 		// TODO: impl API switch
 		inline static GraphicsAPI s_API = GraphicsAPI::VK;
 		_shared<Context> m_Context = nullptr;
+		_shared<Camera2D> m_Camera;
 	};
 }

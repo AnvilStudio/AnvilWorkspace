@@ -1,6 +1,7 @@
 #include "App.h"	
 #include <filesystem>
 #include <Util/Serialize/Serializer.h>
+#include <Util/Time/Time.h>
 
 //tmp
 #include "../Asset/AssetTypes/Texture.h" 
@@ -97,6 +98,8 @@ namespace anv {
 		auto t_path = m_FileSystem->GetKeyVal("Assets") / "TestText.png";
 		Ref<Texture> text = m_AssetManager->Create<Texture>(t_path);
 
+		Time::Init();
+
 		// FIX: prototyping...
 		Render2DCreateInfo r_info{};
 		r_info.pTarget = m_AppWin;
@@ -121,6 +124,8 @@ namespace anv {
 
 		while (!m_AppWin->ShouldClose())
 		{
+			Time::Update();
+
 			// Polls input
 			m_AppWin->OnUpdate();
 

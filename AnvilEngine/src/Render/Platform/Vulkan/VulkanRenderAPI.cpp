@@ -5,6 +5,9 @@
 #include "VulkanRenderPass.h"
 #include "VulkanContext.h"
 #include "VulkanCommandBuffer.h"
+#include <Util/Time/Time.h>
+#include "VulkanBuffer.h"
+#include "Render/Vertex.h"
 
 namespace anv {
 
@@ -27,6 +30,12 @@ namespace anv {
 		create_frames();
 
 		m_RenderPass.As<VulkanRenderPass>()->SetFramebuffers(m_FrameBuffers);
+
+		BufferCreateInfo camera_info{};
+		camera_info.Usage = BufferUsage::Uniform;
+		camera_info.Size = sizeof(CameraUBO);
+		camera_info.Dynamic = true;
+		m_CameraUBO = Buffer::Create<VulkanBuffer>(m_Context, camera_info);
 	}
 
 	void VulkanRenderAPI::DrawFrame()
@@ -101,7 +110,40 @@ namespace anv {
 				sc.extent = { ext.width, ext.height };
 				vkCmdSetScissor(vkCmd->Get(), 0, 1, &sc);
 
-				vkCmdDraw(cmd.As<VulkanCommandBuffer>()->Get(), 3, 1, 0, 0);
+				// drawing the quad
+				auto vkVB = m_QuadVB.As<VulkanBuffer>();
+				auto vkIB = m_QuadIB.As<VulkanBuffer>();
+
+				VkBuffer vertexBuffers[] = { vkVB->GetBuffer()};
+				VkDeviceSize offsets[] = { 0 };
+
+				// bind buffers
+				vkCmdBindVertexBuffers(
+					vkCmd->Get(),
+					0,
+					1,
+					vertexBuffers,
+					offsets
+				);
+
+				vkCmdBindIndexBuffer(
+					vkCmd->Get(),
+					vkIB->GetBuffer(),
+					0,
+					VK_INDEX_TYPE_UINT32
+				);
+
+				//draw
+				vkCmdDrawIndexed(
+					vkCmd->Get(),
+					6,
+					1,
+					0,
+					0,
+					0
+				);
+
+				//vkCmdDraw(cmd.As<VulkanCommandBuffer>()->Get(), 3, 1, 0, 0);
 		});
 
 		m_RenderPass->End();
@@ -126,6 +168,32 @@ namespace anv {
 	{
 		m_Context->GetAs<VulkanContext>()->IdleDevice();
 		destroy_frames();
+	}
+
+	void anv::VulkanRenderAPI::BeginScene()
+	{
+		// Reset rendering statistics
+		// Reset tmp frame data
+	
+		ANV_ASSERT(m_Camera, "Renderer2D has no main camera set!");
+
+		m_Camera->Update(Time::DeltaTime());
+
+		// Upload CameraUBO
+		
+	}
+
+	void VulkanRenderAPI::DrawQuad(const glm::vec2& position, const glm::vec2& size, Color color)
+	{
+	}
+
+	void VulkanRenderAPI::EndScene()
+	{
+	}
+
+	void VulkanRenderAPI::SetMainCamera(_shared<Camera2D> camera)
+	{
+		m_Camera = camera;
 	}
 
 	void VulkanRenderAPI::create_render_passes()
@@ -265,5 +333,20 @@ namespace anv {
 		m_RenderPass.As<VulkanRenderPass>()->SetFramebuffers(m_FrameBuffers);
 
 		m_RecreatingSwapchain.store(false);
+	}
+
+	void VulkanRenderAPI::create_quad_buffers()
+	{
+		BufferCreateInfo ibi{};
+		ibi.Usage = BufferUsage::Index;
+		ibi.Size = sizeof(Quad::indices);
+		ibi.InitialData = Quad::indices;
+		m_QuadIB = Buffer::Create<VulkanBuffer>(m_Context, ibi);
+
+		BufferCreateInfo vbi{};
+		ibi.Usage = BufferUsage::Vertex;
+		ibi.Size = sizeof(Quad::vertices);
+		ibi.InitialData = Quad::vertices;
+		m_QuadVB = Buffer::Create<VulkanBuffer>(m_Context, ibi);
 	}
 }

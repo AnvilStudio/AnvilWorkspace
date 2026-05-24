@@ -52,7 +52,7 @@ namespace anv
 		virtual ~VulkanPipeline() override;
 
 		void SetShaderStages(const Ref<Shader> _shader)                          override;
-		void SetVertexInputLayout(const VertexInputLayout* _layout)          override;
+		void SetVertexInputLayout(const VertexInputLayout* _layout = nullptr)          override;
 		void SetRasterizationSettings(const RasterizationSettings* _raster)  override;
 		void SetColorBlendSettings(const ColorBlendSettings* _colbld)        override;
 		void SetRenderPass(const Ref<RenderPass> _rps)                           override;
@@ -69,5 +69,8 @@ namespace anv
 		VulkanContext*                 m_VkContext;
 		Ref<Shader>                     m_Shader;         
 		std::vector<std::string>    m_EntryNames; 
+
+		VkVertexInputBindingDescription m_VertexBindingDescription{};
+		_vec<VkVertexInputAttributeDescription> m_VertexAttributeDescriptions{};
 	};
 }

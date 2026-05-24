@@ -22,9 +22,23 @@ namespace anv
 
 	void Renderer2D::SetCamera(_shared<Camera2D> _main)
 	{
-		m_MainCamera = _main;
+		m_RenderAPI->SetMainCamera(_main);
 	}
 
+	void Renderer2D::BeginScene(_shared<Camera2D> camera)
+	{
+		m_RenderAPI->BeginScene();
+	}
+
+	void Renderer2D::EndScene()
+	{
+		m_RenderAPI->EndScene();
+	}
+
+	void Renderer2D::DrawQuad(const glm::vec2& position, const glm::vec2& size, Color color)
+	{
+		m_RenderAPI->DrawQuad(position, size, color);
+	}
 
 	void Renderer2D::DrawFrame()
 	{

@@ -149,14 +149,19 @@ namespace anv {
         static Render2DCreateInfo GetSettings() { return m_RenderCreateInfo; }
 
         static void SetCamera(_shared<Camera2D> _main);
-        //static void CmdDrawQuad(VertexBuffer& _vb, IndexBuffer& _ib);
+
+        static void BeginScene(_shared<Camera2D> camera);
+        static void EndScene();
+
+        static void DrawQuad(const glm::vec2& position, const glm::vec2& size, Color color);
+        
         //static void CmdDrawQuadWithMaterial(Material& _mat, VertexBuffer& _vb, IndexBuffer& _ib);
         //static void CmdDrawQuadWithTexture(Texture& _text, VertexBuffer& _vb, IndexBuffer& _ib);
         //static void CmdSubmit();
 
 
     protected:
-        inline static _shared<Camera2D>        m_MainCamera     = nullptr;
+        //inline static _shared<Camera2D>        m_MainCamera     = nullptr;
         inline static _shared<RenderAPI>        m_RenderAPI        = nullptr;
         inline static Render2DCreateInfo         m_RenderCreateInfo {};
         

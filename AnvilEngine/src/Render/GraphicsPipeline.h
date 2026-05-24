@@ -17,6 +17,7 @@ namespace anv
 	struct VertexInputLayout {
 		_vec<VertexAttribute> attributes; // List of attributes
 		uint32_t binding;                        // Vertex buffer binding index
+		size_t stride;                    
 
 		void AddAttribute(const std::string& name, uint32_t location, uint32_t offset, uint32_t size, uint32_t stride, bool normalized = false) {
 			attributes.push_back({ name, location, offset, size, stride, normalized });
