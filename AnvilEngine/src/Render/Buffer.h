@@ -28,7 +28,6 @@ namespace anv
 	public:
 		Buffer(_shared<Context> _ctx);
 
-		template <typename T>
 		static Ref<Buffer> Create(_shared<Context> _ctx, BufferCreateInfo _info);
 		
 		virtual void SetData(const void* data, uint64_t size, uint64_t offset = 0) = 0;
