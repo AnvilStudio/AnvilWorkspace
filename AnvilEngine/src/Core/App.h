@@ -43,6 +43,8 @@ namespace anv
 		FileSystem&            GetFS();
 		_shared<Window> GetMainWindow();
 		_shared<AssetManager> GetAssetManager();
+		_shared<InputSystem>   GetInputSystem();
+
 	public:
 		virtual void OnSetup()     = 0;
 		virtual void OnUpdate()   = 0;
@@ -58,11 +60,10 @@ namespace anv
 
 		AppSettings           m_Settings;
 		_unique<SceneManager>  m_ScnMngr = nullptr;
-
 		_unique<FileSystem>        m_FileSystem    = nullptr;
-		_shared<InputSystem>      m_InputSystem = nullptr;
-		_shared<Window>             m_AppWin        = nullptr;
-		_shared<AssetManager>    m_AssetManager = nullptr;
+		_shared<InputSystem>     m_InputSystem = nullptr;
+		_shared<Window>            m_AppWin        = nullptr;
+		_shared<AssetManager>   m_AssetManager = nullptr;
 	};
 
 }

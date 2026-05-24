@@ -87,7 +87,7 @@ namespace anv {
 
 		m_ScnMngr = std::make_unique<SceneManager>();
 		m_ScnMngr->Register(m_Settings.startScene);
-		
+
 		// window needs to be created before assets.
 		m_AppWin = Window::Create(m_Settings.WindowCreateInfo);
 
@@ -105,7 +105,6 @@ namespace anv {
 		r_info.pTarget = m_AppWin;
 
 		Renderer2D::Init(r_info);
-
 	}
 
 	App::~App()
@@ -121,6 +120,9 @@ namespace anv {
 	void App::Run()
 	{
 		s_This->OnSetup();
+		auto mainCamera = m_ScnMngr->GetActive()->GetMainCamera();
+
+		Renderer2D::SetCamera(mainCamera);
 
 		while (!m_AppWin->ShouldClose())
 		{
@@ -132,7 +134,11 @@ namespace anv {
 			// OnUpdate should hapen after input polling
 			s_This->OnUpdate();
 
+			m_ScnMngr->GetActive()->OnUpdate(Time::DeltaTime());
+
+			Renderer2D::BeginScene();
 			Renderer2D::DrawFrame();
+			Renderer2D::EndScene();
 		}
 		ANV_LOG_INFO("App Closing...")
 		s_This->OnDestroy();
@@ -151,6 +157,11 @@ namespace anv {
 	_shared<AssetManager> App::GetAssetManager()
 	{
 		return m_AssetManager;
+	}
+
+	_shared<InputSystem> App::GetInputSystem()
+	{
+		return m_InputSystem;
 	}
 
 	// Serialize all settings
