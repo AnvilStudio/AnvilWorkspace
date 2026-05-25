@@ -1,5 +1,0 @@
-[Scene]
-Context = '2D'
-Name = 'NewScene'
-Path = '@Assets/Scenes/NewScene.ascn'
-UUID = '08c1ae50-090f-4043-9c2a-e1a5e9dd2eb05672'
