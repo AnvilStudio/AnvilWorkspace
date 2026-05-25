@@ -247,8 +247,8 @@ namespace anv {
 	void VulkanRenderAPI::load_shader_lib()
 	{
 		// TODO: need to update this when we actually have more shaders
-		auto path = App::GetInstance()->GetFS().GetKeyVal("ShaderLib") / "shader.glsl";
-		m_Shader = m_AssetManager->CreateShader(path.string(), m_CreateInfo.pTarget->GetContext());
+		//auto path = App::GetInstance()->GetFS().GetKeyVal("ShaderLib") / "shader.glsl";
+		//m_Shader = m_AssetManager->CreateShader(path.string(), m_CreateInfo.pTarget->GetContext());
 		// sprite
 		auto spritepath = App::GetInstance()->GetFS().GetKeyVal("ShaderLib") / "sprite.glsl";
 		m_SpriteShader = m_AssetManager->CreateShader(spritepath.string(), m_CreateInfo.pTarget->GetContext());
@@ -257,14 +257,14 @@ namespace anv {
 	void VulkanRenderAPI::build_2D_pipelines()
 	{
 		// Basic pipeline (triangle)
-		m_Pipeline = m_AssetManager->CreateGraphicsPipeline(m_CreateInfo.pTarget->GetContext(),
-			"Test Pipeline");
-		m_Pipeline->SetShaderStages(m_Shader);
-		m_Pipeline->SetVertexInputLayout({});
-		m_Pipeline->SetRasterizationSettings({});
-		m_Pipeline->SetColorBlendSettings({});
-		m_Pipeline->SetRenderPass(m_RenderPass);
-		m_Pipeline->Build();
+		//m_Pipeline = m_AssetManager->CreateGraphicsPipeline(m_CreateInfo.pTarget->GetContext(),
+		//	"Test Pipeline");
+		//m_Pipeline->SetShaderStages(m_Shader);
+		//m_Pipeline->SetVertexInputLayout({});
+		//m_Pipeline->SetRasterizationSettings({});
+		//m_Pipeline->SetColorBlendSettings({});
+		//m_Pipeline->SetRenderPass(m_RenderPass);
+		//m_Pipeline->Build();
 
 		VertexInputLayout sprite_layout{};
 

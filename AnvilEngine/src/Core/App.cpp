@@ -95,8 +95,8 @@ namespace anv {
 		m_InputSystem = InputSystem::Create(m_AppWin);
 
 		// Test
-		auto t_path = m_FileSystem->GetKeyVal("Assets") / "TestText.png";
-		Ref<Texture> text = m_AssetManager->Create<Texture>(t_path);
+		//auto t_path = m_FileSystem->GetKeyVal("Assets") / "TestText.png";
+		//Ref<Texture> text = m_AssetManager->Create<Texture>(t_path);
 
 		Time::Init();
 
