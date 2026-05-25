@@ -39,16 +39,18 @@ Installation is meant to be as simple as possible.
 
 ### Prereq
 - `c++20`
+- `python 3`
 - `Microsoft Visual Studio 2022`
 - `Premake5`
 
 1. Clone the dev repository.<br>
 ```git clone --recursive -b dev https://github.com/AnvilStudio/AnvilWorkspace.git```
-2. In the root folder (AnvilWorksapce), run in your terminal... <br>
+2. Navigate to `AnvilWorkspace/ProjectCreator` and run `python3 project_creator.py <Prj Name> <Prj Dir>`.
+3. In the root folder (AnvilWorksapce), run in your terminal... <br>
 ```<your premake installation> vs2022```
-3. Open the `AnvilWorkspace.sln` file
-4. In Visual Studio, set the `Forge` projects command line arguments to `-prj <path to your project>`
-5. Build and run!
+4. Open the `AnvilWorkspace.sln` file
+5. In Visual Studio, set the `Forge` projects command line arguments to `-prj <path to your project>` (right click the project > Debug > command arguments)
+6. Build and run!
     
 ---
 
