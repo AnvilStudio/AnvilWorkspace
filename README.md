@@ -3,7 +3,7 @@
 # Anvil Engine 
 - `Anvil Engine` is built with a powerful, flexible toolset designed to empower developers in creating immersive experiences, whether you're building games, interactive simulations, or lightweight applications. <br> 
 
-- Anvil provides a solid foundation with multi-window support, a range of customizable components
+- Anvil provides a solid foundation with a range of customizable components
 and a versatile renderer that balances performance with simplicity. <br>
 
 - With Anvil, you’ll have the freedom to focus on crafting your vision without unnecessary overhead, thanks to our lightweight, hardware-focused renderer. Our mission is to support developers by offering both high-level tools for rapid development and fine-tuned, API-specific functionality for those who want to dive deeper.
@@ -15,6 +15,7 @@ Thank you for choosing Anvil Engine—let’s get started building something inc
 3. [Structure](#structure)
 4. [Naming Convention](#naming-convention)
 5. [API Documentation](#api-documentation)
+6. [Contact](#contact-us)
 
 ---
 
@@ -39,13 +40,15 @@ Installation is meant to be as simple as possible.
 ### Prereq
 - `c++20`
 - `Microsoft Visual Studio 2022`
+- `Premake5`
 
 1. Clone the dev repository.<br>
 ```git clone --recursive -b dev https://github.com/AnvilStudio/AnvilWorkspace.git```
-2. In the  root folder, run... <br>
-```.\vendor\premake.exe vs2022```
+2. In the root folder (AnvilWorksapce), run in your terminal... <br>
+```<your premake installation> vs2022```
 3. Open the `AnvilWorkspace.sln` file
-4. Build and run!
+4. In Visual Studio, set the `Forge` projects command line arguments to `-prj <path to your project>`
+5. Build and run!
     
 ---
 
@@ -64,16 +67,14 @@ the files are as follows
         |    L Core/
         |    |    L High Level code (i.e. - App class, api - agnostic)
         |    L Render/ 
-        |    |    | (All Rendering + Renderer)
-        |    |    L Context/ 
-        |    |    |    L Context Class (api - agnostic)
+        |    |    | (All high level rendering components + renderer)
         |    |    L Platform/ 
         |    |    |    | (api - specific)
         |    |    |    L Vulkan/ 
         |    |    |    |   L (api implimentation)
         |    |    |    L OtherAPI/
         |    L Util/ 
-        |       L (Engine Utility like macros/logging)
+        |       L (Engine Utility like macros/logging/time)
         L vendor/ 
             L (3rd party libs like GLFW)
 
@@ -145,3 +146,12 @@ applys to constructors and deconstructors
 ## API Documentation
 
 under  construction
+
+---
+
+## Contact Us
+
+#### Head Dev: Cayden "CJ" Jordan
+email: @caydenjordan05@gmail.com
+
+instagram: @cj.cpp
