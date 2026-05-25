@@ -32,7 +32,8 @@ Thank you for choosing Anvil Engine—let’s get started building something inc
 3. [Structure](#structure)
 4. [Naming Convention](#naming-convention)
 5. [API Documentation](#api-documentation)
-6. [Contact](#contact-us)
+6. [Future Plans](#future-plans)
+7. [Contact](#contact-us)
 
 ---
 
@@ -180,7 +181,7 @@ under  construction
 
 ---
 
-##Future Plans
+## Future Plans
 
 Anvil's long-term goal extends beyond becoming just another rendering sandbox or game engine. The vision is to build a flexible and approachable platform capable of supporting games, tools, applications, and experimentation while remaining educational and modular at its core.
 
