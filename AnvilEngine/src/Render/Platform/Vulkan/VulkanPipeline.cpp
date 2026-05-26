@@ -195,22 +195,8 @@ namespace anv
 		m_CreateInfo.colorBlending.blendConstants[2] = 0.0f; // Optional
 		m_CreateInfo.colorBlending.blendConstants[3] = 0.0f; // Optional
 
-		// TODO: Needs settup fn
-		m_CreateInfo.pipelineLayoutInfo = {};
-		m_CreateInfo.pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		m_CreateInfo.pipelineLayoutInfo.setLayoutCount = 0; // Optional
-		m_CreateInfo.pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
-		m_CreateInfo.pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-		m_CreateInfo.pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-		m_CreateInfo.pipelineLayoutInfo.setLayoutCount =
-			static_cast<uint32_t>(m_DescriptorSetLayouts.size());
-
-		m_CreateInfo.pipelineLayoutInfo.pSetLayouts =
-			m_DescriptorSetLayouts.data();
-
-		ANV_VK_CHECK_RESULT(vkCreatePipelineLayout(m_VkContext->GetDevice(), &m_CreateInfo.pipelineLayoutInfo, 
-			nullptr, &m_PipelineLayout), "Failed to create pipeline layout!")
+		
 
 		ANV_LOG_DEBUG("Set Pipeline Color Blend");
 	}
@@ -225,10 +211,19 @@ namespace anv
 		m_DescriptorSetLayouts = layouts;
 	}
 
+	void VulkanPipeline::SetPushConstantRange(VkShaderStageFlags _stage, uint32_t _size)
+	{
+		m_PushRange.stageFlags = _stage;
+		m_PushRange.offset = 0;
+		m_PushRange.size = _size;
+
+
+	}
+
 	void VulkanPipeline::Build()
 	{
-		// ensure renderPass & layout are valid
 		ANV_ASSERT(m_RenderPass != VK_NULL_HANDLE, "Render pass not set");
+		create_layout();
 		ANV_ASSERT(m_PipelineLayout != VK_NULL_HANDLE, "Pipeline layout not created");
 
 		auto* info = m_CreateInfo.BuildInfo();
@@ -264,6 +259,7 @@ namespace anv
 				VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
 			});
 	}
+
 	void VulkanPipeline::OnSave(Serializer& _ser)
 	{
 		_ser.Object("Spec", [&]
@@ -276,5 +272,40 @@ namespace anv
 
 				});
 			});
+	}
+
+	void VulkanPipeline::create_layout()
+	{
+		m_CreateInfo.pipelineLayoutInfo = {};
+		m_CreateInfo.pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+		// descriptor sets
+		m_CreateInfo.pipelineLayoutInfo.setLayoutCount =
+			static_cast<uint32_t>(m_DescriptorSetLayouts.size());
+
+		m_CreateInfo.pipelineLayoutInfo.pSetLayouts =
+			m_DescriptorSetLayouts.empty()
+			? nullptr
+			: m_DescriptorSetLayouts.data();
+
+		// push constants
+		if (m_PushRange.size > 0)
+		{
+			m_CreateInfo.pipelineLayoutInfo.pushConstantRangeCount = 1;
+			m_CreateInfo.pipelineLayoutInfo.pPushConstantRanges = &m_PushRange;
+		}
+		else
+		{
+			m_CreateInfo.pipelineLayoutInfo.pushConstantRangeCount = 0;
+			m_CreateInfo.pipelineLayoutInfo.pPushConstantRanges = nullptr;
+		}
+
+		ANV_VK_CHECK_RESULT(
+			vkCreatePipelineLayout(
+				m_VkContext->GetDevice(), 
+				&m_CreateInfo.pipelineLayoutInfo,
+			    nullptr, &m_PipelineLayout)
+			, "Failed to create pipeline layout!"
+		)
 	}
 }

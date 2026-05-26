@@ -1,6 +1,13 @@
 #type vert
 #version 450
 
+layout(push_constant)
+uniform PushData
+{
+    mat4 model;
+    vec4 color;
+} push_data;
+
 layout(set = 0, binding = 0) uniform Camera
 {
     mat4 View;
@@ -15,9 +22,11 @@ layout(location = 0) out vec4 fragColor;
 
 void main()
 {
-	gl_Position = camera.ViewProjection * vec4(inPosition, 0.0, 1.0);
+	gl_Position = camera.ViewProjection * 
+    push_data.model * 
+    vec4(inPosition, 0.0, 1.0);
 
-	fragColor = inColor;
+	fragColor = push_data.color;
 }
  
 #type frag

@@ -186,11 +186,11 @@ namespace anv {
 	{
 		ANV_PROFILE_SCOPE();
 
-		vk_util::QueueFamilyIndices indices = vk_util::vku_FindQueueFamilies(m_PhysicalDevice, m_Surface);
+		m_QueueFamilies = vk_util::vku_FindQueueFamilies(m_PhysicalDevice, m_Surface);
 
 		// Graphics & Present Queues //
 		_vec<VkDeviceQueueCreateInfo> queueCreateInfos;
-		std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+		std::set<uint32_t> uniqueQueueFamilies = { m_QueueFamilies.graphicsFamily.value(), m_QueueFamilies.presentFamily.value() };
 
 		float queuePriority = 1.0f;
 		for (uint32_t queueFamily : uniqueQueueFamilies) {
@@ -226,8 +226,8 @@ namespace anv {
 			"Failed to create a logical device!")
 		
 		// Retreve queue handles
-		vkGetDeviceQueue(m_Device, indices.graphicsFamily.value(), 0, &m_GraphicsQueue);
-		vkGetDeviceQueue(m_Device, indices.presentFamily.value(), 0, &m_PresentQueue);
+		vkGetDeviceQueue(m_Device, m_QueueFamilies.graphicsFamily.value(), 0, &m_GraphicsQueue);
+		vkGetDeviceQueue(m_Device, m_QueueFamilies.presentFamily.value(), 0, &m_PresentQueue);
 	}
 
 	void VulkanContext::vkc_cmd_pool()
@@ -243,6 +243,151 @@ namespace anv {
 
 		ANV_VK_CHECK_RESULT(vkCreateCommandPool(m_Device, &cpinfo, nullptr, &m_CmdPool),
 			"Failed to create a VkCommandPool!");
+	}
+
+	void VulkanContext::create_immediate_submit_objects()
+	{
+		VkCommandPoolCreateInfo poolInfo{};
+		poolInfo.sType =
+			VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		poolInfo.flags =
+			VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		poolInfo.queueFamilyIndex =
+			GetQueueFamilies().graphicsFamily.value();
+
+		ANV_VK_CHECK_RESULT(
+			vkCreateCommandPool(
+				m_Device,
+				&poolInfo,
+				nullptr,
+				&m_ImmediateCommandPool
+			),
+			"Failed to create immediate command pool!"
+		);
+
+		VkFenceCreateInfo fenceInfo{};
+		fenceInfo.sType =
+			VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+		ANV_VK_CHECK_RESULT(
+			vkCreateFence(
+				m_Device,
+				&fenceInfo,
+				nullptr,
+				&m_ImmediateFence
+			),
+			"Failed to create immediate fence!"
+		);
+	}
+
+	// Bypass the renderers queue and submit taskings on demand
+	void VulkanContext::ImmediateSubmit(
+		const ImmediateSubmitFn& fn)
+	{
+		vkResetFences(
+			m_Device,
+			1,
+			&m_ImmediateFence
+		);
+
+		vkResetCommandPool(
+			m_Device,
+			m_ImmediateCommandPool,
+			0
+		);
+
+		VkCommandBufferAllocateInfo allocInfo{};
+		allocInfo.sType =
+			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.commandPool =
+			m_ImmediateCommandPool;
+		allocInfo.level =
+			VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandBufferCount = 1;
+
+		VkCommandBuffer cmd;
+
+		ANV_VK_CHECK_RESULT(
+			vkAllocateCommandBuffers(
+				m_Device,
+				&allocInfo,
+				&cmd
+			),
+			"Failed to allocate immediate command buffer!"
+		);
+
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType =
+			VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags =
+			VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		ANV_VK_CHECK_RESULT(
+			vkBeginCommandBuffer(
+				cmd,
+				&beginInfo
+			),
+			"Failed to begin immediate command buffer!"
+		);
+
+		fn(cmd);
+
+		ANV_VK_CHECK_RESULT(
+			vkEndCommandBuffer(cmd),
+			"Failed to end immediate command buffer!"
+		);
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType =
+			VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers =
+			&cmd;
+
+		ANV_VK_CHECK_RESULT(
+			vkQueueSubmit(
+				m_GraphicsQueue,
+				1,
+				&submitInfo,
+				m_ImmediateFence
+			),
+			"Failed immediate queue submit!"
+		);
+
+		vkWaitForFences(
+			m_Device,
+			1,
+			&m_ImmediateFence,
+			VK_TRUE,
+			UINT64_MAX
+		);
+
+		vkFreeCommandBuffers(
+			m_Device,
+			m_ImmediateCommandPool,
+			1,
+			&cmd
+		);
+	}
+
+	void VulkanContext::destroy_immediate_submit_objects()
+	{
+		if (m_ImmediateFence)
+			vkDestroyFence(
+				m_Device,
+				m_ImmediateFence,
+				nullptr
+			);
+
+		if (m_ImmediateCommandPool)
+			vkDestroyCommandPool(
+				m_Device,
+				m_ImmediateCommandPool,
+				nullptr
+			);
+
+		m_ImmediateFence = VK_NULL_HANDLE;
+		m_ImmediateCommandPool = VK_NULL_HANDLE;
 	}
 	
 	void VulkanContext::IdleDevice()

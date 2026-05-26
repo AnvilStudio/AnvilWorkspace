@@ -28,6 +28,13 @@ namespace anv {
 
         void CreateSwapchain() override;
 
+        using ImmediateSubmitFn =
+            std::function<void(VkCommandBuffer)>;
+
+        void ImmediateSubmit(
+            const ImmediateSubmitFn& fn
+        );
+
     public:
         VkInstance           GetInstance()            { return m_Instance;            } 
         VkSurfaceKHR      GetSurface()              { return m_Surface;             }
@@ -37,6 +44,11 @@ namespace anv {
         VkQueue              GetPresentQueue()    { return m_PresentQueue;   }
         VkCommandPool  GetCommandPool()   { return m_CmdPool;          }
         GLFWwindow*       GetWinHandle()         { return m_WinHandle;       }
+        const vk_util::QueueFamilyIndices&
+            GetQueueFamilies() const
+        {
+            return m_QueueFamilies;
+        }
         void                      IdleDevice();
 
         // Returned as a VkSwapchain because
@@ -50,6 +62,8 @@ namespace anv {
         void vkc_physical(); // select gpu
         void vkc_logical (); // create logical device
         void vkc_cmd_pool();
+        void create_immediate_submit_objects();
+        void destroy_immediate_submit_objects();
 
     private:
         VkDevice                 m_Device;
@@ -59,6 +73,11 @@ namespace anv {
         VkPhysicalDevice    m_PhysicalDevice;
         VkQueue                m_GraphicsQueue;
         VkQueue                m_PresentQueue;
+
+        VkCommandPool m_ImmediateCommandPool = VK_NULL_HANDLE;
+        VkFence m_ImmediateFence = VK_NULL_HANDLE;
+
+        vk_util::QueueFamilyIndices m_QueueFamilies;
         
         _vec<const char*> m_DeviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,

@@ -9,6 +9,19 @@
 
 namespace anv
 {
+	//struct PushContantData
+	//{
+	//	glm::mat4 model;
+	//	glm::vec4 color;
+	//};
+
+	struct QuadSubmission
+	{
+		glm::vec2 Position;
+		glm::vec2 Size;
+		glm::vec4 Color;
+	};
+
 	class VulkanRenderAPI
 		: public RenderAPI
 	{
@@ -39,16 +52,22 @@ namespace anv
 		void create_descriptor_pool();
 		void create_camera_descriptor_set();
 
+		void create_imgui_descriptor_pool();
+		void init_imgui();
+		void shutdown_imgui();
+		void begin_imgui();
+		void end_imgui(Ref<CommandBuffer> cmd);
+
 	private:
 		Render2DCreateInfo            m_CreateInfo         {};
 		_vec<Ref<Framebuffer>>   m_FrameBuffers    {};
 		Ref<RenderPass>                m_RenderPass       = nullptr;
 		Ref<GraphicsPipeline>        m_Pipeline            = nullptr;
 		Ref<GraphicsPipeline>        m_SpritePipeline    = nullptr;
-		Ref<Shader>                       m_Shader              = nullptr;
 		Ref<Shader>                       m_SpriteShader     = nullptr;
 		_shared<QueueChain>        m_RenderCmdChain  = nullptr;
 		_shared<AssetManager>     m_AssetManager = nullptr;
+		_vec<QuadSubmission>      m_QuadQueue;
 
 		// tmp
 		Ref<Buffer> m_QuadVB;
@@ -58,6 +77,8 @@ namespace anv
 		VkDescriptorSetLayout m_CameraDescriptorSetLayout = VK_NULL_HANDLE;
 		VkDescriptorPool m_DescriptorPool = VK_NULL_HANDLE;
 		VkDescriptorSet m_CameraDescriptorSet = VK_NULL_HANDLE;
+
+		VkDescriptorPool m_ImGuiDescriptorPool = VK_NULL_HANDLE;
 
 		// sync //
 		std::vector<VulkanFrameResources> m_Frames;

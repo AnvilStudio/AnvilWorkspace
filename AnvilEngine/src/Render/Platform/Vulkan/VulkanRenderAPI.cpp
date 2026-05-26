@@ -5,12 +5,24 @@
 #include "VulkanRenderPass.h"
 #include "VulkanContext.h"
 #include "VulkanCommandBuffer.h"
-#include <Util/Time/Time.h>
 #include "VulkanBuffer.h"
 #include "Render/Vertex.h"
 #include "VulkanPipeline.h"
 
+#include "imgui/imgui.h"
+#include "imgui/backends/imgui_impl_glfw.h"
+#include "imgui/backends/imgui_impl_vulkan.h"
+
+#include <Util/Time/Time.h>
+#include <glm/ext/matrix_transform.hpp>
+
 namespace anv {
+
+	struct SpritePush
+	{
+		glm::mat4 Model;
+		glm::vec4 Color;
+	};
 
 	VulkanRenderAPI::VulkanRenderAPI(Render2DCreateInfo _info)
 		: m_CreateInfo(_info)
@@ -35,6 +47,7 @@ namespace anv {
 		camera_info.Dynamic = true;
 		m_CameraUBO = Buffer::Create(m_Context, camera_info);
 		
+		create_imgui_descriptor_pool();
 		create_descriptor_set_layout();
 		create_descriptor_pool();
 		create_camera_descriptor_set();
@@ -42,6 +55,8 @@ namespace anv {
 		build_2D_pipelines();
 		create_frame_buffers();
 		create_frames();
+
+		init_imgui();
 
 		m_RenderPass.As<VulkanRenderPass>()->SetFramebuffers(m_FrameBuffers);
 	}
@@ -99,6 +114,8 @@ namespace anv {
 		m_SpritePipeline->Bind(m_RenderCmdChain);
 		m_RenderPass->Begin();
 
+		ImGui::ShowDemoWindow();
+
 		m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext& frame)
 		{
 				auto vkCmd = cmd.As<VulkanCommandBuffer>();
@@ -152,17 +169,47 @@ namespace anv {
 					VK_INDEX_TYPE_UINT32
 				);
 
-				//draw
-				vkCmdDrawIndexed(
-					vkCmd->Get(),
-					6,
-					1,
-					0,
-					0,
-					0
-				);
+				// draw quads
+				for (auto& quad : m_QuadQueue)
+				{
+					SpritePush push{};
 
-				//vkCmdDraw(cmd.As<VulkanCommandBuffer>()->Get(), 3, 1, 0, 0);
+					push.Model =
+						glm::translate(
+							glm::mat4(1.0f),
+							glm::vec3(quad.Position, 0)
+						)
+						*
+						glm::scale(
+							glm::mat4(1.0f),
+							glm::vec3(quad.Size, 1)
+						);
+
+					push.Color = quad.Color;
+
+					// update push data
+					vkCmdPushConstants(
+						vkCmd->Get(),
+						m_SpritePipeline.As<VulkanPipeline>()
+						->GetPipelineLayout(),
+						VK_SHADER_STAGE_VERTEX_BIT,
+						0,
+						sizeof(SpritePush),
+						&push
+					);
+
+					// draw
+					vkCmdDrawIndexed(
+						vkCmd->Get(),
+						6,
+						1,
+						0,
+						0,
+						0
+					);
+				}
+
+			end_imgui(cmd);
 		});
 
 		m_RenderPass->End();
@@ -192,6 +239,7 @@ namespace anv {
 	void anv::VulkanRenderAPI::BeginScene()
 	{
 		// Reset rendering statistics
+		m_QuadQueue.clear();
 		// Reset tmp frame data
 	
 		ANV_ASSERT(m_Camera, "Renderer2D has no main camera set!");
@@ -203,14 +251,22 @@ namespace anv {
 			&m_Camera->GetCameraUBO(),
 			sizeof(CameraUBO)
 		);
+
+		begin_imgui();
 	}
 
 	void VulkanRenderAPI::DrawQuad(const glm::vec2& position, const glm::vec2& size, glm::vec4 color)
 	{
+		m_QuadQueue.push_back({
+			position,
+			size,
+			color
+			});
 	}
 
 	void VulkanRenderAPI::EndScene()
 	{
+		
 	}
 
 	void VulkanRenderAPI::SetMainCamera(_shared<Camera2D> camera)
@@ -246,9 +302,6 @@ namespace anv {
 
 	void VulkanRenderAPI::load_shader_lib()
 	{
-		// TODO: need to update this when we actually have more shaders
-		auto path = App::GetInstance()->GetFS().GetKeyVal("ShaderLib") / "shader.glsl";
-		m_Shader = m_AssetManager->CreateShader(path.string(), m_CreateInfo.pTarget->GetContext());
 		// sprite
 		auto spritepath = App::GetInstance()->GetFS().GetKeyVal("ShaderLib") / "sprite.glsl";
 		m_SpriteShader = m_AssetManager->CreateShader(spritepath.string(), m_CreateInfo.pTarget->GetContext());
@@ -256,18 +309,6 @@ namespace anv {
 
 	void VulkanRenderAPI::build_2D_pipelines()
 	{
-		// Basic pipeline (triangle)
-		m_Pipeline = m_AssetManager->CreateGraphicsPipeline(m_CreateInfo.pTarget->GetContext(),
-			"Test Pipeline");
-		m_Pipeline->SetShaderStages(m_Shader);
-		m_Pipeline->SetVertexInputLayout({});
-		m_Pipeline->SetRasterizationSettings({});
-		m_Pipeline->SetColorBlendSettings({});
-		m_Pipeline->SetRenderPass(m_RenderPass);
-		m_Pipeline->Build();
-
-		VertexInputLayout sprite_layout{};
-
 		// Sprite Pipeline
 		VertexInputLayout quadLayout{};
 		quadLayout.binding = 0;
@@ -278,14 +319,6 @@ namespace anv {
 			0,
 			offsetof(QuadVertex, Position),
 			sizeof(glm::vec2),
-			sizeof(QuadVertex)
-		);
-
-		quadLayout.AddAttribute(
-			"Color",
-			1,
-			offsetof(QuadVertex, Color),
-			sizeof(glm::vec4),
 			sizeof(QuadVertex)
 		);
 
@@ -301,6 +334,9 @@ namespace anv {
 		m_SpritePipeline.As<VulkanPipeline>()->SetDescriptorSetLayouts({
 			m_CameraDescriptorSetLayout
 		});
+		m_SpritePipeline.As<VulkanPipeline>()->SetPushConstantRange(
+			VK_SHADER_STAGE_VERTEX_BIT, sizeof(SpritePush)
+		);
 		m_SpritePipeline->SetColorBlendSettings(nullptr);
 		m_SpritePipeline->SetRenderPass(m_RenderPass);
 		m_SpritePipeline->Build();
@@ -500,5 +536,149 @@ namespace anv {
 			0,
 			nullptr
 		);
+	}
+
+	void VulkanRenderAPI::create_imgui_descriptor_pool()
+	{
+		VkDescriptorPoolSize poolSizes[] =
+		{
+			{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+		};
+
+		VkDescriptorPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+		poolInfo.maxSets = 1000 * std::size(poolSizes);
+		poolInfo.poolSizeCount = static_cast<uint32_t>(std::size(poolSizes));
+		poolInfo.pPoolSizes = poolSizes;
+
+		ANV_VK_CHECK_RESULT(
+			vkCreateDescriptorPool(
+				m_Context->GetAs<VulkanContext>()->GetDevice(),
+				&poolInfo,
+				nullptr,
+				&m_ImGuiDescriptorPool
+			),
+			"Failed to create ImGui descriptor pool!"
+		);
+	}
+
+	void VulkanRenderAPI::init_imgui()
+	{
+		IMGUI_CHECKVERSION();
+
+		ImGui::CreateContext();
+
+		ImGuiIO& io = ImGui::GetIO();
+
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+		ImGui::StyleColorsDark();
+
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			ImGuiStyle& style = ImGui::GetStyle();
+
+			style.WindowRounding = 0.0f;
+			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+		}
+
+		auto vkCtx = m_Context->GetAs<VulkanContext>();
+
+		ImGui_ImplGlfw_InitForVulkan(
+			App::GetInstance()->GetMainWindow()->GetNativeWindow(),
+			true
+		);
+
+		ImGui_ImplVulkan_InitInfo init{};
+		init.ApiVersion = VK_API_VERSION_1_3; // or whatever your Vulkan instance uses
+		init.Instance = vkCtx->GetInstance();
+		init.PhysicalDevice = vkCtx->GetPhysicalDevice();
+		init.Device = vkCtx->GetDevice();
+		init.QueueFamily = vkCtx->GetQueueFamilies().graphicsFamily.value();
+		init.Queue = vkCtx->GetGraphicsQueue();
+
+		init.DescriptorPool = m_ImGuiDescriptorPool;
+		// OR use automatic pool:
+		// init.DescriptorPoolSize = 1000;
+
+		init.MinImageCount = vkCtx->GetSwapchain()->GetImageCount();
+		init.ImageCount = vkCtx->GetSwapchain()->GetImageCount();
+		init.PipelineCache = VK_NULL_HANDLE;
+
+		// IMPORTANT
+		init.PipelineInfoMain.RenderPass =
+			m_RenderPass.As<VulkanRenderPass>()->Get();
+
+		init.PipelineInfoMain.Subpass = 0;
+
+		init.PipelineInfoMain.MSAASamples =
+			VK_SAMPLE_COUNT_1_BIT;
+
+		init.UseDynamicRendering = false;
+		init.Allocator = nullptr;
+		init.CheckVkResultFn = nullptr;
+		init.MinAllocationSize = 1024 * 1024;
+
+		ImGui_ImplVulkan_Init(&init);
+
+		ANV_LOG_INFO("Initialized ImGui");
+	}
+
+	void VulkanRenderAPI::shutdown_imgui()
+	{
+		auto vkCtx = m_Context->GetAs<VulkanContext>();
+
+		vkCtx->IdleDevice();
+
+		ImGui_ImplVulkan_Shutdown();
+		ImGui_ImplGlfw_Shutdown();
+
+		ImGui::DestroyContext();
+
+		vkDestroyDescriptorPool(
+			m_Context->GetAs<VulkanContext>()->GetDevice(),
+			m_ImGuiDescriptorPool,
+			nullptr
+		);
+
+		ANV_LOG_INFO("Shutdown ImGui");
+	}
+	void VulkanRenderAPI::begin_imgui()
+	{
+		ImGui_ImplVulkan_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+
+		ImGui::NewFrame();
+	}
+	void VulkanRenderAPI::end_imgui(Ref<CommandBuffer> cmd)
+	{
+		ImGui::Render();
+
+		auto vkCmd = cmd.As<VulkanCommandBuffer>();
+
+		ImGui_ImplVulkan_RenderDrawData(
+			ImGui::GetDrawData(),
+			vkCmd->Get()
+		);
+
+		ImGuiIO& io = ImGui::GetIO();
+
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			ImGui::UpdatePlatformWindows();
+			ImGui::RenderPlatformWindowsDefault();
+		}
 	}
 }

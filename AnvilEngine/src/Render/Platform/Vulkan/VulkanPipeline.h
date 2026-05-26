@@ -52,13 +52,15 @@ namespace anv
 		virtual ~VulkanPipeline() override;
 
 		VkPipelineLayout GetPipelineLayout();
+		VkPipeline GetPipeline() { return m_Pipeline; }
 
 		void SetShaderStages(const Ref<Shader> _shader)                          override;
 		void SetVertexInputLayout(const VertexInputLayout* _layout = nullptr)          override;
 		void SetRasterizationSettings(const RasterizationSettings* _raster)  override;
-		void SetColorBlendSettings(const ColorBlendSettings* _colbld)        override;
+		void SetColorBlendSettings(const ColorBlendSettings* _colbld={})        override;
 		void SetRenderPass(const Ref<RenderPass> _rps)                           override;
-		void SetDescriptorSetLayouts(const _vec<VkDescriptorSetLayout>& layouts);
+		void SetDescriptorSetLayouts(const _vec<VkDescriptorSetLayout>& layouts={});
+		void SetPushConstantRange(VkShaderStageFlags _stage=NULL, uint32_t _size=0);
 		void Build()                                                                                      override;
 		void Bind(_shared<QueueChain> _cmdq)                                        override;
 
@@ -76,9 +78,12 @@ namespace anv
 				return VK_FORMAT_UNDEFINED;
 			}
 		}
+	private:
+		void create_layout();
 
 	private:
 		VulkanPipelineCreateInfos m_CreateInfo{};
+		VkPushConstantRange      m_PushRange{};
 		VkPipeline                         m_Pipeline;
 		VkPipelineLayout               m_PipelineLayout;
 		VkRenderPass                    m_RenderPass;

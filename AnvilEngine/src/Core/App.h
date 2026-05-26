@@ -64,6 +64,7 @@ namespace anv
 		_shared<InputSystem>     m_InputSystem = nullptr;
 		_shared<Window>            m_AppWin        = nullptr;
 		_shared<AssetManager>   m_AssetManager = nullptr;
+		FPSCounter m_FPS;
 	};
 
 }

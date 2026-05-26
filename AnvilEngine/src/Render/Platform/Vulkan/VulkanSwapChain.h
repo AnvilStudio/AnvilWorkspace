@@ -23,6 +23,12 @@ namespace anv
 		{
 			return {m_Extent.width, m_Extent.height};
 		}
+		uint32_t GetImageCount()
+		{
+			return static_cast<uint32_t>(
+				m_Images.size()
+			);
+		}
 		void ResetSwap() override;
 		void OnDestroy(VkDevice _dev);
 

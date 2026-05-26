@@ -124,9 +124,18 @@ namespace anv {
 
 		Renderer2D::SetCamera(mainCamera);
 
+		int dur = 0;
+
 		while (!m_AppWin->ShouldClose())
 		{
+			dur++;
 			Time::Update();
+			m_FPS.Update(Time::DeltaTime());
+			if (dur == 2000)
+			{
+				ANV_LOG_DEBUG("FPS: %i", m_FPS.GetFPS());
+				dur = 0;
+			}
 
 			// Polls input
 			m_AppWin->OnUpdate();
@@ -137,8 +146,27 @@ namespace anv {
 			m_ScnMngr->GetActive()->OnUpdate(Time::DeltaTime());
 
 			Renderer2D::BeginScene();
-			Renderer2D::DrawFrame();
+
+			Renderer2D::DrawQuad(
+				{ 0.0f, -1.0f },     // top
+				{ 1.f, 1.f },
+				{ 1, 0, 0, 1 }
+			);
+
+			Renderer2D::DrawQuad(
+				{ -1.0f, 1.0f },   // bottom left
+				{ 1.f, 1.f },
+				{ 0, 1, 0, 1 }
+			);
+
+			Renderer2D::DrawQuad(
+				{ 1.0f, 1.0f },    // bottom right
+				{ 1.f, 1.f },
+				{ 0, 0, 1, 1 }
+			);
+
 			Renderer2D::EndScene();
+			Renderer2D::DrawFrame();
 		}
 		ANV_LOG_INFO("App Closing...")
 		s_This->OnDestroy();

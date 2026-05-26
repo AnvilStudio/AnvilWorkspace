@@ -5,6 +5,7 @@
 
 namespace anv
 {
+
 	struct VertexAttribute {
 		std::string name;           // Attribute name (e.g., "position", "normal")
 		uint32_t location;          // Binding location
@@ -19,7 +20,10 @@ namespace anv
 		uint32_t binding;                        // Vertex buffer binding index
 		size_t stride;                    
 
-		void AddAttribute(const std::string& name, uint32_t location, uint32_t offset, uint32_t size, uint32_t stride, bool normalized = false) {
+		void AddAttribute(const std::string& name, uint32_t location, 
+			uint32_t offset, uint32_t size, 
+			uint32_t stride, bool normalized = false) 
+		{
 			attributes.push_back({ name, location, offset, size, stride, normalized });
 		}
 	};
