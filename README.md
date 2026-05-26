@@ -1,20 +1,39 @@
 ![Anvil Banner](AnvilEngine/AnvilBanner.png "Anvil Banner")
 
+>                         !! WARNING !!
+> Anvil is currently in **heavy active development** and undergoing rapid architectural changes. With one active developer
+>
+> Core systems such as rendering, assets, scene management, and editor tooling are actively being built and refactored.
+>
+> Expect:
+> - Frequent breaking changes
+> - Incomplete features
+> - Limited documentation
+> - APIs changing over time
+>
+> The project is being developed in the open as both an engine and a learning journey. Contributions, feedback, issue reports, and curious visitors are welcome.
+
+---
+
 # Anvil Engine 
 - `Anvil Engine` is built with a powerful, flexible toolset designed to empower developers in creating immersive experiences, whether you're building games, interactive simulations, or lightweight applications. <br> 
 
-- Anvil provides a solid foundation with multi-window support, a range of customizable components
+- Anvil provides a solid foundation with a range of customizable components
 and a versatile renderer that balances performance with simplicity. <br>
 
 - With Anvil, you’ll have the freedom to focus on crafting your vision without unnecessary overhead, thanks to our lightweight, hardware-focused renderer. Our mission is to support developers by offering both high-level tools for rapid development and fine-tuned, API-specific functionality for those who want to dive deeper.
 
 Thank you for choosing Anvil Engine—let’s get started building something incredible!
+
 ## Table of contents
 1. [Overview](#overview)    
+2. [About](#about)
 2. [Installation](#installation)
 3. [Structure](#structure)
 4. [Naming Convention](#naming-convention)
 5. [API Documentation](#api-documentation)
+6. [Future Plans](#future-plans)
+7. [Contact](#contact-us)
 
 ---
 
@@ -32,20 +51,36 @@ Anvil Engine is a modular, developer-friendly engine built for flexibility, offe
 
 Anvil Engine is built to serve as a comprehensive toolset that grows with your project. Whether you’re building a game or a simple app, Anvil has the flexibility and power to bring your ideas to life.
 
+## About
+
+Anvil began as a personal experiment and a challenge: learn graphics programming and engine architecture by building systems from the ground up rather than relying on existing engines. What started as simple rendering tests and low-level graphics experiments gradually evolved into a larger goal — creating a modular engine designed to teach, explore, and eventually power real projects.
+
+Early versions focused heavily on understanding graphics APIs and renderer design. As development continued, Anvil went through multiple rewrites, architectural changes, and redesigns. Systems were frequently rebuilt as new lessons were learned. Instead of treating those rewrites as failures, they became part of the process. The project grew alongside its developer.
+
+Today, Anvil is evolving into a modular C++ engine centered around rendering, application development, and flexible architecture. The long-term vision is to support not only games, but also lightweight applications, tools, and educational projects.
+
+The engine is being developed openly and iteratively. Much of the work happens in public: experimentation, mistakes, redesigns, and breakthroughs alike. The goal isn't just to arrive at a finished engine — it's to understand the technology deeply enough to build it intentionally.
+
+Anvil is still in heavy development, and many systems are unfinished or rapidly changing. But every renderer rewrite, bug hunt, and late-night debugging session pushes the project forward.
+
 ---
 ## Installation
 Installation is meant to be as simple as possible. 
 
 ### Prereq
 - `c++20`
+- `python 3`
 - `Microsoft Visual Studio 2022`
+- `Premake5`
 
 1. Clone the dev repository.<br>
 ```git clone --recursive -b dev https://github.com/AnvilStudio/AnvilWorkspace.git```
-2. In the  root folder, run... <br>
-```.\vendor\premake.exe vs2022```
-3. Open the `AnvilWorkspace.sln` file
-4. Build and run!
+2. Navigate to `AnvilWorkspace/ProjectCreator` and run `python3 project_creator.py <Prj Name> <Prj Dir>`.
+3. In the root folder (AnvilWorksapce), run in your terminal... <br>
+```<your premake installation> vs2022```
+4. Open the `AnvilWorkspace.sln` file
+5. In Visual Studio, set the `Forge` projects command line arguments to `-prj <path to your project>` (right click the project > Debug > command arguments)
+6. Build and run!
     
 ---
 
@@ -64,16 +99,14 @@ the files are as follows
         |    L Core/
         |    |    L High Level code (i.e. - App class, api - agnostic)
         |    L Render/ 
-        |    |    | (All Rendering + Renderer)
-        |    |    L Context/ 
-        |    |    |    L Context Class (api - agnostic)
+        |    |    | (All high level rendering components + renderer)
         |    |    L Platform/ 
         |    |    |    | (api - specific)
         |    |    |    L Vulkan/ 
         |    |    |    |   L (api implimentation)
         |    |    |    L OtherAPI/
         |    L Util/ 
-        |       L (Engine Utility like macros/logging)
+        |       L (Engine Utility like macros/logging/time)
         L vendor/ 
             L (3rd party libs like GLFW)
 
@@ -145,3 +178,60 @@ applys to constructors and deconstructors
 ## API Documentation
 
 under  construction
+
+---
+
+## Future Plans
+
+Anvil's long-term goal extends beyond becoming just another rendering sandbox or game engine. The vision is to build a flexible and approachable platform capable of supporting games, tools, applications, and experimentation while remaining educational and modular at its core.
+
+Planned development areas include:
+
+### Rendering
+- Expand the current Vulkan renderer into a fully featured rendering pipeline
+- Efficient 2D rendering with batching and texture atlases
+- Material and shader systems
+- Framebuffer abstractions and post-processing
+- Lighting and future 3D rendering support
+- Multi-API support beyond Vulkan
+### Engine Systems
+- ECS-driven scene and entity architecture
+- Asset and metadata management
+- Serialization and project persistence
+- Multithreaded task and render systems
+- Resource caching and hot reloading
+### Forge Editor
+
+Forge is planned as Anvil's integrated editor environment.
+
+Goals include:
+
+- Project creation tools
+- Scene hierarchy and inspectors
+- Asset browser
+- Drag-and-drop workflows
+- Visual debugging and profiling tools
+- Multi-window support
+### Scripting and Extensibility
+
+Future versions aim to provide scripting support for rapid iteration and game logic development:
+
+- Runtime scripting systems
+- User extensibility APIs
+- Tool and editor plugins
+- Support for experimentation and custom workflows
+### Cross Platform Support
+
+Anvil is being designed with portability in mind:
+
+- Windows support
+- Linux support
+- macOS support
+- Mobile (android / ios)
+Architecture flexibility for future platforms
+
+## Contact Us
+
+### Head Dev: Cayden "CJ" Jordan
+- email: @caydenjordan05@gmail.com 
+- instagram: @cj.cpp

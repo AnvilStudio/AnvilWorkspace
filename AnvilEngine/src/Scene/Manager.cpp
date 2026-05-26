@@ -50,7 +50,8 @@ namespace anv
 			Serializer::Direction::Read);
 		ser.ObjectStrict("Scene", [&] {
 			ser.FieldOr<std::string>("Name", info.name, "NewScene");
-			ser.FieldOr<std::string>("UUID", info.uuid.uuid, "");
+			// Generate a UUID if the start scene doesnt have one (New Projects)
+			ser.FieldOr<std::string>("UUID", info.uuid.uuid, uuid::uuid_GenAssetID().uuid);
 			ser.EnumFieldOr("Context", info.ctx, Scene::Context::CTX_2D,
 				SceneContextToString, SceneContextFromString);
 		});
