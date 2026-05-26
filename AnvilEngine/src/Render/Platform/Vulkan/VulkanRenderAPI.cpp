@@ -217,6 +217,14 @@ namespace anv {
 		m_RenderCmdChain->Swap();
 		m_RenderCmdChain->WaitForProcessComplete();
 
+		// update after main render loop
+		ImGuiIO& io = ImGui::GetIO();
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			ImGui::UpdatePlatformWindows();
+			ImGui::RenderPlatformWindowsDefault();
+		}
+
 		// present waits on renderFinished
 		swap->Present(vkCtx->GetPresentQueue(), imageIndex, fr.sync.renderFinished, m_SwapRecreateFlag);
 		if (m_SwapRecreateFlag)
@@ -602,7 +610,7 @@ namespace anv {
 		);
 
 		ImGui_ImplVulkan_InitInfo init{};
-		init.ApiVersion = VK_API_VERSION_1_3; // or whatever your Vulkan instance uses
+		init.ApiVersion = VK_API_VERSION_1_3; 
 		init.Instance = vkCtx->GetInstance();
 		init.PhysicalDevice = vkCtx->GetPhysicalDevice();
 		init.Device = vkCtx->GetDevice();
@@ -672,13 +680,5 @@ namespace anv {
 			ImGui::GetDrawData(),
 			vkCmd->Get()
 		);
-
-		ImGuiIO& io = ImGui::GetIO();
-
-		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-		{
-			ImGui::UpdatePlatformWindows();
-			ImGui::RenderPlatformWindowsDefault();
-		}
 	}
 }
