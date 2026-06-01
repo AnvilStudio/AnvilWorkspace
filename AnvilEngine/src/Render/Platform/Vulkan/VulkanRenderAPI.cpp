@@ -6,7 +6,7 @@
 #include "VulkanContext.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanBuffer.h"
-#include "Render/Vertex.h"
+#include "Render/RenderData.h"
 #include "VulkanPipeline.h"
 
 #include "imgui/imgui.h"
@@ -71,11 +71,14 @@ namespace anv {
 		auto& fr = m_Frames[m_FrameIndex];
 
 		// wait/reset fence
-		vkWaitForFences(m_Context->GetAs<VulkanContext>()->GetDevice(), 1, &fr.sync.inFlightFence, VK_TRUE, UINT64_MAX);
-		vkResetFences(m_Context->GetAs<VulkanContext>()->GetDevice(), 1, &fr.sync.inFlightFence);
+		vkWaitForFences(m_Context->GetAs<VulkanContext>()->
+			GetDevice(), 1, &fr.sync.inFlightFence, VK_TRUE, UINT64_MAX);
+		vkResetFences(m_Context->GetAs<VulkanContext>()->
+			GetDevice(), 1, &fr.sync.inFlightFence);
 
 		// acquire
-		uint32_t imageIndex = m_Context->GetAs<VulkanContext>()->GetSwapchain()->AcquireNextImage(fr.sync.imageAvailable, m_SwapRecreateFlag, VK_NULL_HANDLE);
+		uint32_t imageIndex = m_Context->GetAs<VulkanContext>()->GetSwapchain()->
+			AcquireNextImage(fr.sync.imageAvailable, m_SwapRecreateFlag, VK_NULL_HANDLE);
 		
 		if (m_SwapRecreateFlag)
 		{
@@ -86,7 +89,8 @@ namespace anv {
 		}
 
 		// set active cmd + frame context (engine-level)
-		SwapExtent ext = m_Context->GetAs<VulkanContext>()->GetSwapchain()->GetExtent();
+		SwapExtent ext = m_Context->GetAs<VulkanContext>()->
+			GetSwapchain()->GetExtent();
 		RenderFrameContext frame{ imageIndex, ext.width, ext.height };
 		
 		// Bind the active frame to the render thread
@@ -113,8 +117,6 @@ namespace anv {
 
 		m_SpritePipeline->Bind(m_RenderCmdChain);
 		m_RenderPass->Begin();
-
-		ImGui::ShowDemoWindow();
 
 		m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext& frame)
 		{
@@ -169,6 +171,8 @@ namespace anv {
 					VK_INDEX_TYPE_UINT32
 				);
 
+				m_RenderStats.DrawCalls = 0;
+
 				// draw quads
 				for (auto& quad : m_QuadQueue)
 				{
@@ -207,6 +211,7 @@ namespace anv {
 						0,
 						0
 					);
+					m_RenderStats.DrawCalls++;
 				}
 
 			end_imgui(cmd);
@@ -242,12 +247,14 @@ namespace anv {
 	{
 		m_Context->GetAs<VulkanContext>()->IdleDevice();
 		destroy_frames();
+		shutdown_imgui();
 	}
 
 	void anv::VulkanRenderAPI::BeginScene()
 	{
 		// Reset rendering statistics
 		m_QuadQueue.clear();
+		m_RenderStats.QuadCount = 0;
 		// Reset tmp frame data
 	
 		ANV_ASSERT(m_Camera, "Renderer2D has no main camera set!");
@@ -269,7 +276,8 @@ namespace anv {
 			position,
 			size,
 			color
-			});
+		});
+		m_RenderStats.QuadCount++;
 	}
 
 	void VulkanRenderAPI::EndScene()
@@ -280,6 +288,11 @@ namespace anv {
 	void VulkanRenderAPI::SetMainCamera(_shared<Camera2D> camera)
 	{
 		m_Camera = camera;
+	}
+
+	RendererStats VulkanRenderAPI::GetStats()
+	{
+		return m_RenderStats;
 	}
 
 	void VulkanRenderAPI::create_render_passes()

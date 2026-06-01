@@ -6,6 +6,7 @@
 #include "Render/Buffer.h"
 
 #include <Scene/SceneData.h>
+#include <Render/RenderData.h>
 
 namespace anv
 {
@@ -14,13 +15,6 @@ namespace anv
 	//	glm::mat4 model;
 	//	glm::vec4 color;
 	//};
-
-	struct QuadSubmission
-	{
-		glm::vec2 Position;
-		glm::vec2 Size;
-		glm::vec4 Color;
-	};
 
 	class VulkanRenderAPI
 		: public RenderAPI
@@ -37,6 +31,8 @@ namespace anv
 		virtual void EndScene() override;
 
 		virtual void SetMainCamera(_shared<Camera2D> camera) override;
+
+		virtual RendererStats GetStats() override;
 
 	private:
 		void create_render_passes();
@@ -87,6 +83,8 @@ namespace anv
 		// Window Resize //
 		std::atomic<bool>                             m_RecreatingSwapchain{ false };
 		bool m_SwapRecreateFlag                   = false;
+
+		RendererStats m_RenderStats;
 	};
 }
 

@@ -7,7 +7,7 @@ namespace anv
 	{
 		glm::vec2 Position;
 	};
-
+	
     struct Quad
     {
         static inline QuadVertex vertices[4] =
@@ -24,4 +24,11 @@ namespace anv
             2, 3, 0
         };
     };
+
+	struct QuadSubmission
+	{
+		glm::vec2 Position;
+		glm::vec2 Size;
+		glm::vec4 Color;
+	};
 }

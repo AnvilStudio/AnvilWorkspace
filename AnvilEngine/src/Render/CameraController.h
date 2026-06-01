@@ -13,11 +13,18 @@ namespace anv
 		~CameraController();
 
 		void Update(float _deltaTime);
+		void OnResize(float width, float height);
+		void OnMouseScrolled(float yOffset);
 
 	private:
-			_shared<InputSystem> m_InputSystem;
-			_shared<Camera2D>    m_Camera;
-			float m_Speed = 2.f;
+		void RecalculateCamera();
+
+		_shared<InputSystem> m_InputSystem;
+		_shared<Camera2D>    m_Camera;
+
+		float m_Speed = 2.f;
+		float m_AspectRatio = 16.0f / 9.0f;
+		float m_ZoomLevel = 1.0f;
 	};
 }
 

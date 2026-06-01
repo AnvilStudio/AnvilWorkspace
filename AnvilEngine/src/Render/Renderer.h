@@ -20,6 +20,7 @@
 #include "RenderAPI.h"
 #include <string>
 #include "Framebuffer.h"
+#include "RenderStats.h"
 
 namespace anv {
 
@@ -147,6 +148,7 @@ namespace anv {
         static void DrawFrame();
 
         static Render2DCreateInfo GetSettings() { return m_RenderCreateInfo; }
+        static RendererStats GetStats() { return m_RenderAPI->GetStats(); }
 
         static void SetCamera(_shared<Camera2D> _main);
 

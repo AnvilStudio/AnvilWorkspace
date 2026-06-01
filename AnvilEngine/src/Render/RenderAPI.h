@@ -4,6 +4,7 @@
 #include "Camera.h"
 #include "Framebuffer.h"
 #include <glm/glm.hpp>
+#include "RenderStats.h"
 
 namespace anv
 {
@@ -27,6 +28,8 @@ namespace anv
 		
 		static GraphicsAPI GetAPI() { return s_API; }
 		static void SetAPI(GraphicsAPI _api) { s_API = _api; };
+
+		virtual RendererStats GetStats() = 0;
 
 		virtual void DrawFrame() = 0;
 		virtual void OnShutdown() = 0;

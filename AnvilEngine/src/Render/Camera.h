@@ -35,6 +35,8 @@ namespace anv
 
         CameraUBO& GetCameraUBO() { return m_CameraUBO; }
 
+        void SetProjection(float left, float right, float bottom, float top);
+
     private:
         void calc_view();
 

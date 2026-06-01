@@ -15,16 +15,14 @@ namespace anv
 
     void Camera2D::Update(float _deltaTime)
     {
-
+        calc_view();
+        m_CameraUBO.ViewProjection =
+            m_CameraUBO.Projection * m_CameraUBO.View;
     }
 
     void Camera2D::Move(glm::vec2 dir)
     {
         m_Transform.Position += dir;
-
-        calc_view();
-        m_CameraUBO.ViewProjection =
-            m_CameraUBO.Projection * m_CameraUBO.View;
     }
 
     void Camera2D::calc_view()
@@ -36,6 +34,10 @@ namespace anv
             );
 
         m_CameraUBO.View = glm::inverse(transform);
+    }
+    void Camera2D::SetProjection(float left, float right, float bottom, float top)
+    {
+         m_CameraUBO.Projection = glm::ortho(left, right, bottom, top, -1.0f, 1.0f);
     }
 
 } // namespace anv
