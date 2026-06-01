@@ -2,7 +2,7 @@
 
 #include "Profile.h"
 #include "AnvLog/AnvLog.h"
-
+#include "ScopedTimer.h"
 #include <memory>
 #include <vector>
 #include <random>
@@ -35,6 +35,7 @@ using _weak = std::weak_ptr<_ty>;
 // profile a specific scope
 #define ANV_PROFILE_SCOPE() Profiler _profile_scope(__func__);
 #define ANV_PROFILE_SCOPE_NAME(scope) Profiler _profile_scope(scope);
+#define TIME_SCOPE(result) ScopedTimer timer(result);
 
 // Logging
 // ====================================================================
