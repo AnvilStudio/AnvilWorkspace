@@ -50,8 +50,8 @@ namespace anv
         struct SpriteRenderer
         {
             uuid::AssetUUID Texture;
-            glm::vec4 color{ 1, 1, 1, 1 };
-            int layer;
+            glm::vec4 Color{ 1, 1, 1, 1 };
+            int Layer;
         };
         
     } // namespace Component

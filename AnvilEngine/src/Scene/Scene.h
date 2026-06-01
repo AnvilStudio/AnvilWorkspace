@@ -28,6 +28,8 @@ namespace anv
         std::string GetName() { return m_Name; }
         uuid::AssetUUID GetUUID() { return m_UUID; }
         std::string GetPath() { return m_Path; }
+        _shared<Camera2D> GetMainCamera() { return m_MainCamera; }
+        entt::registry& Registry() { return m_Registry; }
 
 
         entt::entity CreateEntity (std::string _tag);
@@ -41,7 +43,6 @@ namespace anv
 
         void DestroyEntity(entt::entity);
 
-        _shared<Camera2D> GetMainCamera() { return m_MainCamera; }
     
     protected:
         bool m_HasShutdown = false;
@@ -55,6 +56,7 @@ namespace anv
 
         
         friend class SceneManager;
+        friend class SceneRenderer2D;
     };
    
     inline const char* SceneContextToString(Scene::Context ctx)

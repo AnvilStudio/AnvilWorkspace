@@ -2,6 +2,7 @@
 #include <Core/App.h>
 #include <Util/Serialize/Serializer.h>
 #include <Render/CameraController.h>
+#include<Render/Renderer.h>
 
 namespace anv
 {
@@ -70,7 +71,21 @@ namespace anv
 
     void Scene::Render()
     {
+        auto view = m_Registry.view<
+            Component::Transform2d,
+            Component::SpriteRenderer>();
 
+        view.each([](
+            auto entity,
+            Component::Transform2d& transform,
+            Component::SpriteRenderer& sprite)
+            {
+                Renderer2D::DrawQuad(
+                    transform.Position,
+                    transform.Scale,
+                    sprite.Color
+                );
+            });
     }
 
     entt::entity Scene::CreateEntity(std::string _tag)
