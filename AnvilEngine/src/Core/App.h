@@ -1,6 +1,7 @@
 #pragma once
 #include "../Render/Renderer.h"
 #include "../Asset/AssetManager.h"
+#include "../Layer/LayerStack.h"
 #include "../Scene/Scene.h"
 #include "../Scene/Manager.h"
 #include "../Input/Input.h"
@@ -30,6 +31,12 @@ namespace anv
 		WindowCreateInfo WindowCreateInfo;
 	};
 
+	struct AppStats
+	{
+		float frameTime = 0.f;
+		FPSCounter fps;
+	};
+
 	class App
 	{
 	public:
@@ -43,7 +50,15 @@ namespace anv
 		FileSystem&            GetFS();
 		_shared<Window> GetMainWindow();
 		_shared<AssetManager> GetAssetManager();
+		_shared<SceneManager> GetSceneManager();
 		_shared<InputSystem>   GetInputSystem();
+		AppStats& GetStats() { return m_Stats; }
+
+		void PushLayer(Layer* layer);
+		void PopLayer(Layer* layer);
+		void PushOverlay(Layer* overlay);
+		void PopOverlay(Layer* overlay);
+
 
 	public:
 		virtual void OnSetup()     = 0;
@@ -59,12 +74,14 @@ namespace anv
 		inline static App*   s_This  = nullptr;
 
 		AppSettings           m_Settings;
-		_unique<SceneManager>  m_ScnMngr = nullptr;
+		LayerStack             m_LayerStack;
 		_unique<FileSystem>        m_FileSystem    = nullptr;
+		_shared<SceneManager>  m_ScnMngr = nullptr;
 		_shared<InputSystem>     m_InputSystem = nullptr;
 		_shared<Window>            m_AppWin        = nullptr;
 		_shared<AssetManager>   m_AssetManager = nullptr;
-		FPSCounter m_FPS;
+		
+		AppStats m_Stats;
 	};
 
 }

@@ -2,7 +2,7 @@
 #include <filesystem>
 #include <Util/Serialize/Serializer.h>
 #include <Util/Time/Time.h>
-
+#include "AppLayers/SceneLayer.h"
 //tmp
 #include "../Asset/AssetTypes/Texture.h" 
 
@@ -42,6 +42,7 @@ namespace anv {
 
 	App::App(int arg_c, char* arg_v[])
 	{
+		ANV_PROFILE_SCOPE()
 		if (s_This == nullptr)
 			s_This = this;
 
@@ -55,18 +56,14 @@ namespace anv {
 
 		for (int i = 0; i < arg_c; i++)
 		{
-			if ((strcmp(arg_v[i], "--projectPath") || strcmp(arg_v[i], "-prj")) && i + 1 < arg_c)
+			if ((strcmp(arg_v[i], "--projectPath") == 0 ||
+				strcmp(arg_v[i], "-prj") == 0) &&
+				i + 1 < arg_c)
 			{
-				i += 2;
-				m_Settings.projectPath = arg_v[i];
+				m_Settings.projectPath = arg_v[i + 1];
 				break;
 			}
-			else {
-				ANV_LOG_FATAL("Please specify a project path")
-			}
 		}
-
-		ANV_PROFILE_SCOPE()
 
 		anv_log::LogCreateInfo info
 		{
@@ -82,35 +79,39 @@ namespace anv {
 
 
 		PopulateSettings(m_Settings.projectPath);
-
 		InitializeFileSys();
 
-		m_ScnMngr = std::make_unique<SceneManager>();
-		m_ScnMngr->Register(m_Settings.startScene);
-
-		// window needs to be created before assets.
+		// Window first
 		m_AppWin = Window::Create(m_Settings.WindowCreateInfo);
 
+		// Core systems
 		m_AssetManager = std::make_shared<AssetManager>();
 		m_InputSystem = InputSystem::Create(m_AppWin);
 
-		// Test
-		//auto t_path = m_FileSystem->GetKeyVal("Assets") / "TestText.png";
-		//Ref<Texture> text = m_AssetManager->Create<Texture>(t_path);
-
 		Time::Init();
 
-		// FIX: prototyping...
+		// Renderer before scene layer/camera binding
 		Render2DCreateInfo r_info{};
 		r_info.pTarget = m_AppWin;
-
 		Renderer2D::Init(r_info);
+
+		// Scene manager after renderer exists
+		m_ScnMngr = std::make_shared<SceneManager>();
+		m_ScnMngr->Register(m_Settings.startScene);
+
+		// Layer last
+		PushLayer(new SceneLayer(m_ScnMngr));
 	}
 
 	App::~App()
 	{
 		ANV_PROFILE_SCOPE()
 		SaveStates();
+
+		for (Layer* layer : m_LayerStack)
+		{
+			layer->OnDetach();
+		}
 
 		// Everything should be deleted before the app itself gets deleted
 		Renderer2D::Shutdown();
@@ -120,55 +121,37 @@ namespace anv {
 	void App::Run()
 	{
 		s_This->OnSetup();
-		auto mainCamera = m_ScnMngr->GetActive()->GetMainCamera();
-
-		Renderer2D::SetCamera(mainCamera);
-
-		int dur = 0;
 
 		while (!m_AppWin->ShouldClose())
 		{
-			dur++;
+			TIME_SCOPE(m_Stats.frameTime)
+
 			Time::Update();
-			m_FPS.Update(Time::DeltaTime());
-			if (dur == 2000)
-			{
-				ANV_LOG_DEBUG("FPS: %i", m_FPS.GetFPS());
-				dur = 0;
-			}
+			m_Stats.fps.Update(Time::DeltaTime());
 
-			// Polls input
+			m_InputSystem->ResetScroll();
+
+			// Poll input/events
 			m_AppWin->OnUpdate();
-
-			// OnUpdate should hapen after input polling
-			s_This->OnUpdate();
-
-			m_ScnMngr->GetActive()->OnUpdate(Time::DeltaTime());
+			
+			// Update engine/game layers
+			for (Layer* layer : m_LayerStack)
+				layer->OnUpdate(Time::DeltaTime());
 
 			Renderer2D::BeginScene();
+			s_This->OnUpdate();
 
-			Renderer2D::DrawQuad(
-				{ 0.0f, -1.0f },     // top
-				{ 1.f, 1.f },
-				{ 1, 0, 0, 1 }
-			);
+			// Render layers
+			for (Layer* layer : m_LayerStack)
+				layer->OnRender();
 
-			Renderer2D::DrawQuad(
-				{ -1.0f, 1.0f },   // bottom left
-				{ 1.f, 1.f },
-				{ 0, 1, 0, 1 }
-			);
-
-			Renderer2D::DrawQuad(
-				{ 1.0f, 1.0f },    // bottom right
-				{ 1.f, 1.f },
-				{ 0, 0, 1, 1 }
-			);
+			// Render UI
+			for (Layer* layer : m_LayerStack)
+				layer->OnImGuiRender();
 
 			Renderer2D::EndScene();
 			Renderer2D::DrawFrame();
 		}
-		ANV_LOG_INFO("App Closing...")
 		s_This->OnDestroy();
 	}
 
@@ -187,9 +170,37 @@ namespace anv {
 		return m_AssetManager;
 	}
 
+	_shared<SceneManager> App::GetSceneManager()
+	{
+		return m_ScnMngr;
+	}
+
 	_shared<InputSystem> App::GetInputSystem()
 	{
 		return m_InputSystem;
+	}
+
+	void App::PushLayer(Layer * layer)
+	{
+		m_LayerStack.PushLayer(layer);
+		layer->OnAttach();
+	}
+
+	void App::PopLayer(Layer* layer)
+	{
+		m_LayerStack.PushLayer(layer);
+		layer->OnDetach();
+	}
+	void App::PushOverlay(Layer* overlay)
+	{
+		m_LayerStack.PushOverlay(overlay);
+		overlay->OnAttach();
+	}
+
+	void App::PopOverlay(Layer* overlay)
+	{
+		m_LayerStack.PushOverlay(overlay);
+		overlay->OnDetach();
 	}
 
 	// Serialize all settings
