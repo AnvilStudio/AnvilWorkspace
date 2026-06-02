@@ -59,6 +59,7 @@ namespace anv
 		void PushOverlay(Layer* overlay);
 		void PopOverlay(Layer* overlay);
 
+		void Close();
 
 	public:
 		virtual void OnSetup()     = 0;
@@ -82,6 +83,7 @@ namespace anv
 		_shared<AssetManager>   m_AssetManager = nullptr;
 		
 		AppStats m_Stats;
+		bool m_CloseEvent = false;
 	};
 
 }

@@ -122,7 +122,7 @@ namespace anv {
 	{
 		s_This->OnSetup();
 
-		while (!m_AppWin->ShouldClose())
+		while (!m_AppWin->ShouldClose() && m_CloseEvent == false)
 		{
 			TIME_SCOPE(m_Stats.frameTime)
 
@@ -201,6 +201,11 @@ namespace anv {
 	{
 		m_LayerStack.PushOverlay(overlay);
 		overlay->OnDetach();
+	}
+
+	void App::Close()
+	{
+		m_CloseEvent = true;
 	}
 
 	// Serialize all settings
