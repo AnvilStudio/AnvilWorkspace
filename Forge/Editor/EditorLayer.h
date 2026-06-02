@@ -11,10 +11,12 @@ public:
 
 private:
 	void begin_dock_space();
+	void draw_menu_bar();
 	void draw_scene_hierarchy();
 	void draw_inspector();
 	void draw_stats();
 
 	entt::entity m_SelectedEntity = entt::null;
+	entt::entity m_EntityToDelete = entt::null;
 };
 

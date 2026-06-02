@@ -16,6 +16,7 @@ void EditorLayer::OnUpdate(float dt)
 void EditorLayer::OnImGuiRender()
 {
     begin_dock_space();
+    draw_menu_bar();
     draw_scene_hierarchy();
     draw_inspector();
     draw_stats();
@@ -25,10 +26,10 @@ void EditorLayer::draw_scene_hierarchy()
 {
     ImGui::Begin("Scene Hierarchy");
 
-    auto scene =
-        App::GetInstance()
-        ->GetSceneManager()
-        ->GetActive();
+    // EditorLayer
+    auto scene = App::GetInstance()->GetSceneManager()->GetActive();
+    if (!scene)
+        return;
 
     if (ImGui::Button("Create Entity"))
     {
@@ -64,6 +65,24 @@ void EditorLayer::draw_scene_hierarchy()
         {
             m_SelectedEntity = entity;
         }
+
+        if (ImGui::BeginPopupContextItem())
+        {
+            if (ImGui::MenuItem("Delete"))
+            {
+                m_EntityToDelete = entity;
+            }
+
+            ImGui::EndPopup();
+        }
+    }
+
+    if (m_EntityToDelete != entt::null)
+    {
+        scene->DestroyEntity(m_EntityToDelete);
+        m_EntityToDelete = entt::null;
+        if (m_SelectedEntity == m_EntityToDelete)
+            m_SelectedEntity = entt::null;
     }
 
     ImGui::End();
@@ -100,7 +119,7 @@ void EditorLayer::draw_inspector()
                 buffer,
                 sizeof(buffer)))
             {
-                tag.Get() = buffer;
+                tag.value = buffer;
             }
         }
 
@@ -113,19 +132,19 @@ void EditorLayer::draw_inspector()
 
             ImGui::DragFloat2(
                 "Position",
-                &transform.Position.x,
+                &transform.position.x,
                 0.1f
             );
 
             ImGui::DragFloat(
                 "Rotation",
-                &transform.Rotation.x,
+                &transform.rotation,
                 0.1f
             );
 
             ImGui::DragFloat2(
                 "Scale",
-                &transform.Scale.x,
+                &transform.scale.x,
                 0.1f
             );
         }
@@ -139,7 +158,7 @@ void EditorLayer::draw_inspector()
 
             ImGui::ColorEdit4(
                 "Color",
-                &sprite.Color.x
+                &sprite.color.x
             );
         }
     }
@@ -205,4 +224,35 @@ void EditorLayer::begin_dock_space()
     );
 
     ImGui::End();
+}
+
+void EditorLayer::draw_menu_bar()
+{
+    if (ImGui::BeginMainMenuBar())
+    {
+        if (ImGui::BeginMenu("File"))
+        {
+            if (ImGui::MenuItem("Save Scene", "Ctrl+S"))
+            {
+                auto scene =
+                    App::GetInstance()
+                    ->GetSceneManager()
+                    ->GetActive();
+
+                if (scene)
+                    scene->Save();
+            }
+
+            ImGui::Separator();
+
+            if (ImGui::MenuItem("Exit"))
+            {
+                App::GetInstance()->Close();
+            }
+
+            ImGui::EndMenu();
+        }
+
+        ImGui::EndMainMenuBar();
+    }
 }
