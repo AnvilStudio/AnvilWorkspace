@@ -17,9 +17,9 @@ namespace anv
             Component::SpriteRenderer& sprite)
             {
                 Renderer2D::DrawQuad(
-                    transform.Position,
-                    transform.Scale,
-                    sprite.Color
+                    transform.position,
+                    transform.scale,
+                    sprite.color
                 );
             });
 	}
