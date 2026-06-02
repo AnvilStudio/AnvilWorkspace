@@ -2,6 +2,7 @@
 #include "../vendor/entt/single_include/entt/entt.hpp"
 #include "../Render/Camera.h"
 #include "../Render/CameraController.h"
+#include "SceneData.h"
 
 namespace anv
 {
@@ -11,16 +12,14 @@ namespace anv
         : public RefCounter
     {
     public:
-        enum class Context
-        {
-            CTX_2D,
-            CTX_3D
-        };
-
         Scene(std::string _name);
+        Scene(std::filesystem::path _path);
+
         ~Scene();
 
         void Init();
+        void Load();
+        void Save();
         void Shutdown();
         void OnUpdate(float _deltaTime);
         void Render();
@@ -43,11 +42,10 @@ namespace anv
 
         void DestroyEntity(entt::entity);
 
-    
     protected:
         bool m_HasShutdown = false;
         std::string m_Name;
-        Context     m_Context;
+        SceneContext     m_Context;
         uuid::AssetUUID m_UUID;
         entt::registry  m_Registry;
         std::string m_Path;
@@ -59,20 +57,20 @@ namespace anv
         friend class SceneRenderer2D;
     };
    
-    inline const char* SceneContextToString(Scene::Context ctx)
+    inline const char* SceneContextToString(SceneContext ctx)
     {
         switch (ctx)
         {
-        case Scene::Context::CTX_2D: return "2D";
-        case Scene::Context::CTX_3D: return "3D";
+        case SceneContext::CTX_2D: return "2D";
+        case SceneContext::CTX_3D: return "3D";
         default: return "Unknown";
         }
     }
 
-    inline bool SceneContextFromString(const std::string& s, Scene::Context& out)
+    inline bool SceneContextFromString(const std::string& s, SceneContext& out)
     {
-        if (s == "2D" || s == "CTX_2D") { out = Scene::Context::CTX_2D; return true; }
-        if (s == "3D" || s == "CTX_3D") { out = Scene::Context::CTX_3D; return true; }
+        if (s == "2D" || s == "CTX_2D") { out = SceneContext::CTX_2D; return true; }
+        if (s == "3D" || s == "CTX_3D") { out = SceneContext::CTX_3D; return true; }
         return false;
     }
 }

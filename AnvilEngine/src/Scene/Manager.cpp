@@ -1,6 +1,7 @@
 #include "Manager.h"
 #include "Scene.h"
 #include "Core/App.h"
+#include "SceneData.h"
 
 namespace anv
 {
@@ -40,50 +41,20 @@ namespace anv
 
 		std::filesystem::path newPath;
 		if (_path[0] == '@')
+		{
 			 newPath = fs.ResolveKey(_path);
+		}
+		else {
+			ANV_LOG_WARN("Scene path %s did not match with any file system mounts!");
+			newPath = std::filesystem::path(_path);
+		}
 
-		SceneRegInfo info{
-			.path = _path
-		};
-
-		Serializer ser(newPath, Serializer::Mode::SER_MODE_TOML,
-			Serializer::Direction::Read);
-		ser.ObjectStrict("Scene", [&] {
-			ser.FieldOr<std::string>("Name", info.name, "NewScene");
-			// Generate a UUID if the start scene doesnt have one (New Projects)
-			ser.FieldOr<std::string>("UUID", info.uuid.uuid, uuid::uuid_GenAssetID().uuid);
-			ser.EnumFieldOr("Context", info.ctx, Scene::Context::CTX_2D,
-				SceneContextToString, SceneContextFromString);
-		});
-
-		Ref<Scene> scene = Ref<Scene>::Create(info.name);
-		if (info.uuid.uuid != "")
-			scene->m_UUID = info.uuid;
-		scene->m_Context = info.ctx;
-		scene->m_Path = info.path;
-
+		Ref<Scene> scene = Ref<Scene>::Create(newPath);
 		m_Registry.emplace(scene->m_UUID, scene);
 
 		// If no active scene, set it
 		if (m_Active.uuid.empty())
-			m_Active = info.uuid;
-
-		// load entities
-		ser.ForEachTable("Entities", [&](const std::string& entUUID)
-			{
-				// We are now inside [Entities."<entUUID>"]
-				std::string name;
-				ser.FieldOr<std::string>("Name", name, "Entity");
-
-				auto ent = scene->RegisterEntity(name, uuid::EntityUUID(entUUID));
-
-				//ser.ObjectIf("Transform2d", [&] {
-				     // TODO: Need to retrieve transform2d data then pass it in to AddCompnent 
-				//	scene->AddComponent<Component::Transform2d>(ent);
-				//});
-
-				// Create entity using entUUID + name
-			});
+			m_Active = scene->GetUUID();
 
 		return scene;
 	}

@@ -1,13 +1,20 @@
 #pragma once
-
-#include <glm/glm.hpp>
+#include <string>
+#include "../Core/Uuid.h"
 
 namespace anv
 {
-	//struct SceneData
-	//{ 
-	//	// camera data;
-	//	CameraUBO cameraUBO;
-	//};
+	enum SceneContext
+	{
+		CTX_2D,
+		CTX_3D
+	};
 
+	struct SceneRegInfo
+	{
+		std::string path;
+		std::string name;
+		uuid::AssetUUID uuid;
+		SceneContext ctx;
+	};
 }

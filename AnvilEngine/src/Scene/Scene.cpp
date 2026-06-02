@@ -14,6 +14,16 @@ namespace anv
         Init();
     }
 
+    Scene::Scene(std::filesystem::path _path)
+        : m_Path(_path.string())
+    {
+        m_Name = _path.filename().string();
+
+        ANV_LOG_INFO("Creating scene: %s", m_Name.c_str())
+        m_UUID = uuid::uuid_GenAssetID();
+        Init();
+    }
+
     Scene::~Scene()
     {
         //Shutdown();
@@ -21,22 +31,77 @@ namespace anv
 
     void Scene::Init()
     {
-        m_Path = "Assets/Scenes/" + m_Name + ".ascn";
-
         m_MainCamera = std::make_shared<Camera2D>();
         m_CameraController = std::make_unique<CameraController>( 
             App::GetInstance()->GetInputSystem(), 
             m_MainCamera
         );
+
+        Load();
     }
 
-    void Scene::Shutdown()
+    void Scene::Load()
     {
-        if (m_HasShutdown)
-            return;
+        Serializer ser(m_Path, Serializer::Mode::SER_MODE_TOML, Serializer::Direction::Read);
+         
+        // scene header
+        ser.Object("Scene", [&]() {
+            ser.Field("Name", m_Name);
+            ser.Field("UUID", m_UUID.uuid);
+            ser.Field("Path", m_Path);
 
-        m_HasShutdown = true;
+            ser.EnumFieldOr(
+                "Context",
+                m_Context,
+                SceneContext::CTX_3D,
+                SceneContextToString,
+                SceneContextFromString
+            );
+        });
 
+        // entities
+        if (ser.HasObject("Entities"))
+        {
+            ser.Object("Entities", [&]()
+                {
+                    ser.ForEachObject([&](const std::string& entityUUID)
+                        {
+                            entt::entity entity = m_Registry.create();
+
+                            auto& id =
+                                m_Registry.emplace<uuid::EntityUUID>(entity);
+
+                            id.uuid = entityUUID;
+
+                            DeserializeIfPresent<Component::Tag>(
+                                m_Registry,
+                                entity,
+                                ser,
+                                "Tag"
+                            );
+
+                            DeserializeIfPresent<Component::Transform2d>(
+                                m_Registry,
+                                entity,
+                                ser,
+                                "Transform2d"
+                            );
+
+                            DeserializeIfPresent<Component::SpriteRenderer>(
+                                m_Registry,
+                                entity,
+                                ser,
+                                "SpriteRenderer"
+                            );
+                        });
+                });
+        }
+        
+        ser.Close();
+    }
+
+    void Scene::Save()
+    {
         Serializer ser(m_Path, Serializer::Mode::SER_MODE_TOML, Serializer::Direction::Write);
 
         // Header
@@ -47,21 +112,49 @@ namespace anv
             ser.EnumFieldOr(
                 "Context",
                 m_Context,
-                Scene::Context::CTX_3D,
+                SceneContext::CTX_3D,
                 SceneContextToString,
                 SceneContextFromString);
+            });
 
-            // Entities
-            // Could probably impl a Serialize component to gather all data of the entity and serialize it
-            auto view = m_Registry.view<uuid::EntityUUID, Component::Tag>();
-            for (auto [e, id, tag] : view.each())
-            {
-                ser.ObjectKeyed("Entities", id.uuid, [&] {
-                    ser.Field("Name", tag.tag);
+        // Entities
+        ser.RemoveObject("Entities");
+        auto view = m_Registry.view<uuid::EntityUUID, Component::Tag>();
+        for (auto [e, id, tag] : view.each())
+        {
+            ser.ObjectKeyed("Entities", id.uuid, [&] {
+
+                SerializeIfPresent<Component::Tag>(
+                    m_Registry,
+                    e,
+                    ser,
+                    "Tag"
+                );
+                SerializeIfPresent<Component::Transform2d>(
+                    m_Registry,
+                    e,
+                    ser,
+                    "Transform2d"
+                );
+                SerializeIfPresent<Component::SpriteRenderer>(
+                    m_Registry,
+                    e,
+                    ser,
+                    "SpriteRenderer"
+                );
                 });
-            }
-        });
+        }
+
         ser.Close();
+    }
+
+    void Scene::Shutdown()
+    {
+        if (m_HasShutdown)
+            return;
+
+        m_HasShutdown = true;
+        Save();
     }
 
     void Scene::OnUpdate(float _deltaTime)
@@ -81,9 +174,9 @@ namespace anv
             Component::SpriteRenderer& sprite)
             {
                 Renderer2D::DrawQuad(
-                    transform.Position,
-                    transform.Scale,
-                    sprite.Color
+                    transform.position,
+                    transform.scale,
+                    sprite.color
                 );
             });
     }
@@ -92,7 +185,7 @@ namespace anv
     {
         auto entity = m_Registry.create();
 
-        m_Registry.emplace<uuid::EntityUUID>(entity);
+        m_Registry.emplace<uuid::EntityUUID>(entity) = uuid::uuid_GenEntID();
         m_Registry.emplace<Component::Transform2d>(entity);
         m_Registry.emplace<Component::Tag>(entity, _tag);
 

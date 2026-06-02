@@ -4,6 +4,7 @@
 #include "../Core/Uuid.h"
 #include "../Core/Reference.h"
 #include "../Util/Serialize/Serializer.h"
+#include "SceneData.h"
 
 namespace anv
 {
@@ -11,13 +12,6 @@ namespace anv
 	class SceneManager
 	{
 	public:
-		struct SceneRegInfo
-		{
-			std::string path;
-			std::string name;
-			uuid::AssetUUID uuid;
-			Scene::Context ctx;
-		};
 
 		SceneManager();
 		~SceneManager();
