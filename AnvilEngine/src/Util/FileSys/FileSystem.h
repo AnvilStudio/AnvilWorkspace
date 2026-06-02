@@ -54,7 +54,7 @@ namespace anv
         std::filesystem::path GetKeyVal(const std::string & _key);
         bool          MoveToKey(const std::string & _key);
 
-        void ForEach(const const std::filesystem::path _dirRelOrAbs, _ForEachFn _Fn);
+        void ForEach(const std::filesystem::path _dirRelOrAbs, _ForEachFn _Fn);
 
         // If you don’t want a background thread, you can stop it and call this manually.
         void PumpDeletes();

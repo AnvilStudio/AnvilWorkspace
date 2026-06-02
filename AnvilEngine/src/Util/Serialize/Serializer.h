@@ -49,6 +49,29 @@ namespace anv
 
         // TOML-only: iterate immediate child tables under `parent`.
         // Example: ForEachTable("Entities", [&](const std::string& id){ ... });
+
+        bool HasObject(const std::string& name) const;
+
+        void RemoveObject(const std::string& name);
+
+        template<typename Fn>
+        void ForEachObject(Fn&& fn)
+        {
+            auto& table = *m_TomlStack.back();
+
+            for (auto&& [key, value] : table)
+            {
+                if (!value.is_table())
+                    continue;
+
+                std::string name = std::string(key.str());
+
+                push_toml_table_for_read(name);
+                fn(name);
+                pop_toml_table();
+            }
+        }
+
         template<typename Fn>
         void ForEachTable(const std::string & _parent, Fn && _fn)
         {

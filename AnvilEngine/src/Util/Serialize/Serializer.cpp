@@ -119,6 +119,22 @@ namespace anv
         }
     }
 
+    bool Serializer::HasObject(const std::string& name) const
+    {
+        if (m_Mode == Mode::SER_MODE_TOML)
+            return toml_has_table(name);
+
+        return false; // for bin later on
+    }
+
+    void Serializer::RemoveObject(const std::string& name)
+    {
+        if (m_Mode == Mode::SER_MODE_TOML)
+        {
+            m_TomlStack.back()->erase(name);
+        }
+    }
+
     // -------------------------
     // TOML backend
     // -------------------------
