@@ -25,9 +25,14 @@ namespace anv
 		m_RenderAPI->SetMainCamera(_main);
 	}
 
-	void Renderer2D::BeginScene()
+	void Renderer2D::BeginScene(/*Ref<RenderTarget> _renderTarget*/)
 	{
-		m_RenderAPI->BeginScene();
+		m_RenderAPI->BeginScene(/*_renderTarget*/);
+	}
+
+	void Renderer2D::DrawScene(Ref<RenderTarget> _renderTarget)
+	{
+		m_RenderAPI->DrawScene(_renderTarget);
 	}
 
 	void Renderer2D::EndScene()
@@ -43,6 +48,11 @@ namespace anv
 	void Renderer2D::DrawFrame()
 	{
 		m_RenderAPI->DrawFrame();
+	}
+
+	void Renderer2D::WaitIdle()
+	{
+		App::GetInstance()->GetMainWindow()->GetContext()->WaitIdle();
 	}
 
 }

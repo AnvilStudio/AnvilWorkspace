@@ -19,7 +19,7 @@ namespace anv
     }
 
 	RenderPass::RenderPass(RenderPassCreateInfo _info)
-		: m_RenderQueue(_info.commandQueue)
+		: m_Info(_info)
 	{
 		m_DName = _info.d_name;
 	}

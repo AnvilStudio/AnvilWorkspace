@@ -30,17 +30,25 @@ namespace anv
 
         void Update(float _deltaTime);
         
-        // Vec2 because 2D
-        void Move(glm::vec2 _dir);
+        
 
         CameraUBO& GetCameraUBO() { return m_CameraUBO; }
+        Component::Transform2d& GetTransform() { return m_Transform; }
+        float GetAspectRatio() { return m_AspectRatio; }
+        float GetZoom() { return m_ZoomLevel; }
 
+        void SetTransform(Component::Transform2d _transform) { m_Transform = _transform; }
+        void SetZoom(float _zoom);
         void SetProjection(float left, float right, float bottom, float top);
+        void SetAspectRatio(float _ratio);
+        void Move(glm::vec2 _dir);
 
     private:
         void calc_view();
 
         CameraUBO m_CameraUBO;
         Component::Transform2d m_Transform;
+        float m_AspectRatio = 16.0f / 9.0f;
+        float m_ZoomLevel = 1.0f;
     };
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include "../Util/UMacros.h"
 #include "../Core/Reference.h"
+#include "RenderTarget.h"
 #include "Camera.h"
 #include "Framebuffer.h"
 #include <glm/glm.hpp>
@@ -35,6 +36,9 @@ namespace anv
 		virtual void OnShutdown() = 0;
 
 		virtual void BeginScene() = 0;
+		virtual void BeginScene(Ref<RenderTarget> _renderTarget) = 0;
+		// draw to a target
+		virtual void DrawScene(Ref<RenderTarget> _renderTarget) = 0;
 		virtual void DrawQuad(const glm::vec2& position, const glm::vec2& size, glm::vec4 color) = 0;
 		virtual void EndScene() = 0;
 
@@ -44,6 +48,7 @@ namespace anv
 		// TODO: impl API switch
 		inline static GraphicsAPI s_API = GraphicsAPI::VK;
 		_shared<Context> m_Context = nullptr;
+		Ref<RenderTarget> m_CurrentTarget = nullptr;
 		_shared<Camera2D> m_Camera;
 	};
 }

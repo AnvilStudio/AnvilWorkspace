@@ -5,7 +5,7 @@ namespace anv
     CameraController::CameraController(_shared<InputSystem>_is, _shared<Camera2D> _cam)
         : m_InputSystem(_is), m_Camera(_cam)
     {
-        RecalculateCamera();
+        
     }
 
     CameraController::~CameraController()
@@ -20,10 +20,7 @@ namespace anv
 
         if (scroll != 0.0f)
         {
-            m_ZoomLevel -= scroll * 0.25f;
-            m_ZoomLevel = std::max(m_ZoomLevel, 0.1f);
-
-            RecalculateCamera();
+            OnMouseScrolled(scroll);
         }
 
         if (m_InputSystem->IsKeyPressed(ANV_KEY_W))
@@ -51,8 +48,7 @@ namespace anv
     }
     void CameraController::OnResize(float width, float height)
     {
-        m_AspectRatio = width / height;
-        RecalculateCamera();
+        //m_AspectRatio = width / height;
     }
 
     void CameraController::OnMouseScrolled(float yOffset)
@@ -60,16 +56,6 @@ namespace anv
         m_ZoomLevel -= yOffset * 0.25f;
         m_ZoomLevel = std::max(m_ZoomLevel, 0.1f);
 
-        RecalculateCamera();
-    }
-
-    void CameraController::RecalculateCamera()
-    {
-        m_Camera->SetProjection(
-            -m_AspectRatio * m_ZoomLevel,
-            m_AspectRatio * m_ZoomLevel,
-            -m_ZoomLevel,
-            m_ZoomLevel
-        );
+        m_Camera->SetZoom(m_ZoomLevel);
     }
 }

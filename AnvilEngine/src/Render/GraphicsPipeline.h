@@ -78,7 +78,7 @@ namespace anv
 		virtual void SetColorBlendSettings(const ColorBlendSettings* _colbld)       = 0;
 		virtual void SetRenderPass(const Ref<RenderPass> _rps) = 0;
 		virtual void Build() = 0;
-		virtual void Bind(_shared<QueueChain> _cmdq) = 0;
+		virtual void Bind(Ref<CommandBuffer> _cmd) = 0;
 
 		virtual void OnSave(Serializer& _ser) = 0;
 

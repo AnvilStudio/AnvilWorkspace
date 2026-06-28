@@ -17,16 +17,16 @@ namespace anv
     //    }
     //}
 
-    Ref<Image2D> anv::Image2D::Create(_shared<Context> _ctx, Format _fmt)
+    Ref<Image2D> anv::Image2D::Create(_shared<Context> _ctx, Format _fmt, uint32_t _width, uint32_t _height)
     {
         switch (RenderAPI::GetAPI())
         {
-        case GraphicsAPI::VK: return Ref<VulkanImage2D>::Create(_ctx, _fmt);
+        case GraphicsAPI::VK: return Ref<VulkanImage2D>::Create(_ctx, _fmt, _width, _height);
         }
     }
 
-    Image2D::Image2D(_shared<Context> _ctx)
-        : m_Context(_ctx)
+    Image2D::Image2D(_shared<Context> _ctx, uint32_t _width, uint32_t _height)
+        : m_Context(_ctx), m_Width(_width), m_Height(_height)
     {
     }
 }

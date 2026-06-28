@@ -23,6 +23,8 @@ namespace anv {
         inline Ref<Swapchain> GetSwapchain() { return m_Swapchain; }
         inline _shared<RenderAPI> GetAPI() { return m_API; }
 
+        virtual void WaitIdle() = 0;
+
         template<typename T>
         inline T* GetAs() { return static_cast<T*>(this); }
 

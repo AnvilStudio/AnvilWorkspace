@@ -120,7 +120,7 @@ namespace anv {
         int stencilBits = 8;
 
         // Clear color
-        Color clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+        Color clearColor = { 0.1f, 0.1f, 0.1f, 1.0f };
 
         // Off-Screen Rendering
         bool offscreenRendering = false;
@@ -153,6 +153,7 @@ namespace anv {
         static void SetCamera(_shared<Camera2D> _main);
 
         static void BeginScene();
+        static void DrawScene(Ref<RenderTarget> _renderTarget);
         static void EndScene();
 
         static void DrawQuad(const glm::vec2& position, const glm::vec2& size, glm::vec4 color);
@@ -161,6 +162,7 @@ namespace anv {
         //static void CmdDrawQuadWithTexture(Texture& _text, VertexBuffer& _vb, IndexBuffer& _ib);
         //static void CmdSubmit();
 
+        static void WaitIdle();
 
     protected:
         //inline static _shared<Camera2D>        m_MainCamera     = nullptr;

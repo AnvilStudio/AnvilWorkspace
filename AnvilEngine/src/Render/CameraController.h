@@ -17,13 +17,10 @@ namespace anv
 		void OnMouseScrolled(float yOffset);
 
 	private:
-		void RecalculateCamera();
-
 		_shared<InputSystem> m_InputSystem;
 		_shared<Camera2D>    m_Camera;
 
 		float m_Speed = 2.f;
-		float m_AspectRatio = 16.0f / 9.0f;
 		float m_ZoomLevel = 1.0f;
 	};
 }
