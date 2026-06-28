@@ -37,7 +37,38 @@ namespace anv
         template<typename comp, typename ...Args>
         comp& AddComponent(entt::entity _entity, Args&&... args)
         {
+            if (m_Registry.any_of<comp>(_entity))
+            {
+                return m_Registry.get<comp>(_entity);
+            }
             return m_Registry.emplace<comp>(_entity, std::forward<Args>(args)...);
+        }
+
+        template<typename comp>
+        comp& GetComponent(entt::entity _entity)
+        {
+            return m_Registry.get<comp>(_entity);
+        }
+
+        template<typename comp>
+        void RemoveComponent(entt::entity _entity)
+        {
+            if (!m_Registry.valid(_entity))
+                return;
+
+            if (!m_Registry.any_of<comp>(_entity))
+                return;
+
+            m_Registry.remove<comp>(_entity);
+        }
+
+        template<typename comp>
+        bool HasComponent(entt::entity _entity)
+        {
+            if (!m_Registry.valid(_entity))
+                return false;
+
+            return m_Registry.any_of<comp>(_entity);
         }
 
         void DestroyEntity(entt::entity);

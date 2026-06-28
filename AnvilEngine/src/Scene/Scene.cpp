@@ -59,6 +59,20 @@ namespace anv
             );
         });
 
+        // Camera
+        ser.ObjectIf("Camera", [&]() {
+            ser.Object("Transform", [&]() {
+                m_MainCamera->GetTransform().Deserialize(ser);
+            });
+            ser.Object("Settings", [&]() {
+                float ar, z;
+                ser.Field<float>("AspectRatio", ar);
+                ser.Field<float>("Zoom", z);
+
+                m_MainCamera->SetZoom(z);
+                });
+            });
+
         // entities
         if (ser.HasObject("Entities"))
         {
@@ -116,6 +130,20 @@ namespace anv
                 SceneContextToString,
                 SceneContextFromString);
             });
+
+        // Camera
+        ser.Object("Camera", [&]() {
+            ser.Object("Transform", [&]() {
+                m_MainCamera->GetTransform().Serialize(ser);
+                });
+            ser.Object("Settings", [&]() {
+                float aspectRatio = m_MainCamera->GetAspectRatio();
+                float zoom = m_MainCamera->GetZoom();
+
+                ser.Field("AspectRatio", aspectRatio);
+                ser.Field("Zoom", zoom);
+            });
+        });
 
         // Entities
         ser.RemoveObject("Entities");
