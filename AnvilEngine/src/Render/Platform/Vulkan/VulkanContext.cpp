@@ -394,4 +394,8 @@ namespace anv {
 	{
 		vkDeviceWaitIdle(m_Device);
 	}
+	void VulkanContext::WaitIdle()
+	{
+		IdleDevice();
+	}
 }

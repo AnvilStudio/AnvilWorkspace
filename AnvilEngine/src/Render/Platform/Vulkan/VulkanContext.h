@@ -50,7 +50,7 @@ namespace anv {
             return m_QueueFamilies;
         }
         void                      IdleDevice();
-
+        void                      WaitIdle() override;
         // Returned as a VkSwapchain because
         // We're in the abstract class.
         Ref<VulkanSwapchain>    
