@@ -27,8 +27,8 @@ namespace anv
 		: public Image2D
 	{
 	public:
-		VulkanImage2D(_shared<Context> _ctx, Format _fmt);
-		VulkanImage2D(_shared<Context> _ctx, VkImage _img, Format _fmt);
+		VulkanImage2D(_shared<Context> _ctx, Format _fmt, uint32_t _width, uint32_t _height);
+		VulkanImage2D(_shared<Context> _ctx, VkImage _img, Format _fmt, uint32_t _width, uint32_t _height);
 		~VulkanImage2D();
 
 		// Builds an image view for the VkImage
@@ -38,8 +38,12 @@ namespace anv
 		void SetImage(VkImage _img) { m_Image = _img; };
 
 	private:
+		void create_image();
+
 		VkFormat       m_Format;
-		VkImage        m_Image;
+		VkImage        m_Image = VK_NULL_HANDLE;
+		VkDeviceMemory m_Memory = VK_NULL_HANDLE;
+		bool m_OwnsImage = true;
 	};
 
 }
