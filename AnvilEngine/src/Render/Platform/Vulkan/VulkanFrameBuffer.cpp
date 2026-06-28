@@ -3,11 +3,12 @@
 
 namespace anv
 {
-	VulkanFrameBuffer::VulkanFrameBuffer(_shared<Context> _ctx, Ref<ImageView> _imgv, Ref<RenderPass> _rp)
-		: Framebuffer(_ctx, _imgv, _rp)
+	VulkanFrameBuffer::VulkanFrameBuffer(_shared<Context> _ctx, Ref<ImageView> _imgv, Ref<RenderPass> _rp, uint32_t _width, uint32_t _height)
+		: Framebuffer(_ctx, _imgv, _rp, _width, _height)
 	{
 		ANV_LOG_DEBUG("Creating VkFrameBuffer")
 		create_frame_buffer();
+		ANV_ASSERT(m_FrameBuffer != VK_NULL_HANDLE, "VkFramebuffer creation returned null!");
 	}
 
 	VulkanFrameBuffer::~VulkanFrameBuffer()
@@ -29,8 +30,8 @@ namespace anv
 		fb_info.attachmentCount     = 1;
 		VkImageView attachments[] = { m_ImageView.As<VulkanImageView>()->Get() };
 		fb_info.pAttachments          = attachments;
-		fb_info.width                       = m_Context->GetSwapchain()->GetExtent().width;
-		fb_info.height                      = m_Context->GetSwapchain()->GetExtent().height;
+		fb_info.width                       = m_Width;
+		fb_info.height                      = m_Height;
 		fb_info.layers                       = 1;
 
 		ANV_VK_CHECK_RESULT(vkCreateFramebuffer(m_Context->GetAs<VulkanContext>()->GetDevice(), 
