@@ -4,5 +4,7 @@
 #include "../vendor/imgui/imgui.h"
 #include "../vendor/glm/glm/glm.hpp"
 #include "../src/Render/Renderer.h"
+#include "../src/Render/RenderTarget.h"
+#include "../src/Render/Camera.h"
 #include "../src/Scene/Component.h"
 #include "../src/Scene/Scene.h"
