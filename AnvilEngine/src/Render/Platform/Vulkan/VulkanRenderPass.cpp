@@ -8,6 +8,22 @@ anv::VulkanRenderPass::VulkanRenderPass(RenderPassCreateInfo _rpinfo, _shared<Co
 {
 	m_VkContext = _ctx->GetAs<VulkanContext>();
 	init_render_pass(_rpinfo);
+
+	for (const auto& attachment : m_Info.attachments)
+	{
+		switch (attachment.type)
+		{
+		case RenderPassAttachment::Type::ATT_TY_COLOR:
+			m_Signature.ColorFormat = attachment.imageFormat;
+			break;
+
+		case RenderPassAttachment::Type::ATT_TY_DEPTH:
+			m_Signature.DepthFormat = attachment.imageFormat;
+			m_Signature.HasDepth = true;
+			break;
+		}
+	}
+	m_Signature.Samples = 1; // later read from attachment
 }
 
 anv::VulkanRenderPass::~VulkanRenderPass()
@@ -20,6 +36,11 @@ anv::VulkanRenderPass::~VulkanRenderPass()
 		return;
 	}
 	vkDestroyRenderPass(m_VkContext->GetDevice(), m_RenderPass, nullptr);
+}
+
+anv::RenderPassSignature& anv::VulkanRenderPass::GetSignature()
+{
+	return m_Signature;
 }
 
 void anv::VulkanRenderPass::Build()
@@ -87,7 +108,7 @@ void anv::VulkanRenderPass::init_render_pass(RenderPassCreateInfo _rpinfo)
 		attachment.d_index = d_att_index;
 
 		VkAttachmentDescription desc = {};
-		desc.format = m_VkContext->GetSwapchain()->GetFormat();
+		desc.format = vk_util::vku_ToImageFormat(attachment.imageFormat);
 		desc.samples = VK_SAMPLE_COUNT_1_BIT;
 		vk_util::vku_ToVulkanAttachmentDescription(&attachment, &desc);
 		vk_util::vku_ToRenderPassLayout(&attachment, &desc);
@@ -97,27 +118,17 @@ void anv::VulkanRenderPass::init_render_pass(RenderPassCreateInfo _rpinfo)
 	}
 }
 
-void anv::VulkanRenderPass::Begin()
+void anv::VulkanRenderPass::Begin(Ref<CommandBuffer> _cmd, Ref<Framebuffer> _fb, uint32_t _width, uint32_t _height)
 {
-	ANV_ASSERT(m_RenderQueue, "VulkanRenderPass::m_RenderQueue is null");
-
-	m_RenderQueue->WriteToBack([&](Ref<CommandBuffer> cmd, const RenderFrameContext& frame) {
-
-		ANV_ASSERT(frame.imageIndex < m_Framebuffers.size(), "imageIndex out of range");
-
-		auto vkCmd = cmd.As<VulkanCommandBuffer>();
+		auto vkCmd = _cmd.As<VulkanCommandBuffer>();
 		ANV_ASSERT(vkCmd, "CommandBuffer cast failed!");
-
-		auto vkFb = m_Framebuffers[frame.imageIndex].As<VulkanFrameBuffer>();
-		ANV_ASSERT(vkFb, "Framebuffer cast failed!");
 
 		VkRenderPassBeginInfo rp{};
 		rp.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		rp.renderPass = m_RenderPass;
-		rp.framebuffer = vkFb->Get();
-		auto ext = m_VkContext->GetSwapchain()->GetExtent();
+		rp.framebuffer = _fb.Cast<VulkanFrameBuffer>()->Get();
 		rp.renderArea.offset = { 0, 0 };
-		rp.renderArea.extent = { ext.width, ext.height };
+		rp.renderArea.extent = { _width, _height };
 
 		VkClearValue clearValues[1]{};
 		clearValues[0].color = { {0.f, 0.f, 0.f, 1.f} };
@@ -125,16 +136,15 @@ void anv::VulkanRenderPass::Begin()
 		rp.pClearValues = clearValues;
 
 		vkCmdBeginRenderPass(vkCmd->Get(), &rp, VK_SUBPASS_CONTENTS_INLINE);
-	});
 }
 
 
-void anv::VulkanRenderPass::End()
+void anv::VulkanRenderPass::End(Ref<CommandBuffer> cmd)
 {
-	m_RenderQueue->WriteToBack([](Ref<CommandBuffer> cmd, const RenderFrameContext&) {
-		auto vkCmd = cmd.As<VulkanCommandBuffer>();
-		vkCmdEndRenderPass(vkCmd->Get());
-	});
+	
+	auto vkCmd = cmd.As<VulkanCommandBuffer>();
+	vkCmdEndRenderPass(vkCmd->Get());
+	
 }
 
 

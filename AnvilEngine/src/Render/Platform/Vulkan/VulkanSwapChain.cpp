@@ -136,7 +136,9 @@ namespace anv
 			m_Images[i] = Ref<VulkanImage2D>::Create(
 				m_Context, 
 				imgs[i],
-				vk_util::vku_ToEngineImgFormat(surfaceFormat.format)
+				vk_util::vku_ToEngineImgFormat(surfaceFormat.format),
+				m_Extent.width,
+				m_Extent.height
 			);
 		}
 

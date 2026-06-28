@@ -251,13 +251,10 @@ namespace anv
 		);
 	}
 
-	void VulkanPipeline::Bind(_shared<QueueChain> _cmdq)
+	void VulkanPipeline::Bind(Ref<CommandBuffer> _cmd)
 	{
-		_cmdq->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext& frame) {
-
-			vkCmdBindPipeline(cmd.As<VulkanCommandBuffer>()->Get(),
-				VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
-			});
+		vkCmdBindPipeline(_cmd.As<VulkanCommandBuffer>()->Get(),
+			VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);		
 	}
 
 	void VulkanPipeline::OnSave(Serializer& _ser)

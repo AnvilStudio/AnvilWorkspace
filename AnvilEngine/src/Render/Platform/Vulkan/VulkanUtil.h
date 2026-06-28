@@ -13,7 +13,7 @@
 //  - Simplifies validation layer integration using debug callbacks.                         
 //  - Provides helper functions for selecting suitable physical devices, queue families,     
 //    and swapchain configurations.                                                          
-//  - Converts abstract engine resources (e.g., `RenderPass::Attachment`, `Image2D::Format`) 
+//  - Converts abstract engine resources (e.g., `struct RenderPassAttachment`, `Image2D::Format`) 
 //    into Vulkan-compatible structures.                                                  
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -158,9 +158,9 @@ namespace vk_util {
         vku_ChooseSwapExtent
         (const VkSurfaceCapabilitiesKHR& _capabilities, GLFWwindow* _window);
 
-    void vku_ToVulkanAttachmentDescription(RenderPass::Attachment* _att, VkAttachmentDescription* _desc);
+    void vku_ToVulkanAttachmentDescription(RenderPassAttachment* _att, VkAttachmentDescription* _desc);
 
-    void vku_ToRenderPassLayout(RenderPass::Attachment* _att, VkAttachmentDescription* _desc);
+    void vku_ToRenderPassLayout(RenderPassAttachment* _att, VkAttachmentDescription* _desc);
 
     VkFormat vku_ToImageFormat(Image2D::Format _fmt);
 

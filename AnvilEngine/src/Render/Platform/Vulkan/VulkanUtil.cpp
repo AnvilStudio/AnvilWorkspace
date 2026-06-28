@@ -283,7 +283,7 @@ namespace anv::vk_util
     VkSurfaceFormatKHR vku_ChooseSwapSurfaceFormat(const _vec<VkSurfaceFormatKHR>& _availableFormats)
     {
         for (const auto& availableFormat : _availableFormats) {
-            if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+            if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
                 return availableFormat;
             }
         }
@@ -323,25 +323,25 @@ namespace anv::vk_util
         }
     }
 
-    void vku_ToVulkanAttachmentDescription(RenderPass::Attachment* _att, VkAttachmentDescription* _desc)
+    void vku_ToVulkanAttachmentDescription(RenderPassAttachment* _att, VkAttachmentDescription* _desc)
     {
         switch (_att->type)
         {
             // Color attachment
-        case RenderPass::Attachment::Type::ATT_TY_COLOR:
+        case RenderPassAttachment::Type::ATT_TY_COLOR:
             // load ops
             switch (_att->loadOp)
             {
-            case RenderPass::Attachment::LoadOp::LOAD_OP_CLEAR:
+            case RenderPassAttachment::LoadOp::LOAD_OP_CLEAR:
                 _desc->loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
                 break;
-            case RenderPass::Attachment::LoadOp::LOAD_OP_LOAD:
+            case RenderPassAttachment::LoadOp::LOAD_OP_LOAD:
                 _desc->loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
                 break;
-            case RenderPass::Attachment::LoadOp::LOAD_OP_UNDEF:
+            case RenderPassAttachment::LoadOp::LOAD_OP_UNDEF:
                 _desc->loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
                 break;
-            case RenderPass::Attachment::LoadOp::LOAD_OP_MAX_ENUM:
+            case RenderPassAttachment::LoadOp::LOAD_OP_MAX_ENUM:
                 _desc->loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
                 ANV_LOG_WARN("Vk Render Pass \"%s\" attachment %i has an unusable load op (MAX_ENUM)\nSetting to clear op", _att->d_rp_name, _att->d_index)
                     break;
@@ -353,13 +353,13 @@ namespace anv::vk_util
             // store ops
             switch (_att->storeOp)
             {
-            case RenderPass::Attachment::StoreOp::STORE_OP_STORE:
+            case RenderPassAttachment::StoreOp::STORE_OP_STORE:
                 _desc->storeOp = VK_ATTACHMENT_STORE_OP_STORE;
                 break;
-            case RenderPass::Attachment::StoreOp::STORE_OP_UNDEF:
+            case RenderPassAttachment::StoreOp::STORE_OP_UNDEF:
                 _desc->storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
                 break;
-            case RenderPass::Attachment::StoreOp::STORE_OP_MAX_ENUM:
+            case RenderPassAttachment::StoreOp::STORE_OP_MAX_ENUM:
                 _desc->storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
                 ANV_LOG_WARN("Vk Render Pass \"%s\" attachment %i has an unusable store op (MAX_ENUM)\nSetting to undef op", _att->d_rp_name, _att->d_index)
                     break;
@@ -370,20 +370,20 @@ namespace anv::vk_util
             break;
 
             // Depth Attachment
-        case RenderPass::Attachment::Type::ATT_TY_DEPTH:
+        case RenderPassAttachment::Type::ATT_TY_DEPTH:
             // load ops
             switch (_att->loadOp)
             {
-            case RenderPass::Attachment::LoadOp::LOAD_OP_CLEAR:
+            case RenderPassAttachment::LoadOp::LOAD_OP_CLEAR:
                 _desc->loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
                 break;
-            case RenderPass::Attachment::LoadOp::LOAD_OP_LOAD:
+            case RenderPassAttachment::LoadOp::LOAD_OP_LOAD:
                 _desc->loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
                 break;
-            case RenderPass::Attachment::LoadOp::LOAD_OP_UNDEF:
+            case RenderPassAttachment::LoadOp::LOAD_OP_UNDEF:
                 _desc->loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
                 break;
-            case RenderPass::Attachment::LoadOp::LOAD_OP_MAX_ENUM:
+            case RenderPassAttachment::LoadOp::LOAD_OP_MAX_ENUM:
                 _desc->loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
                 ANV_LOG_WARN("Vk Render Pass \"%s\" attachment %i has an unusable load op (MAX_ENUM)\nSetting to clear op", _att->d_rp_name, _att->d_index)
                     break;
@@ -395,13 +395,13 @@ namespace anv::vk_util
             // store ops 
             switch (_att->storeOp)
             {
-            case RenderPass::Attachment::StoreOp::STORE_OP_STORE:
+            case RenderPassAttachment::StoreOp::STORE_OP_STORE:
                 _desc->storeOp = VK_ATTACHMENT_STORE_OP_STORE;
                 break;
-            case RenderPass::Attachment::StoreOp::STORE_OP_UNDEF:
+            case RenderPassAttachment::StoreOp::STORE_OP_UNDEF:
                 _desc->storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
                 break;
-            case RenderPass::Attachment::StoreOp::STORE_OP_MAX_ENUM:
+            case RenderPassAttachment::StoreOp::STORE_OP_MAX_ENUM:
                 _desc->storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
                 ANV_LOG_WARN("Vk Render Pass \"%s\" attachment %i has an unusable store op (MAX_ENUM)\nSetting to undef op", _att->d_rp_name, _att->d_index)
                     break;
@@ -413,23 +413,25 @@ namespace anv::vk_util
         }
     }
 
-    void vku_ToRenderPassLayout(RenderPass::Attachment* _att, VkAttachmentDescription* _desc)
+    void vku_ToRenderPassLayout(RenderPassAttachment* _att, VkAttachmentDescription* _desc)
     {
         switch (_att->beginLayout)
         {
-        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_COLOR_ATT:
+        case RenderPassAttachment::ImgLayout::IMG_LAYOUT_COLOR_ATT:
             _desc->initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             break;
-        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_PRES:
+        case RenderPassAttachment::ImgLayout::IMG_LAYOUT_PRES:
             _desc->initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
             break;
-        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_MEMCPY_DST:
+        case RenderPassAttachment::ImgLayout::IMG_LAYOUT_MEMCPY_DST:
             _desc->initialLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
             break;
-        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_UNDEF:
+        case RenderPassAttachment::ImgLayout::IMG_LAYOUT_UNDEF:
             _desc->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             break;
-        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_MAX_ENUM:
+        case RenderPassAttachment::ImgLayout::IMG_LAYOUT_SHADER_READ_ONLY:
+            _desc->initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        case RenderPassAttachment::ImgLayout::IMG_LAYOUT_MAX_ENUM:
             ANV_LOG_WARN("Vk render pass \"%s\" %i has an unusable begining layout (MAX_ENUM)\nSetting to undef", _att->d_rp_name, _att->d_index)
                 _desc->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             break;
@@ -440,19 +442,22 @@ namespace anv::vk_util
 
         switch (_att->endLayout)
         {
-        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_COLOR_ATT:
+        case RenderPassAttachment::ImgLayout::IMG_LAYOUT_COLOR_ATT:
             _desc->finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             break;
-        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_PRES:
+        case RenderPassAttachment::ImgLayout::IMG_LAYOUT_PRES:
             _desc->finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
             break;
-        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_MEMCPY_DST:
+        case RenderPassAttachment::ImgLayout::IMG_LAYOUT_MEMCPY_DST:
             _desc->finalLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
             break;
-        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_UNDEF:
+        case RenderPassAttachment::ImgLayout::IMG_LAYOUT_UNDEF:
             _desc->initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             break;
-        case RenderPass::Attachment::ImgLayout::IMG_LAYOUT_MAX_ENUM:
+        case RenderPassAttachment::ImgLayout::IMG_LAYOUT_SHADER_READ_ONLY:
+            _desc->finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            break;
+        case RenderPassAttachment::ImgLayout::IMG_LAYOUT_MAX_ENUM:
             ANV_LOG_WARN("Vk render pass \"%s\" %i has an unusable final layout (MAX_ENUM)\nSetting to undef", _att->d_rp_name, _att->d_index)
                 _desc->finalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             break;

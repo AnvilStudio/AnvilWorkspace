@@ -36,7 +36,6 @@ namespace anv {
 
 		m_RenderCmdChain->Start();
 
-		create_render_passes();
 		load_shader_lib();
 		create_quad_buffers();
 
@@ -52,13 +51,13 @@ namespace anv {
 		create_descriptor_pool();
 		create_camera_descriptor_set();
 
+		m_SwapchainTarget = Ref<VulkanSwapchainRenderTarget>::Create(m_Context);
+		m_CurrentTarget = m_SwapchainTarget;
+
 		build_2D_pipelines();
-		create_frame_buffers();
 		create_frames();
 
 		init_imgui();
-
-		m_RenderPass.As<VulkanRenderPass>()->SetFramebuffers(m_FrameBuffers);
 	}
 
 	void VulkanRenderAPI::DrawFrame()
@@ -73,13 +72,13 @@ namespace anv {
 		// wait/reset fence
 		vkWaitForFences(m_Context->GetAs<VulkanContext>()->
 			GetDevice(), 1, &fr.sync.inFlightFence, VK_TRUE, UINT64_MAX);
+
 		vkResetFences(m_Context->GetAs<VulkanContext>()->
 			GetDevice(), 1, &fr.sync.inFlightFence);
 
 		// acquire
-		uint32_t imageIndex = m_Context->GetAs<VulkanContext>()->GetSwapchain()->
-			AcquireNextImage(fr.sync.imageAvailable, m_SwapRecreateFlag, VK_NULL_HANDLE);
-		
+		uint32_t imageIndex = m_SwapchainTarget->AcquireNextImage(fr.sync.imageAvailable, m_SwapRecreateFlag);
+
 		if (m_SwapRecreateFlag)
 		{
 			ANV_LOG_INFO("SwapChain Recreation due to winow resize")
@@ -115,39 +114,132 @@ namespace anv {
 					fr2.sync.inFlightFence);
 			});
 
-		m_SpritePipeline->Bind(m_RenderCmdChain);
-		m_RenderPass->Begin();
-
+		
 		m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext& frame)
 		{
+				// all scene logic moved to DrawScene()
+				m_SwapchainTarget->Begin(cmd);
+				end_imgui(cmd);
+				m_SwapchainTarget->End(cmd);
+		});
+
+		m_RenderCmdChain->Swap();
+		m_RenderCmdChain->WaitForProcessComplete();
+
+		// update after main render loop
+		ImGuiIO& io = ImGui::GetIO();
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			ImGui::UpdatePlatformWindows();
+			ImGui::RenderPlatformWindowsDefault();
+		}
+
+		// present waits on renderFinished
+		m_SwapchainTarget->Present(
+			vkCtx->GetPresentQueue(),
+			fr.sync.renderFinished,
+			m_SwapRecreateFlag
+		);
+
+		if (m_SwapRecreateFlag)
+		{
+			recreate_swap();
+			m_SwapchainTarget->Resize(
+				vkCtx->GetSwapchain()->GetExtent().width,
+				vkCtx->GetSwapchain()->GetExtent().height
+			);
+
+			m_SwapRecreateFlag = false;
+
+			// update aspect ratio
+			uint32_t width = m_CurrentTarget->GetWidth();
+			uint32_t height = m_CurrentTarget->GetHeight();
+
+			float ar =
+				static_cast<float>(width) /
+				static_cast<float>(height);
+
+			if (m_Camera)
+				m_Camera->SetAspectRatio(ar);
+			return;
+		}
+		m_FrameIndex = (m_FrameIndex + 1) % (uint32_t)m_Frames.size();
+	}
+
+
+	void VulkanRenderAPI::OnShutdown()
+	{
+		m_Context->GetAs<VulkanContext>()->IdleDevice();
+		destroy_frames();
+		shutdown_imgui();
+	}
+
+	void anv::VulkanRenderAPI::BeginScene(Ref<RenderTarget> _renderTarget)
+	{
+		// Reset rendering statistics
+		m_QuadQueue.clear();
+		m_RenderStats.QuadCount = 0;
+		// Reset tmp frame data
+	
+		ANV_ASSERT(m_CurrentTarget, "No RenderTarget specifide for Renderer2D!");
+
+		m_CurrentTarget = _renderTarget;
+
+		ANV_ASSERT(m_Camera, "Renderer2D has no main camera set!");
+
+		m_Camera->Update(Time::DeltaTime());
+
+		// Upload CameraUBO
+		m_CameraUBO->SetData(
+			&m_Camera->GetCameraUBO(),
+			sizeof(CameraUBO)
+		);
+
+		begin_imgui();
+	}
+
+	void VulkanRenderAPI::BeginScene()
+	{
+		BeginScene(m_SwapchainTarget);
+	}
+
+	void VulkanRenderAPI::DrawScene(Ref<RenderTarget> _renderTarget)
+	{
+		auto pipeline = m_PipelineLibrary.Get("Sprite", _renderTarget);
+		m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext& frame) mutable
+		{
+				auto stableiz_pipeline = pipeline;
+				auto stableize_rt = _renderTarget;
 				auto vkCmd = cmd.As<VulkanCommandBuffer>();
-				auto ext = m_Context->GetSwapchain()->GetExtent();
+
+				stableize_rt->Begin(cmd);
+				stableiz_pipeline->Bind(cmd);
 
 				VkViewport vp{};
 				vp.x = 0.0f;
 				vp.y = 0.0f;
-				vp.width = (float)ext.width;
-				vp.height = (float)ext.height;
+				vp.width = (float)_renderTarget->GetWidth();
+				vp.height = (float)_renderTarget->GetHeight();
 				vp.minDepth = 0.0f;
 				vp.maxDepth = 1.0f;
 				vkCmdSetViewport(vkCmd->Get(), 0, 1, &vp);
 
 				VkRect2D sc{};
 				sc.offset = { 0, 0 };
-				sc.extent = { ext.width, ext.height };
+				sc.extent = { _renderTarget->GetWidth(), _renderTarget->GetHeight() };
 				vkCmdSetScissor(vkCmd->Get(), 0, 1, &sc);
 
 				// drawing the quad
 				auto vkVB = m_QuadVB.As<VulkanBuffer>();
 				auto vkIB = m_QuadIB.As<VulkanBuffer>();
 
-				VkBuffer vertexBuffers[] = { vkVB->GetBuffer()};
+				VkBuffer vertexBuffers[] = { vkVB->GetBuffer() };
 				VkDeviceSize offsets[] = { 0 };
 
 				vkCmdBindDescriptorSets(
 					vkCmd->Get(),
 					VK_PIPELINE_BIND_POINT_GRAPHICS,
-					m_SpritePipeline.As<VulkanPipeline>()->GetPipelineLayout(),
+					pipeline.As<VulkanPipeline>()->GetPipelineLayout(),
 					0,
 					1,
 					&m_CameraDescriptorSet,
@@ -194,7 +286,7 @@ namespace anv {
 					// update push data
 					vkCmdPushConstants(
 						vkCmd->Get(),
-						m_SpritePipeline.As<VulkanPipeline>()
+						pipeline.As<VulkanPipeline>()
 						->GetPipelineLayout(),
 						VK_SHADER_STAGE_VERTEX_BIT,
 						0,
@@ -213,61 +305,8 @@ namespace anv {
 					);
 					m_RenderStats.DrawCalls++;
 				}
-
-			end_imgui(cmd);
+				_renderTarget->End(cmd);
 		});
-
-		m_RenderPass->End();
-
-		m_RenderCmdChain->Swap();
-		m_RenderCmdChain->WaitForProcessComplete();
-
-		// update after main render loop
-		ImGuiIO& io = ImGui::GetIO();
-		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-		{
-			ImGui::UpdatePlatformWindows();
-			ImGui::RenderPlatformWindowsDefault();
-		}
-
-		// present waits on renderFinished
-		swap->Present(vkCtx->GetPresentQueue(), imageIndex, fr.sync.renderFinished, m_SwapRecreateFlag);
-		if (m_SwapRecreateFlag)
-		{
-			recreate_swap();
-			m_SwapRecreateFlag = false;
-			return;
-		}
-
-		m_FrameIndex = (m_FrameIndex + 1) % (uint32_t)m_Frames.size();
-	}
-
-
-	void VulkanRenderAPI::OnShutdown()
-	{
-		m_Context->GetAs<VulkanContext>()->IdleDevice();
-		destroy_frames();
-		shutdown_imgui();
-	}
-
-	void anv::VulkanRenderAPI::BeginScene()
-	{
-		// Reset rendering statistics
-		m_QuadQueue.clear();
-		m_RenderStats.QuadCount = 0;
-		// Reset tmp frame data
-	
-		ANV_ASSERT(m_Camera, "Renderer2D has no main camera set!");
-
-		m_Camera->Update(Time::DeltaTime());
-
-		// Upload CameraUBO
-		m_CameraUBO->SetData(
-			&m_Camera->GetCameraUBO(),
-			sizeof(CameraUBO)
-		);
-
-		begin_imgui();
 	}
 
 	void VulkanRenderAPI::DrawQuad(const glm::vec2& position, const glm::vec2& size, glm::vec4 color)
@@ -295,32 +334,6 @@ namespace anv {
 		return m_RenderStats;
 	}
 
-	void VulkanRenderAPI::create_render_passes()
-	{
-		RenderPassCreateInfo rpinfo{};
-		rpinfo.d_name = "GeometryPass";
-
-		rpinfo.commandQueue = m_RenderCmdChain;
-
-		RenderPass::Attachment colatt;
-		colatt.type = RenderPass::Attachment::Type::ATT_TY_COLOR;
-		colatt.loadOp = RenderPass::Attachment::LoadOp::LOAD_OP_CLEAR;
-		colatt.storeOp = RenderPass::Attachment::StoreOp::STORE_OP_STORE;
-		colatt.beginLayout = RenderPass::Attachment::ImgLayout::IMG_LAYOUT_UNDEF;
-		colatt.endLayout = RenderPass::Attachment::ImgLayout::IMG_LAYOUT_PRES;
-		rpinfo.attachments.push_back(colatt);
-
-		RenderPassCreateInfo::SubpassInfo rpspinfo{
-			.colorAttachments = {0},     // ref the first color attach
-			.depthStencilAttachment = -1 // no depth att
-		};
-
-		rpinfo.subpasses.push_back(rpspinfo);
-
-		m_RenderPass = RenderPass::Create(rpinfo, m_CreateInfo.pTarget->GetContext());
-		m_RenderPass->Build();
-	}
-
 	void VulkanRenderAPI::load_shader_lib()
 	{
 		// sprite
@@ -330,38 +343,13 @@ namespace anv {
 
 	void VulkanRenderAPI::build_2D_pipelines()
 	{
-		// Sprite Pipeline
-		VertexInputLayout quadLayout{};
-		quadLayout.binding = 0;
-		quadLayout.stride = sizeof(QuadVertex);
-
-		quadLayout.AddAttribute(
-			"Position",
-			0,
-			offsetof(QuadVertex, Position),
-			sizeof(glm::vec2),
-			sizeof(QuadVertex)
+		m_PipelineLibrary.Register(
+			"Sprite",
+			[this](Ref<RenderPass> renderPass)
+			{
+				return build_sprite_pipeline(renderPass);
+			}
 		);
-
-		m_SpritePipeline =
-			m_AssetManager->CreateGraphicsPipeline(
-				m_Context,
-				"Sprite Pipeline"
-			);
-
-		m_SpritePipeline->SetShaderStages(m_SpriteShader);
-		m_SpritePipeline->SetVertexInputLayout(&quadLayout);
-		m_SpritePipeline->SetRasterizationSettings(nullptr);
-		m_SpritePipeline.As<VulkanPipeline>()->SetDescriptorSetLayouts({
-			m_CameraDescriptorSetLayout
-		});
-		m_SpritePipeline.As<VulkanPipeline>()->SetPushConstantRange(
-			VK_SHADER_STAGE_VERTEX_BIT, sizeof(SpritePush)
-		);
-		m_SpritePipeline->SetColorBlendSettings(nullptr);
-		m_SpritePipeline->SetRenderPass(m_RenderPass);
-		m_SpritePipeline->Build();
-		// Post Processing
 	}
 
 	void VulkanRenderAPI::create_frames()
@@ -418,19 +406,6 @@ namespace anv {
 		m_Frames.clear();
 	}
 
-	void VulkanRenderAPI::create_frame_buffers()
-	{
-		ANV_PROFILE_SCOPE();
-
-		auto ctx = m_CreateInfo.pTarget->GetContext();
-		auto views = ctx->GetSwapchain()->GetImageViews();
-
-		m_FrameBuffers.resize(views.size());
-
-		for (size_t i = 0; i < views.size(); i++)
-			m_FrameBuffers[i] = Framebuffer::Create(ctx, views[i], m_RenderPass);
-	}
-
 	void VulkanRenderAPI::recreate_swap()
 	{
 		m_RecreatingSwapchain.store(true);
@@ -439,19 +414,12 @@ namespace anv {
 		
 		m_Context->GetAs<VulkanContext>()->IdleDevice();
 
-		for (size_t i = 0; i < m_FrameBuffers.size(); i++)
-		{
-			m_FrameBuffers[i].Reset();
-		}
-		m_RenderPass.Reset();
-		
 		m_Context->GetSwapchain()->ResetSwap();
 
-		create_render_passes();
-		create_frame_buffers();
-		m_RenderPass.As<VulkanRenderPass>()->SetFramebuffers(m_FrameBuffers);
-
 		m_RecreatingSwapchain.store(false);
+
+		// all render passes in render targets are now old. they also will be recreated
+		m_PipelineLibrary.Clear();
 	}
 
 	void VulkanRenderAPI::create_quad_buffers()
@@ -559,6 +527,14 @@ namespace anv {
 		);
 	}
 
+	void VulkanRenderAPI::begin_batch()
+	{
+	}
+
+	void VulkanRenderAPI::end_batch()
+	{
+	}
+
 	void VulkanRenderAPI::create_imgui_descriptor_pool()
 	{
 		VkDescriptorPoolSize poolSizes[] =
@@ -640,7 +616,7 @@ namespace anv {
 
 		// IMPORTANT
 		init.PipelineInfoMain.RenderPass =
-			m_RenderPass.As<VulkanRenderPass>()->Get();
+			m_SwapchainTarget->GetRenderPass().As<VulkanRenderPass>()->Get();
 
 		init.PipelineInfoMain.Subpass = 0;
 
@@ -693,5 +669,45 @@ namespace anv {
 			ImGui::GetDrawData(),
 			vkCmd->Get()
 		);
+	}
+
+	Ref<GraphicsPipeline> VulkanRenderAPI::build_sprite_pipeline(
+		Ref<RenderPass> renderPass)
+	{
+		VertexInputLayout quadLayout{};
+		quadLayout.binding = 0;
+		quadLayout.stride = sizeof(QuadVertex);
+
+		quadLayout.AddAttribute(
+			"Position",
+			0,
+			offsetof(QuadVertex, Position),
+			sizeof(glm::vec2),
+			sizeof(QuadVertex)
+		);
+
+		auto pipeline = m_AssetManager->CreateGraphicsPipeline(
+			m_Context,
+			"Sprite Pipeline"
+		);
+
+		pipeline->SetShaderStages(m_SpriteShader);
+		pipeline->SetVertexInputLayout(&quadLayout);
+		pipeline->SetRasterizationSettings(nullptr);
+
+		pipeline.As<VulkanPipeline>()->SetDescriptorSetLayouts({
+			m_CameraDescriptorSetLayout
+			});
+
+		pipeline.As<VulkanPipeline>()->SetPushConstantRange(
+			VK_SHADER_STAGE_VERTEX_BIT,
+			sizeof(SpritePush)
+		);
+
+		pipeline->SetColorBlendSettings(nullptr);
+		pipeline->SetRenderPass(renderPass);
+		pipeline->Build();
+
+		return pipeline;
 	}
 }

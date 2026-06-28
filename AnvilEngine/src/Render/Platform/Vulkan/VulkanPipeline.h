@@ -62,7 +62,7 @@ namespace anv
 		void SetDescriptorSetLayouts(const _vec<VkDescriptorSetLayout>& layouts={});
 		void SetPushConstantRange(VkShaderStageFlags _stage=NULL, uint32_t _size=0);
 		void Build()                                                                                      override;
-		void Bind(_shared<QueueChain> _cmdq)                                        override;
+		void Bind(Ref<CommandBuffer> _cmd)                                        override;
 
 		virtual void OnSave(Serializer& _ser) override;
 
