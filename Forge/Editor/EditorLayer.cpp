@@ -5,7 +5,7 @@
 using namespace anv;
 
 EditorLayer::EditorLayer()
-	: anv::Layer("Editor Layer")
+	: anv::Layer("Editor Layer"), m_DevNotes(anv::App::GetInstance()->GetFS().GetKeyVal("Assets")/"Notes.toml")
 {
 }
 
@@ -25,20 +25,20 @@ void EditorLayer::OnAttach()
 
     ImGuiStyle& style = ImGui::GetStyle();
 
-    style.WindowRounding = 5.0f;
-    style.ChildRounding = 5.0f;
-    style.FrameRounding = 5.0f;
-    style.PopupRounding = 5.0f;
-    style.TabRounding = 5.0f;
-    style.GrabRounding = 5.0f;
+    style.WindowRounding = 3.0f;
+    style.ChildRounding = 3.0f;
+    style.FrameRounding = 3.0f;
+    style.PopupRounding = 3.0f;
+    style.TabRounding = 2.0f;
+    style.GrabRounding = 2.0f;
 
-    style.WindowPadding = ImVec2(10, 10);
+    style.WindowPadding = ImVec2(2, 2);
     style.FramePadding = ImVec2(8, 4);
     style.CellPadding = ImVec2(6, 4);
     style.ItemSpacing = ImVec2(8, 6);
     style.ItemInnerSpacing = ImVec2(6, 4);
 
-    style.ScrollbarSize = 16.0f;
+    style.ScrollbarSize = 13.0f;
     style.GrabMinSize = 10.0f;
 
     ImVec4* colors = style.Colors;
@@ -49,8 +49,8 @@ void EditorLayer::OnAttach()
     colors[ImGuiCol_PopupBg] = ImVec4(0.176f, 0.176f, 0.188f, 1.0f); // #2D2D30
 
     // Borders
-    colors[ImGuiCol_Border] = ImVec4(0.25f, 0.25f, 0.25f, 1.0f);
-    colors[ImGuiCol_BorderShadow] = ImVec4(0, 0, 0, 0);
+    colors[ImGuiCol_Border] = ImVec4(0.40f, 0.40f, 0.40f, 1.0f);
+    colors[ImGuiCol_BorderShadow] = ImVec4(0.12f, 0.12f, 0.12f, 0.8f);
 
     // Text
     colors[ImGuiCol_Text] = ImVec4(0.831f, 0.831f, 0.831f, 1.0f); // #D4D4D4
@@ -74,7 +74,7 @@ void EditorLayer::OnAttach()
     colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.176f, 0.176f, 0.188f, 1.0f);
 
     // Title bars
-    colors[ImGuiCol_TitleBg] = ImVec4(0.118f, 0.118f, 0.118f, 1.0f);
+    colors[ImGuiCol_TitleBg] = ImVec4(0.110f, 0.110f, 0.110f, 1.0f);
     colors[ImGuiCol_TitleBgActive] = ImVec4(0.145f, 0.145f, 0.149f, 1.0f);
     colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.118f, 0.118f, 0.118f, 1.0f);
 
@@ -111,6 +111,7 @@ void EditorLayer::OnImGuiRender()
     draw_inspector();
     draw_stats();
     draw_filesys();
+    m_DevNotes.OnImGuiRender();
 }
 
 void EditorLayer::draw_scene_hierarchy()
@@ -181,6 +182,8 @@ void EditorLayer::draw_scene_hierarchy()
 
 void EditorLayer::draw_inspector()
 {
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 2));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 3));
     ImGui::Begin("Inspector");
 
     auto scene =
@@ -199,15 +202,20 @@ void EditorLayer::draw_inspector()
             [&](Component::Tag& tag)
             {
                 char buffer[256]{};
-                strncpy(buffer, tag.Get().c_str(),
-                    sizeof(buffer));
+                strncpy_s(buffer, tag.Get().c_str(), sizeof(buffer));
 
-                if (ImGui::InputText(
-                    "Name",
-                    buffer,
-                    sizeof(buffer)))
+                if (ImGui::BeginTable("TagProps", 2,
+                    ImGuiTableFlags_SizingStretchProp))
                 {
-                    tag.value = buffer;
+                    ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+                    ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+
+                    ImGui::TableNextRow();
+
+                    if (property_text("Name", buffer, sizeof(buffer)))
+                        tag.value = buffer;
+
+                    ImGui::EndTable();
                 }
             }
         );
@@ -218,23 +226,23 @@ void EditorLayer::draw_inspector()
             scene,
             [&](Component::Transform2d& transform)
             {
-                ImGui::DragFloat2(
-                    "Position",
-                    &transform.position.x,
-                    0.1f
-                );
+                if (ImGui::BeginTable("Transform2DProps", 2,
+                    ImGuiTableFlags_SizingStretchProp))
+                {
+                    ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+                    ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
 
-                ImGui::DragFloat(
-                    "Rotation",
-                    &transform.rotation,
-                    0.1f
-                );
+                    ImGui::TableNextRow();
+                    property_float2("Position", &transform.position.x);
 
-                ImGui::DragFloat2(
-                    "Scale",
-                    &transform.scale.x,
-                    0.1f
-                );
+                    ImGui::TableNextRow();
+                    property_float("Rotation", &transform.rotation);
+
+                    ImGui::TableNextRow();
+                    property_float2("Scale", &transform.scale.x);
+
+                    ImGui::EndTable();
+                }
             }
         );
 
@@ -244,15 +252,26 @@ void EditorLayer::draw_inspector()
             scene,
             [&](Component::SpriteRenderer& sprite)
             {
-                ImGui::ColorEdit4(
-                    "Color",
-                    &sprite.color.x);
-            });
+                if (ImGui::BeginTable("SpriteProps", 2,
+                    ImGuiTableFlags_SizingStretchProp))
+                {
+                    ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+                    ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
 
-        draw_add_component_menu(scene, m_SelectedEntity);
+                    ImGui::TableNextRow();
+                    property_color4("Color", &sprite.color.x);
+
+                    ImGui::TableNextRow();
+                    property_int("Draw Layer", &sprite.drawLayer);
+
+                    ImGui::EndTable();
+                }
+            }
+        );
+
     }
-
     ImGui::End();
+    ImGui::PopStyleVar(2);
 }
 
 void EditorLayer::draw_add_component_menu(

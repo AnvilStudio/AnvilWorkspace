@@ -208,8 +208,18 @@ namespace anv {
 		auto pipeline = m_PipelineLibrary.Get("Sprite", _renderTarget);
 		m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext& frame) mutable
 		{
+				// sort draw order
+				std::sort(m_QuadQueue.begin(), m_QuadQueue.end(),
+					[](const QuadSubmission& a, const QuadSubmission& b)
+					{
+						return a.Layer < b.Layer;
+					});
+
+
+				// dont think this is necessary
 				auto stableiz_pipeline = pipeline;
 				auto stableize_rt = _renderTarget;
+
 				auto vkCmd = cmd.As<VulkanCommandBuffer>();
 
 				stableize_rt->Begin(cmd);
@@ -276,6 +286,8 @@ namespace anv {
 							glm::vec3(quad.Position, 0)
 						)
 						*
+						glm::rotate(glm::mat4(1.f), glm::radians(quad.Rotaion), {0, 0, 1})
+						*
 						glm::scale(
 							glm::mat4(1.0f),
 							glm::vec3(quad.Size, 1)
@@ -309,12 +321,14 @@ namespace anv {
 		});
 	}
 
-	void VulkanRenderAPI::DrawQuad(const glm::vec2& position, const glm::vec2& size, glm::vec4 color)
+	void VulkanRenderAPI::DrawQuad(const glm::vec2& position, float rotation, const glm::vec2& size, glm::vec4 color, int layer)
 	{
 		m_QuadQueue.push_back({
 			position,
+			rotation,
 			size,
-			color
+			color,
+			layer
 		});
 		m_RenderStats.QuadCount++;
 	}

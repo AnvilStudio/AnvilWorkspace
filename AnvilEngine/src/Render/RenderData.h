@@ -28,7 +28,10 @@ namespace anv
 	struct QuadSubmission
 	{
 		glm::vec2 Position;
+        float Rotaion;
 		glm::vec2 Size;
 		glm::vec4 Color;
+
+        int Layer;
 	};
 }

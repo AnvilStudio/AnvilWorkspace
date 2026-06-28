@@ -32,9 +32,11 @@ namespace anv
 		virtual void BeginScene() override;
 		virtual void DrawScene(Ref<RenderTarget> _renderTarget);
 		virtual void DrawQuad(
-			const glm::vec2& position, 
+			const glm::vec2& position,
+			float rotation, 
 			const glm::vec2& size, 
-			glm::vec4 color) override;
+			glm::vec4 color,
+			int layer) override;
 		virtual void EndScene() override;
 
 		virtual void SetMainCamera(_shared<Camera2D> camera) override;

@@ -39,7 +39,7 @@ namespace anv
 		virtual void BeginScene(Ref<RenderTarget> _renderTarget) = 0;
 		// draw to a target
 		virtual void DrawScene(Ref<RenderTarget> _renderTarget) = 0;
-		virtual void DrawQuad(const glm::vec2& position, const glm::vec2& size, glm::vec4 color) = 0;
+		virtual void DrawQuad(const glm::vec2& position, float rotation, const glm::vec2& size, glm::vec4 color, int layer) = 0;
 		virtual void EndScene() = 0;
 
 		virtual void SetMainCamera(_shared<Camera2D> camera) = 0;

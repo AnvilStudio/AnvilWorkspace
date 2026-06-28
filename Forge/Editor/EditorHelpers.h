@@ -51,3 +51,43 @@ void draw_component(
 
     ImGui::Separator();
 }
+
+static void property_label(const char* label, float width = 90.0f)
+{
+    ImGui::TableSetColumnIndex(0);
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted(label);
+
+    ImGui::TableSetColumnIndex(1);
+    ImGui::SetNextItemWidth(-1.0f);
+}
+
+static bool property_float2(const char* label, float* value, float speed = 0.1f)
+{
+    property_label(label);
+    return ImGui::DragFloat2(("##" + std::string(label)).c_str(), value, speed);
+}
+
+static bool property_float(const char* label, float* value, float speed = 0.1f)
+{
+    property_label(label);
+    return ImGui::DragFloat(("##" + std::string(label)).c_str(), value, speed);
+}
+
+static bool property_int(const char* label, int* value)
+{
+    property_label(label);
+    return ImGui::DragInt(("##" + std::string(label)).c_str(), value);
+}
+
+static bool property_color4(const char* label, float* value)
+{
+    property_label(label);
+    return ImGui::ColorEdit4(("##" + std::string(label)).c_str(), value);
+}
+
+static bool property_text(const char* label, char* buffer, size_t size)
+{
+    property_label(label);
+    return ImGui::InputText(("##" + std::string(label)).c_str(), buffer, size);
+}

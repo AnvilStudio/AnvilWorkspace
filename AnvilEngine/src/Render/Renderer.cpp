@@ -40,9 +40,9 @@ namespace anv
 		m_RenderAPI->EndScene();
 	}
 
-	void Renderer2D::DrawQuad(const glm::vec2& position, const glm::vec2& size, glm::vec4 color)
+	void anv::Renderer2D::DrawQuad(const glm::vec2& position, float rotation, const glm::vec2& size, glm::vec4 color, int layer)
 	{
-		m_RenderAPI->DrawQuad(position, size, color);
+		m_RenderAPI->DrawQuad(position, rotation, size, color, layer);
 	}
 
 	void Renderer2D::DrawFrame()

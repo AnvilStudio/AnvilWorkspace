@@ -18,9 +18,10 @@ namespace anv
             {
                 Renderer2D::DrawQuad(
                     transform.position,
+                    transform.rotation,
                     transform.scale,
-                    sprite.color
-                );
+                    sprite.color, 
+                    sprite.drawLayer);
             });
 	}
 }

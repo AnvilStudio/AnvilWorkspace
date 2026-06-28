@@ -156,7 +156,7 @@ namespace anv {
         static void DrawScene(Ref<RenderTarget> _renderTarget);
         static void EndScene();
 
-        static void DrawQuad(const glm::vec2& position, const glm::vec2& size, glm::vec4 color);
+        static void DrawQuad(const glm::vec2& position, float rotation, const glm::vec2& size, glm::vec4 color, int layer = 0);
         
         //static void CmdDrawQuadWithMaterial(Material& _mat, VertexBuffer& _vb, IndexBuffer& _ib);
         //static void CmdDrawQuadWithTexture(Texture& _text, VertexBuffer& _vb, IndexBuffer& _ib);
