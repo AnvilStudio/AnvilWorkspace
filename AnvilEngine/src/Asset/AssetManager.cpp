@@ -68,6 +68,17 @@ namespace anv
 		return s;
 	}
 
+	Ref<Texture> AssetManager::CreateTexture(std::filesystem::path& _path)
+	{
+		auto text = Texture::Create(_path);
+
+		const uuid::AssetUUID id = text->GetAssetID();
+		text->GenMetaFile();
+		m_AssetReg.try_emplace(id, text.As<Asset>());
+
+		return text;
+	}
+
 	void AssetManager::resolve_assets()
 	{
 		auto assets = m_Fs.GetKeyVal("AssetMeta");

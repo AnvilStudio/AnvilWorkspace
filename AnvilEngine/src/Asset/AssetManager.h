@@ -43,7 +43,7 @@ namespace anv
 
         Ref<GraphicsPipeline> CreateGraphicsPipeline(_shared<Context> _ctx, std::string _dName);
         Ref<Shader> CreateShader(const std::string& _shaderPath, _shared<Context> _ctx);
-
+        Ref<Texture> CreateTexture(std::filesystem::path& _path);
     private:
         void resolve_assets();
         void create(Deserialized& _dser);

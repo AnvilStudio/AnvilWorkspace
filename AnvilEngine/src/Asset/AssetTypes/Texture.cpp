@@ -1,11 +1,16 @@
 #include "Texture.h"
 #include "Util/Serialize/Serializer.h"
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 
+#include <Core/App.h>
+
+#include <Render/RenderAPI.h>
+#include <Render/Platform/Vulkan/VulkanTexture2d.h>
+
 namespace anv
 {
-
 	Texture::Texture(const std::filesystem::path& _path)
 		: Asset(_path)
 	{
@@ -15,34 +20,67 @@ namespace anv
 	Texture::Texture(Deserialized& _dser)
 		: Asset(_dser.resource)
 	{
-		Load();
+	}
+
+	Ref<Texture> Texture::Create(std::filesystem::path& _path)
+	{
+		auto ctx = App::GetInstance()->GetMainWindow()->GetContext();
+		switch (RenderAPI::GetAPI())
+		{
+		case GraphicsAPI::VK:
+			return Ref<VulkanTexture2D>::Create(ctx);
+		}
 	}
 
 	Texture::~Texture()
 	{
-		if (m_Data)
-			stbi_image_free(m_Data);
+		Unload();
 	}
 
 	void Texture::Load()
 	{
+		Unload();
+
 		stbi_set_flip_vertically_on_load(true);
-		m_Data = stbi_load(m_ResourcePath.string().c_str(), 
-			&m_Width, &m_Height, &m_Channels, 0);
+
+		m_Data = stbi_load(
+			m_ResourcePath.string().c_str(),
+			&m_Width,
+			&m_Height,
+			&m_Channels,
+			STBI_rgb_alpha
+		);
 
 		if (!m_Data)
 		{
-			const char* failure_reason = stbi_failure_reason();
-			ANV_LOG_ERROR("Failed to load texture: %s\nReason: %s", m_ResourcePath.c_str(), failure_reason);
+			ANV_LOG_ERROR(
+				"Failed to load texture: %s\nReason: %s",
+				m_ResourcePath.string().c_str(),
+				stbi_failure_reason()
+			);
+
+			m_Width = 0;
+			m_Height = 0;
+			m_Channels = 0;
+			return;
 		}
 
-		ANV_LOG_DEBUG("Loaded Text: " + m_Name)
+		m_Channels = 4;
+
+		ANV_LOG_DEBUG("Loaded Texture: " + m_Name);
 	}
-	
+
 	void Texture::Unload()
 	{
 		if (m_Data)
+		{
 			stbi_image_free(m_Data);
+			m_Data = nullptr;
+		}
+
+		m_Width = 0;
+		m_Height = 0;
+		m_Channels = 0;
 	}
 
 	int Texture::Width()
@@ -72,6 +110,6 @@ namespace anv
 			_ser.Field("Width", m_Width);
 			_ser.Field("Height", m_Height);
 			_ser.Field("Channels", m_Channels);
-		});
+			});
 	}
 }
