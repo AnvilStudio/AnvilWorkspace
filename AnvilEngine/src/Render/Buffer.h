@@ -10,7 +10,8 @@ namespace anv
 		Vertex,
 		Index,
 		Uniform,
-		Storage
+		Storage,
+		TransferSrc
 	};
 
 

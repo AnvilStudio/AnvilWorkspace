@@ -6,6 +6,7 @@ namespace anv
 	struct QuadVertex
 	{
 		glm::vec2 Position;
+        glm::vec2 TexCoord;
 	};
 	
     struct Quad
