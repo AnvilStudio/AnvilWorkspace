@@ -16,6 +16,7 @@ namespace anv {
 		vkc_physical  (); // select gpu
 		vkc_logical   (); // create logical device
 		vkc_cmd_pool  ();
+		create_immediate_submit_objects();
 	}
 
 	VulkanContext::~VulkanContext()
@@ -30,6 +31,7 @@ namespace anv {
 		//	vkDestroyCommandPool(m_Device, m_CmdPool, nullptr);
 		//}
 
+		destroy_immediate_submit_objects();
 		vkDestroyDevice(m_Device, nullptr);
 
 		vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);

@@ -104,6 +104,10 @@ namespace anv
 			m_VkUsage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 			break;
 
+		case BufferUsage::TransferSrc:
+			m_VkUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+			break;
+
 		default:
 			ANV_LOG_FATAL("Unknown buffer usage!");
 			break;

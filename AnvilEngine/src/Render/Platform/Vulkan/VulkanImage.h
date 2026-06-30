@@ -42,6 +42,7 @@ namespace anv
 
 		VkFormat       m_Format;
 		VkImage        m_Image = VK_NULL_HANDLE;
+		Ref<VulkanImageView> m_ImageView = nullptr;
 		VkDeviceMemory m_Memory = VK_NULL_HANDLE;
 		bool m_OwnsImage = true;
 	};

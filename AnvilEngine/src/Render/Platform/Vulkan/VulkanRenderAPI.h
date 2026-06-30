@@ -89,6 +89,10 @@ namespace anv
 		VkDescriptorPool m_DescriptorPool                             = VK_NULL_HANDLE;
 		VkDescriptorSet m_CameraDescriptorSet                     = VK_NULL_HANDLE;
 
+		VkDescriptorSetLayout m_TextureLayout;
+		VkDescriptorPool      m_TexturePool;
+		VkDescriptorSet       m_TextureSet;
+
 		VkDescriptorPool m_ImGuiDescriptorPool = VK_NULL_HANDLE;
 
 		// sync //

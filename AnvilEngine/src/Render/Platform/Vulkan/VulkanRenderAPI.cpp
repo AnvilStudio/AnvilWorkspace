@@ -700,6 +700,14 @@ namespace anv {
 			sizeof(QuadVertex)
 		);
 
+		quadLayout.AddAttribute(
+			"TextCoord",
+			1,
+			offsetof(QuadVertex, TexCoord),
+			sizeof(glm::vec2),
+			sizeof(QuadVertex)
+		);
+
 		auto pipeline = m_AssetManager->CreateGraphicsPipeline(
 			m_Context,
 			"Sprite Pipeline"
