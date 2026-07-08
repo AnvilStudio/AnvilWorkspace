@@ -18,9 +18,12 @@ namespace anv {
 
         _shared<RenderAPI> InitAPI(Render2DCreateInfo _info);
 
+        // probably needs to be in VkRenderAPI instead of the base class
+        // MTL doesnt really have a controllable swapchain 
         virtual void CreateSwapchain() = 0;
-
+        // this one too ...
         inline Ref<Swapchain> GetSwapchain() { return m_Swapchain; }
+        
         inline _shared<RenderAPI> GetAPI() { return m_API; }
 
         virtual void WaitIdle() = 0;

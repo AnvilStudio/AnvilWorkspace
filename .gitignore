@@ -127,3 +127,5 @@ Setup/
 /Forge/MyProj
 *.ini
 /TestProject
+.DS_Store
+

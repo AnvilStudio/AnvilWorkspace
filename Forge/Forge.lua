@@ -36,28 +36,33 @@ project "Forge"
     }
 
 filter "system:macosx"
+    defines
+    {
+        "PLATFORM_APPLE",
+        "PLATFORM_MACOS",
+        "ANV_RENDER_API_METAL"
+    }
+
     libdirs
     {
-        "%{ROOTDIR}AnvilEngine/vendor/GLFW/" .. outdir .. "/GLFW",
-        "%{VULKAN_LIB}"
+        "%{ROOTDIR}AnvilEngine/vendor/GLFW/" .. outdir .. "/GLFW"
     }
 
     links
     {
         "GLFW",
-        "vulkan",
-        "shaderc_combined",
-
-        -- Required by MoltenVK
         "Cocoa.framework",
         "QuartzCore.framework",
+        "Metal.framework",
+        "MetalKit.framework",
         "IOKit.framework",
-        "Metal.framework",      
+        "CoreVideo.framework",
         "CoreFoundation.framework"
     }
 
-    postbuildcommands {
-        "install_name_tool -add_rpath " .. "\"%{VULKAN_LIB}\"" .. " %{cfg.targetdir}/%{cfg.buildtarget.name}"
+    buildoptions
+    {
+        "-fobjc-arc"
     }
 
 filter "system:windows"

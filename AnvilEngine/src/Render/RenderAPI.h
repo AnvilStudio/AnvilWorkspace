@@ -1,5 +1,6 @@
 #pragma once
 #include "../Util/UMacros.h"
+#include "../Core/Macros.h"
 #include "../Core/Reference.h"
 #include "RenderTarget.h"
 #include "Camera.h"
@@ -13,10 +14,9 @@ namespace anv
 	struct Render2DCreateInfo;
 
 	enum class GraphicsAPI {
-		VK,
-		OGL,
-		DX,
-		MTL
+		VK, // portability / android
+		DX, // windows
+		MTL // apple
 	};
 
 	class RenderAPI
@@ -45,8 +45,15 @@ namespace anv
 		virtual void SetMainCamera(_shared<Camera2D> camera) = 0;
 
 	protected:
-		// TODO: impl API switch
-		inline static GraphicsAPI s_API = GraphicsAPI::VK;
+		
+		#if defined(PLATFORM_WIN64) || defined(PLATFORM_LINUX)
+			inline static GraphicsAPI s_API = GraphicsAPI::VK;
+		#endif
+		#ifdef PLATFORM_APPLE
+			inline static GraphicsAPI s_API = GraphicsAPI::MTL;
+		#endif
+		
+		//inline static GraphicsAPI s_API = GraphicsAPI::VK;
 		_shared<Context> m_Context = nullptr;
 		Ref<RenderTarget> m_CurrentTarget = nullptr;
 		_shared<Camera2D> m_Camera;

@@ -15,6 +15,7 @@ newaction {
         os.remove("*.vcxproj")
         os.remove("*.vcxproj.*")
         os.remove("*.xcodeproj")
+        os.remove("*.xcworkspace")
         print("Clean complete.")
     end
 }

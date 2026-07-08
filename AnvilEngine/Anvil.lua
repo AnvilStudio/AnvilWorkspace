@@ -4,6 +4,7 @@ project "AnvilEngine"
         language "C++"
         cppdialect "C++20"
         warnings "off"
+        staticruntime "off"
 
         targetdir("bin/" .. outdir .. "/%{prj.name}")
         objdir( "bin-int/" .. outdir .. "/%{prj.name}")
@@ -18,6 +19,7 @@ project "AnvilEngine"
         files
         {
             "./src/**.cpp",
+            "./src/**.mm",
             "./src/**.h",
             "./include/**.h",
         }
@@ -30,13 +32,14 @@ project "AnvilEngine"
             "./vendor/GLFW/include",
             "./vendor/tomlplusplus/include",
             "./vendor/entt/single_include",
+            "./vendor/imgui/",
             "%{VULKAN_SDK}"
         }
 
         libdirs 
         {
             "vendor/GLFW/".. outdir .."/GLFW",
-            "%{VULKAN_LIB}",
+            "%{VULKAN_LIB}",   
         }
 
         filter "system:windows"
@@ -48,11 +51,28 @@ project "AnvilEngine"
             }
 
         filter "system:macosx"
+            defines
+            {
+                "PLATFORM_APPLE",
+                "PLATFORM_MACOS",
+                --"ANV_RENDER_API_METAL"
+            }
+
             links
             {
                 "GLFW",
-                "vulkan",
-                "shaderc_combined"
+                "Cocoa.framework",
+                "QuartzCore.framework",
+                "Metal.framework",
+                "MetalKit.framework",
+                "IOKit.framework",
+                "CoreVideo.framework",
+                "CoreFoundation.framework"
+            }
+
+            buildoptions
+            {
+                "-fobjc-arc"
             }
 
 

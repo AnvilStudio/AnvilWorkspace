@@ -25,4 +25,4 @@
 	#endif
 # endif
 
-// TODO (Alba): Impl Apple platform detection. (Follow a similar format of windows)
+
