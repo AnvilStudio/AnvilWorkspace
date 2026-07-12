@@ -139,7 +139,7 @@ namespace anv
         auto it = m_KeyMap.find(keyName); // m_KeyMap: "Assets" -> base path
         if (it == m_KeyMap.end())
         {
-            ANV_LOG_ERROR("FileSystem: Unknown key '{}'", keyName);
+            ANV_LOG_ERROR("FileSystem: Unknown key '{}'", keyName.c_str());
             return {};
         }
 

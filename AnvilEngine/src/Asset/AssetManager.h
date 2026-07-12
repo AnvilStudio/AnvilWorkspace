@@ -2,7 +2,8 @@
 #include "Asset.h"
 #include "../Render/GraphicsPipeline.h"
 #include "../Core/Reference.h"
-
+#include <type_traits>
+#include <utility>
 #include <unordered_map>
 
 namespace anv
@@ -36,8 +37,7 @@ namespace anv
 
             asset->GenMetaFile();
 
-            // push to registry
-            m_AssetReg.try_emplace(id, asset.As<Asset>());
+            m_AssetReg.try_emplace(id, asset.template As<Asset>());
             return asset;
         }
 

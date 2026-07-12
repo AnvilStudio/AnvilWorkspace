@@ -20,6 +20,7 @@ namespace anv
         ~MetalContext() override;
 
         void WaitIdle() override;
+        void CreateSwapchain() override;
 
         void* GetDevice() const;
         void* GetCommandQueue() const;

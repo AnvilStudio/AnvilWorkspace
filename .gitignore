@@ -125,6 +125,7 @@ Setup/
 /Forge/TestPrj/
 /ProjectCreator/MyPrj
 /Forge/MyProj
+/MacOS_Test
 *.ini
 /TestProject
 .DS_Store
