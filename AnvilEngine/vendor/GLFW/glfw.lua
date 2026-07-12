@@ -55,7 +55,7 @@ project "GLFW"
 
 	filter "system:macosx"
 		pic "On"
-
+		architecture "arm64"
 		files
 		{
 			"src/cocoa_init.m",

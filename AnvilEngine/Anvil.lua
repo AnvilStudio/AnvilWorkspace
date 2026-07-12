@@ -19,9 +19,16 @@ project "AnvilEngine"
         files
         {
             "./src/**.cpp",
-            "./src/**.mm",
+            --"./src/**.mm",
             "./src/**.h",
             "./include/**.h",
+
+            "./vendor/imgui/imgui.cpp",
+            "./vendor/imgui/imgui_demo.cpp",
+            "./vendor/imgui/imgui_draw.cpp",
+            "./vendor/imgui/imgui_tables.cpp",
+            "./vendor/imgui/imgui_widgets.cpp",
+            "./vendor/imgui/misc/cpp/imgui_stdlib.cpp"
         }
 
         includedirs
@@ -33,16 +40,31 @@ project "AnvilEngine"
             "./vendor/tomlplusplus/include",
             "./vendor/entt/single_include",
             "./vendor/imgui/",
-            "%{VULKAN_SDK}"
+            --"%{VULKAN_SDK}"
         }
 
         libdirs 
         {
             "vendor/GLFW/".. outdir .."/GLFW",
-            "%{VULKAN_LIB}",   
+            --"%{VULKAN_LIB}",   
         }
 
         filter "system:windows"
+            removefiles
+            {
+                "./src/Render/Platform/Metal/**",
+            }
+
+            includedirs
+            {
+                "%{VULKAN_SDK}"
+            }
+
+            libdirs 
+            {
+                "%{VULKAN_LIB}"
+            }
+
             links
             {
                 "GLFW",
@@ -51,11 +73,22 @@ project "AnvilEngine"
             }
 
         filter "system:macosx"
+            architecture "arm64"
+
             defines
             {
                 "PLATFORM_APPLE",
                 "PLATFORM_MACOS",
                 --"ANV_RENDER_API_METAL"
+            }
+
+            files
+            {
+                "./src/**.mm"
+            }
+            removefiles
+            {
+                "./src/Render/Platform/Vulkan/**"
             }
 
             links

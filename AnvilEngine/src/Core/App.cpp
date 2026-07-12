@@ -146,8 +146,8 @@ namespace anv {
 				layer->OnRender();
 
 			// Render UI
-			for (Layer* layer : m_LayerStack)
-				layer->OnImGuiRender();
+			//for (Layer* layer : m_LayerStack)
+			//	layer->OnImGuiRender();
 
 			Renderer2D::EndScene();
 			Renderer2D::DrawFrame();

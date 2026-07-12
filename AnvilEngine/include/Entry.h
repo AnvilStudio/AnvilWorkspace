@@ -40,13 +40,21 @@ extern anv::App* CreateApp(int arg_c = 0, char* arg_v[] = nullptr);
     #endif // RELEASE
 #endif
 
-//#else // Platform ?
-//int main(int arg_c, char* arg_v[])
-//{
-//    anv::App* app = CreateApp(arg_c, arg_v);
-//
-//    app->Run();
-//
-//    delete app;
-//}
-//#endif
+#ifdef PLATFORM_APPLE
+int main(int arg_c, char* arg_v[])
+{
+    ANV_LOG_DEBUG("Arg Count: %i", arg_c);
+
+    for (int i = 0; i < arg_c; i++)
+    {
+        ANV_LOG_DEBUG("%i> %s", i, arg_v[i]);
+    }
+    
+    anv::App* app = CreateApp(arg_c, arg_v);
+
+    app->Run();
+
+    delete app;
+}
+// TODO: Impl release fn
+#endif

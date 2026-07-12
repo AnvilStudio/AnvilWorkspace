@@ -17,7 +17,7 @@ namespace anv {
 		switch (RenderAPI::GetAPI())
 		{
 		case GraphicsAPI::VK:
-			#ifdef PLATFORM_WIN64 || PLATFORM_LINUX
+			#ifdef PLATFORM_WIN64 //|| PLATFORM_LINUX
 				return std::make_shared<VulkanContext>(_win);
 			#else
 				ANV_LOG_FATAL("Vulkan was set as the Graphics API, but this machine is not supported!")

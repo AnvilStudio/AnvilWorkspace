@@ -1,5 +1,8 @@
 #include "GraphicsPipeline.h"
+#ifdef PLATFORM_WIN64
 #include "Platform/Vulkan/VulkanPipeline.h"
+#elif defined(PLATFORM_APPLE)
+#endif
 #include "RenderAPI.h"
 
 namespace anv
@@ -9,7 +12,19 @@ namespace anv
 		switch (RenderAPI::GetAPI())
 		{
 		case GraphicsAPI::VK:
+			#ifdef PLATFORM_WIN64
 			return Ref<VulkanPipeline>::Create(_ctx, _dName);
+			#else
+			return nullptr;
+			#endif
+			break;
+		case GraphicsAPI::MTL:
+			#ifdef PLATFORM_APPLE
+			//return Ref<MetalPipeline>::Create(_ctx, _dName);
+			return nullptr;
+			#else
+			return nullptr;
+			#endif
 			break;
 		}
 	}

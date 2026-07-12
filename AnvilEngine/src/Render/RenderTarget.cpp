@@ -1,6 +1,9 @@
 #include "RenderTarget.h"
-
+#ifdef PLATFORM_WIN64
 #include "Platform/Vulkan/VulkanRenderTarget.h"
+#elif defined(PLATFORM_APPLE)
+
+#endif
 #include "RenderAPI.h"
 namespace anv
 {
@@ -10,9 +13,23 @@ namespace anv
 		switch (RenderAPI::GetAPI())
 		{
 		case GraphicsAPI::VK:
+			#ifdef PLATFORM_WIN64
 			return Ref<VulkanRenderTarget>::Create(_ctx, _type, _width, _height);
+			#else
+			return nullptr;
+			#endif
+			break;
+		case GraphicsAPI::MTL:
+			#ifdef PLATFORM_APPLE
+			//return Ref<MetalRenderTarget>::Create(_ctx, _type, _width, _height);
+			return nullptr;
+			#else
+			return nullptr;
+			#endif
+			break;
 		default:
-			ANV_ASSERT(0, "No supported render API");
+			ANV_LOG_FATAL("No supported render API");
+			break;
 		}
 	}
 

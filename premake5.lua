@@ -54,19 +54,16 @@ workspace "AnvilWorkspace"
     group ""
 
     filter "system:windows"
-        VULKAN_SDK = os.getenv("VULKAN_SDK")
+        VULKAN_SDK = os.getenv("VULKAN_SDK") .. "/include"
+        VULKAN_LIB = os.getenv("VULKAN_SDK") .. "/Lib"
 
     --filter "system:linux"
         --VULKAN_SDK = os.getenv("VULKAN_SDK") or "/usr/include/vulkan"
 
     filter "system:macosx"
         architecture "arm64"
-        VULKAN_SDK = "/usr/local/include/vulkan"
-        VULKAN_LIB = "/usr/local/lib"
+        --VULKAN_SDK = "/usr/local/include/vulkan"
+        --VULKAN_LIB = "/usr/local/lib"
 
-    filter "system:windows"
-        VULKAN_SDK = os.getenv("VULKAN_SDK") .. "/include"
-        VULKAN_LIB = os.getenv("VULKAN_SDK") .. "/Lib"
-
-    print("Vulkan SDK: ", VULKAN_SDK)
+    --print("Vulkan SDK: ", VULKAN_SDK)
     

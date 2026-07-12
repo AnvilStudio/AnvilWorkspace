@@ -25,10 +25,10 @@ project "Forge"
         "%{ROOTDIR}AnvilEngine/vendor/glm", -- TODO: Remove
     }
 
-    libdirs 
-    {
-        "%{ROOTDIR}AnvilEngine/" .. outdir .. "/AnvilEngine"
-    }
+    --libdirs 
+    --{
+    --    "%{ROOTDIR}AnvilEngine/" .. outdir .. "/AnvilEngine"
+    --}
 
     links
     {
@@ -36,16 +36,20 @@ project "Forge"
     }
 
 filter "system:macosx"
+    architecture "arm64"
+
+
     defines
     {
         "PLATFORM_APPLE",
         "PLATFORM_MACOS",
-        "ANV_RENDER_API_METAL"
+        --"ANV_RENDER_API_METAL"
     }
 
     libdirs
     {
-        "%{ROOTDIR}AnvilEngine/vendor/GLFW/" .. outdir .. "/GLFW"
+        "%{ROOTDIR}AnvilEngine/bin/" .. outdir .. "/AnvilEngine",
+        "%{ROOTDIR}AnvilEngine/vendor/GLFW/bin/" .. outdir .. "/GLFW"
     }
 
     links

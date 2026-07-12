@@ -1,9 +1,13 @@
 from pathlib import Path
 import sys
+import shutil
 
 def write(path: Path, text: str):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
+
+def cpy_file(src: Path, dst: Path):
+    shutil.copy(src, dst)
 
 def create_project(name: str, root: str):
     project_dir = Path(root).resolve()
@@ -11,14 +15,18 @@ def create_project(name: str, root: str):
     assets = project_dir / "Assets"
     engine = assets / "com.anvstu.engine"
 
+    # TODO: need to copy/paste font into font dir for imgui to use
     dirs = [
         assets / "Scenes",
+        assets / "Fonts",
         engine / "ShaderLib",
         engine / "Settings"
     ]
 
     for d in dirs:
         d.mkdir(parents=True, exist_ok=True)
+
+    cpy_file(Path("./JetBrainsMono-Bold.ttf"), assets / "Fonts")
 
     write(project_dir / f"{name}.anv", f"""[Settings]
 Description = 'Anvil Project'
@@ -46,6 +54,7 @@ Settings = '@Res/Settings'
 Context = '2D'
 Name = 'Default'
 Path = '@Assets/Scenes/Default.ascn'
+UUID = ''
 """)
 
     write(engine / "ShaderLib" / "sprite.glsl", """#type vert
@@ -89,6 +98,8 @@ void main() {
     outColor = fragColor;
 }
 """)
+    
+
 
     print(f"Created Anvil project: {project_dir}")
 

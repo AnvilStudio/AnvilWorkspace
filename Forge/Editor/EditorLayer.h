@@ -1,6 +1,6 @@
 #pragma once
 #include <Anvil.h>
-#include "Windows/Viewport.h"
+//#include "Windows/Viewport.h" // TODO: Get viewports back!
 #include "Windows/DevNotes.h"
 
 class EditorLayer : public anv::Layer
@@ -37,7 +37,7 @@ private:
 
 	SceneState m_SceneState = SceneState::Edit;
 
-	Viewport m_Viewport;
+	//Viewport m_Viewport;
 	DevNotesPanel m_DevNotes;
 };
 

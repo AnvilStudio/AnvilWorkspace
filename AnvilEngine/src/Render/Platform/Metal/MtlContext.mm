@@ -13,6 +13,11 @@ namespace anv
         m_CommandQueue = [m_Device newCommandQueue];
     }
 
+    MetalContext::~MetalContext()
+    {
+        
+    }
+
     void MetalContext::WaitIdle()
     {
         // TODO
