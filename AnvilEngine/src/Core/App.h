@@ -42,7 +42,7 @@ namespace anv
 	public:
 		App();
 		App(int arg_c = 0, char* arg_v[] = nullptr);
-		~App();
+		virtual ~App() noexcept;
 
 		void Run();
 

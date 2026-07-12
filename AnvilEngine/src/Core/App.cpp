@@ -103,9 +103,18 @@ namespace anv {
 		PushLayer(new SceneLayer(m_ScnMngr));
 	}
 
-	App::~App() {
+	App::~App() noexcept
+	{
+		SaveStates();
 
+		for (Layer* layer : m_LayerStack)
+		{
+			layer->OnDetach();
+		}
 
+		// Everything should be deleted before the app itself gets deleted
+		Renderer2D::Shutdown();
+		m_ScnMngr->Shutdown();
 	}
 
 	void App::Run()
@@ -143,17 +152,6 @@ namespace anv {
 			Renderer2D::DrawFrame();
 		}
 		s_This->OnDestroy();
-
-		SaveStates();
-
-		for (Layer* layer : m_LayerStack)
-		{
-			layer->OnDetach();
-		}
-
-		// Everything should be deleted before the app itself gets deleted
-		Renderer2D::Shutdown();
-		m_ScnMngr->Shutdown();
 	}
 
 	App* App::GetInstance()
