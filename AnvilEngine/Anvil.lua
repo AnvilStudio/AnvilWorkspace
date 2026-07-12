@@ -84,7 +84,14 @@ project "AnvilEngine"
 
             files
             {
-                "./src/**.mm"
+                "./src/**.mm",
+
+                -- ImGui + GLFW
+                "./vendor/imgui/backends/imgui_impl_glfw.h",
+                "./vendor/imgui/backends/imgui_impl_glfw.cpp",
+                -- ImGui + Metal
+                "./vendor/imgui/backends/imgui_impl_metal.h",
+                "./vendor/imgui/backends/imgui_impl_metal.mm"
             }
             removefiles
             {

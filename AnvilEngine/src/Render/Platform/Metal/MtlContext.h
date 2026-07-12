@@ -11,6 +11,8 @@ class MTLCommandQueue;
 class CAMetalLayer;
 #endif
 
+struct GLFWwindow;
+
 namespace anv
 {
     class MetalContext : public Context
@@ -25,6 +27,8 @@ namespace anv
         void* GetDevice() const;
         void* GetCommandQueue() const;
         void* GetLayer() const;
+
+        GLFWwindow* GetWindowHandle() const;
 
     private:
         void create_device();
