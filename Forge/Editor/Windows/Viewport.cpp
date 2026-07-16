@@ -19,25 +19,41 @@ void Viewport::Draw()
 
     ImVec2 viewportSize = ImGui::GetContentRegionAvail();
 
-    static ImVec2 last_size{};
-
     bool validSize = viewportSize.x > 0 && viewportSize.y > 0;
+
+    ImVec2 framebufferScale =
+        ImGui::GetIO().DisplayFramebufferScale;
+
+    uint32_t targetWidth = validSize
+        ? static_cast<uint32_t>(
+            viewportSize.x * framebufferScale.x)
+        : 0;
+
+    uint32_t targetHeight = validSize
+        ? static_cast<uint32_t>(
+            viewportSize.y * framebufferScale.y)
+        : 0;
+
     bool sizeChanged =
         validSize &&
-        (last_size.x != viewportSize.x || last_size.y != viewportSize.y);
+        targetWidth > 0 &&
+        targetHeight > 0 &&
+        (m_LastTargetWidth != targetWidth ||
+         m_LastTargetHeight != targetHeight);
 
-    if (sizeChanged)
+    if (sizeChanged && m_ViewportTarget)
     {
         // IMPORTANT:
         // Do not immediately destroy GPU resources if render thread may be using them.
         anv::Renderer2D::WaitIdle(); // temporary safe fix
-        m_ViewportTarget->Resize((uint32_t)viewportSize.x, (uint32_t)viewportSize.y);
+        m_ViewportTarget->Resize(targetWidth, targetHeight);
 
-        last_size = viewportSize;
+        m_LastTargetWidth = targetWidth;
+        m_LastTargetHeight = targetHeight;
         m_Camera->SetAspectRatio((viewportSize.x / viewportSize.y));
     }
 
-    if (validSize)
+    if (validSize && m_ViewportTarget)
     {
         anv::Renderer2D::DrawScene(m_ViewportTarget);
 

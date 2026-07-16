@@ -1,8 +1,9 @@
 #include "RenderTarget.h"
+#include <Core/Macros.h>
 #ifdef PLATFORM_WIN64
 #include "Platform/Vulkan/VulkanRenderTarget.h"
 #elif defined(PLATFORM_APPLE)
-
+#include "Platform/Metal/MtlRenderTarget.h"
 #endif
 #include "RenderAPI.h"
 namespace anv
@@ -21,8 +22,11 @@ namespace anv
 			break;
 		case GraphicsAPI::MTL:
 			#ifdef PLATFORM_APPLE
-			//return Ref<MetalRenderTarget>::Create(_ctx, _type, _width, _height);
-			return nullptr;
+			return Ref<MetalRenderTarget>::Create(
+				_ctx,
+				_type,
+				_width,
+				_height);
 			#else
 			return nullptr;
 			#endif

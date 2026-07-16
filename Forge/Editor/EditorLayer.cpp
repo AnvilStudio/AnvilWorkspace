@@ -106,7 +106,7 @@ void EditorLayer::OnImGuiRender()
 {
     begin_dock_space();
     draw_menu_bar();
-    //m_Viewport.Draw();
+    m_Viewport.Draw();
     draw_scene_hierarchy();
     draw_inspector();
     draw_stats();
@@ -431,22 +431,4 @@ void EditorLayer::draw_menu_bar()
 
         ImGui::EndMainMenuBar();
     }
-}
-
-void EditorLayer::draw_viewport()
-{
-    ImGui::Begin("Viewport");
-
-    ImVec2 viewportSize =
-        ImGui::GetContentRegionAvail();
-
-    // TODO: later show rendered scene texture here
-    ImGui::Text(
-        "Viewport: %.0f x %.0f",
-        viewportSize.x,
-        viewportSize.y
-    );
-
-    ImGui::End();
-
 }

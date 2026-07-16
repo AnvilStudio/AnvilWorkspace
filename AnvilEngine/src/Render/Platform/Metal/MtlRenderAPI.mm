@@ -2,6 +2,10 @@
 
 #include <Render/Renderer.h>
 #include <Core/Window.h>
+#include <Util/Time/Time.h>
+
+#include <algorithm>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -10,11 +14,27 @@
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 
+#include "MtlRenderTarget.h"
+
 namespace anv
 {
-    static NSString* TriangleShaderSource = @R"(
+    struct MetalSpriteUniforms
+    {
+        glm::mat4 ViewProjection{ 1.0f };
+        glm::mat4 Model{ 1.0f };
+        glm::vec4 Color{ 1.0f };
+    };
+
+    static NSString* SpriteShaderSource = @R"(
         #include <metal_stdlib>
         using namespace metal;
+
+        struct SpriteUniforms
+        {
+            float4x4 viewProjection;
+            float4x4 model;
+            float4 color;
+        };
 
         struct VertexOutput
         {
@@ -22,33 +42,35 @@ namespace anv
             float4 color;
         };
 
-        vertex VertexOutput triangle_vertex(
-            uint vertexID [[vertex_id]]
+        vertex VertexOutput sprite_vertex(
+            uint vertexID [[vertex_id]],
+            constant SpriteUniforms& uniforms [[buffer(0)]]
         )
         {
             constexpr float2 positions[] =
             {
-                float2( 0.0,  0.65),
-                float2(-0.65, -0.65),
-                float2( 0.65, -0.65)
-            };
-
-            constexpr float4 colors[] =
-            {
-                float4(1.0, 0.15, 0.10, 1.0),
-                float4(0.10, 1.0, 0.25, 1.0),
-                float4(0.10, 0.35, 1.0, 1.0)
+                float2(-0.5, -0.5),
+                float2( 0.5, -0.5),
+                float2( 0.5,  0.5),
+                float2( 0.5,  0.5),
+                float2(-0.5,  0.5),
+                float2(-0.5, -0.5)
             };
 
             VertexOutput output;
-            output.position =
+            float4 localPosition =
                 float4(positions[vertexID], 0.0, 1.0);
-            output.color = colors[vertexID];
+
+            output.position =
+                uniforms.viewProjection *
+                uniforms.model *
+                localPosition;
+            output.color = uniforms.color;
 
             return output;
         }
 
-        fragment float4 triangle_fragment(
+        fragment float4 sprite_fragment(
             VertexOutput input [[stage_in]]
         )
         {
@@ -71,7 +93,7 @@ namespace anv
             return;
         }
 
-        create_triangle_pipeline();
+        create_sprite_pipeline();
         initialize_imgui();
     }
 
@@ -80,7 +102,7 @@ namespace anv
         OnShutdown();
     }
 
-    void MetalRenderAPI::create_triangle_pipeline()
+    void MetalRenderAPI::create_sprite_pipeline()
     {
         id<MTLDevice> device =
             (__bridge id<MTLDevice>)
@@ -89,7 +111,7 @@ namespace anv
         NSError* error = nil;
 
         id<MTLLibrary> library =
-            [device newLibraryWithSource:TriangleShaderSource
+            [device newLibraryWithSource:SpriteShaderSource
                                 options:nil
                                   error:&error];
 
@@ -103,15 +125,15 @@ namespace anv
         }
 
         id<MTLFunction> vertexFunction =
-            [library newFunctionWithName:@"triangle_vertex"];
+            [library newFunctionWithName:@"sprite_vertex"];
 
         id<MTLFunction> fragmentFunction =
-            [library newFunctionWithName:@"triangle_fragment"];
+            [library newFunctionWithName:@"sprite_fragment"];
 
         if (!vertexFunction || !fragmentFunction)
         {
             ANV_LOG_FATAL(
-                "Failed to retrieve Metal triangle shader functions!"
+                "Failed to retrieve Metal sprite shader functions!"
             );
             return;
         }
@@ -119,12 +141,22 @@ namespace anv
         MTLRenderPipelineDescriptor* descriptor =
             [[MTLRenderPipelineDescriptor alloc] init];
 
-        descriptor.label = @"Anvil Triangle Pipeline";
+        descriptor.label = @"Anvil Sprite Pipeline";
         descriptor.vertexFunction = vertexFunction;
         descriptor.fragmentFunction = fragmentFunction;
 
         descriptor.colorAttachments[0].pixelFormat =
             MTLPixelFormatBGRA8Unorm;
+
+        descriptor.colorAttachments[0].blendingEnabled = YES;
+        descriptor.colorAttachments[0].sourceRGBBlendFactor =
+            MTLBlendFactorSourceAlpha;
+        descriptor.colorAttachments[0].destinationRGBBlendFactor =
+            MTLBlendFactorOneMinusSourceAlpha;
+        descriptor.colorAttachments[0].sourceAlphaBlendFactor =
+            MTLBlendFactorOne;
+        descriptor.colorAttachments[0].destinationAlphaBlendFactor =
+            MTLBlendFactorOneMinusSourceAlpha;
 
         id<MTLRenderPipelineState> pipeline =
             [device
@@ -140,10 +172,10 @@ namespace anv
             return;
         }
 
-        m_TrianglePipeline =
+        m_SpritePipeline =
             (__bridge_retained void*)pipeline;
 
-        ANV_LOG_INFO("Created Metal triangle pipeline");
+        ANV_LOG_INFO("Created Metal sprite pipeline");
     }
 
     void MetalRenderAPI::initialize_imgui()
@@ -177,9 +209,12 @@ namespace anv
             return;
         }
 
+        m_ImGuiGlfwInitialized = true;
+
         if (!ImGui_ImplMetal_Init(device))
         {
             ImGui_ImplGlfw_Shutdown();
+            m_ImGuiGlfwInitialized = false;
 
             ANV_LOG_FATAL(
                 "Failed to initialize ImGui Metal backend!"
@@ -187,7 +222,27 @@ namespace anv
             return;
         }
 
+        m_ImGuiMetalInitialized = true;
+
         ANV_LOG_INFO("Initialized ImGui Metal backend");
+    }
+
+    void MetalRenderAPI::shutdown_imgui()
+    {
+        if (m_ImGuiMetalInitialized)
+        {
+            ImGui_ImplMetal_Shutdown();
+            m_ImGuiMetalInitialized = false;
+        }
+
+        if (m_ImGuiGlfwInitialized)
+        {
+            ImGui_ImplGlfw_Shutdown();
+            m_ImGuiGlfwInitialized = false;
+        }
+
+        if (ImGui::GetCurrentContext())
+            ImGui::DestroyContext();
     }
 
     RendererStats MetalRenderAPI::GetStats()
@@ -218,16 +273,51 @@ void MetalRenderAPI::DrawFrame()
 
     id<MTLRenderPipelineState> pipeline =
         (__bridge id<MTLRenderPipelineState>)
-            m_TrianglePipeline;
+            m_SpritePipeline;
 
     encoder.label = @"Anvil Main Encoder";
 
-    // Draw the test triangle.
+    std::stable_sort(
+        m_QuadQueue.begin(),
+        m_QuadQueue.end(),
+        [](const QuadSubmission& _left, const QuadSubmission& _right)
+        {
+            return _left.Layer < _right.Layer;
+        });
+
     [encoder setRenderPipelineState:pipeline];
 
-    [encoder drawPrimitives:MTLPrimitiveTypeTriangle
-                vertexStart:0
-                vertexCount:3];
+    for (const QuadSubmission& quad : m_QuadQueue)
+    {
+        MetalSpriteUniforms uniforms{};
+
+        uniforms.ViewProjection =
+            m_Camera->GetCameraUBO().ViewProjection;
+
+        uniforms.Model =
+            glm::translate(
+                glm::mat4(1.0f),
+                glm::vec3(quad.Position, 0.0f))
+            *
+            glm::rotate(
+                glm::mat4(1.0f),
+                glm::radians(quad.Rotaion),
+                glm::vec3(0.0f, 0.0f, 1.0f))
+            *
+            glm::scale(
+                glm::mat4(1.0f),
+                glm::vec3(quad.Size, 1.0f));
+
+        uniforms.Color = quad.Color;
+
+        [encoder setVertexBytes:&uniforms
+                         length:sizeof(MetalSpriteUniforms)
+                        atIndex:0];
+
+        [encoder drawPrimitives:MTLPrimitiveTypeTriangle
+                    vertexStart:0
+                    vertexCount:6];
+    }
 
     // Draw ImGui into the same active render encoder.
     ImGui_ImplMetal_RenderDrawData(
@@ -241,7 +331,8 @@ void MetalRenderAPI::DrawFrame()
     [commandBuffer presentDrawable:drawable];
     [commandBuffer commit];
 
-    m_Stats.DrawCalls = 2;
+    m_Stats.DrawCalls =
+        static_cast<uint32_t>(m_QuadQueue.size());
 
     CFBridgingRelease(m_CurrentEncoder);
     CFBridgingRelease(m_CurrentRenderPass);
@@ -256,22 +347,36 @@ void MetalRenderAPI::DrawFrame()
 
     void MetalRenderAPI::OnShutdown()
     {
-        if (m_TrianglePipeline)
+        if (m_HasShutdown)
+            return;
+
+        m_HasShutdown = true;
+
+        if (m_MetalContext)
+            m_MetalContext->WaitIdle();
+
+        shutdown_imgui();
+
+        if (m_SpritePipeline)
         {
-            CFBridgingRelease(m_TrianglePipeline);
-            m_TrianglePipeline = nullptr;
+            CFBridgingRelease(m_SpritePipeline);
+            m_SpritePipeline = nullptr;
         }
 
-        // m_CurrentTarget.reset();
-        // m_Camera.reset();
-        // m_MetalContext.reset();
-        // m_Context.reset();
+        m_CurrentTarget = nullptr;
+        m_Camera.reset();
+        m_MetalContext.reset();
+        m_Context.reset();
     }
 
     void MetalRenderAPI::BeginScene()
     {
-        if (!m_MetalContext || !m_TrianglePipeline)
+        if (!m_MetalContext || !m_SpritePipeline || !m_Camera)
             return;
+
+        m_QuadQueue.clear();
+        m_Stats.DrawCalls = 0;
+        m_Stats.QuadCount = 0;
 
         m_MetalContext->CreateSwapchain();
 
@@ -282,6 +387,15 @@ void MetalRenderAPI::DrawFrame()
 
         if (!drawable)
             return;
+
+        if (drawable.texture.height > 0)
+        {
+            m_Camera->SetAspectRatio(
+                static_cast<float>(drawable.texture.width) /
+                static_cast<float>(drawable.texture.height));
+        }
+
+        m_Camera->Update(Time::DeltaTime());
 
         id<MTLCommandQueue> commandQueue =
             (__bridge id<MTLCommandQueue>)
@@ -338,7 +452,190 @@ void MetalRenderAPI::DrawFrame()
         Ref<RenderTarget> renderTarget
     )
     {
-        (void)renderTarget;
+        if (!renderTarget ||
+            !m_MetalContext ||
+            !m_SpritePipeline ||
+            !m_Camera)
+        {
+            return;
+        }
+
+        Ref<MetalRenderTarget> metalTarget =
+            renderTarget.As<MetalRenderTarget>();
+
+        if (!metalTarget)
+        {
+            ANV_LOG_ERROR(
+                "MetalRenderAPI::DrawScene received a non-Metal RenderTarget"
+            );
+            return;
+        }
+
+        id<MTLTexture> targetTexture =
+            (__bridge id<MTLTexture>)
+                metalTarget->GetTexture();
+
+        if (!targetTexture)
+        {
+            ANV_LOG_ERROR(
+                "MetalRenderAPI::DrawScene RenderTarget has no color texture"
+            );
+            return;
+        }
+
+        id<MTLCommandQueue> commandQueue =
+            (__bridge id<MTLCommandQueue>)
+                m_MetalContext->GetCommandQueue();
+
+        id<MTLRenderPipelineState> pipeline =
+            (__bridge id<MTLRenderPipelineState>)
+                m_SpritePipeline;
+
+        if (!commandQueue || !pipeline)
+            return;
+
+        id<MTLCommandBuffer> commandBuffer =
+            [commandQueue commandBuffer];
+
+        if (!commandBuffer)
+            return;
+
+        commandBuffer.label =
+            @"Anvil Viewport Command Buffer";
+
+        MTLRenderPassDescriptor* renderPass =
+            [MTLRenderPassDescriptor renderPassDescriptor];
+
+        renderPass.colorAttachments[0].texture =
+            targetTexture;
+
+        renderPass.colorAttachments[0].loadAction =
+            MTLLoadActionClear;
+
+        renderPass.colorAttachments[0].storeAction =
+            MTLStoreActionStore;
+
+        renderPass.colorAttachments[0].clearColor =
+            MTLClearColorMake(
+                0.025,
+                0.025,
+                0.035,
+                1.0
+            );
+
+        id<MTLRenderCommandEncoder> encoder =
+            [commandBuffer
+                renderCommandEncoderWithDescriptor:renderPass];
+
+        if (!encoder)
+        {
+            ANV_LOG_ERROR(
+                "Failed to create Metal viewport render encoder"
+            );
+            return;
+        }
+
+        encoder.label =
+            @"Anvil Viewport Encoder";
+
+        const NSUInteger width =
+            targetTexture.width;
+
+        const NSUInteger height =
+            targetTexture.height;
+
+        if (width == 0 || height == 0)
+        {
+            [encoder endEncoding];
+            return;
+        }
+
+        MTLViewport viewport{};
+        viewport.originX = 0.0;
+        viewport.originY = 0.0;
+        viewport.width =
+            static_cast<double>(width);
+        viewport.height =
+            static_cast<double>(height);
+        viewport.znear = 0.0;
+        viewport.zfar = 1.0;
+
+        [encoder setViewport:viewport];
+
+        MTLScissorRect scissor{};
+        scissor.x = 0;
+        scissor.y = 0;
+        scissor.width = width;
+        scissor.height = height;
+
+        [encoder setScissorRect:scissor];
+
+        if (height > 0)
+        {
+            m_Camera->SetAspectRatio(
+                static_cast<float>(width) /
+                static_cast<float>(height)
+            );
+        }
+
+        m_Camera->Update(Time::DeltaTime());
+
+        std::stable_sort(
+            m_QuadQueue.begin(),
+            m_QuadQueue.end(),
+            [](const QuadSubmission& left,
+            const QuadSubmission& right)
+            {
+                return left.Layer < right.Layer;
+            }
+        );
+
+        [encoder setRenderPipelineState:pipeline];
+
+        for (const QuadSubmission& quad : m_QuadQueue)
+        {
+            MetalSpriteUniforms uniforms{};
+
+            uniforms.ViewProjection =
+                m_Camera->GetCameraUBO().ViewProjection;
+
+            uniforms.Model =
+                glm::translate(
+                    glm::mat4(1.0f),
+                    glm::vec3(
+                        quad.Position,
+                        static_cast<float>(quad.Layer)
+                    )
+                )
+                *
+                glm::rotate(
+                    glm::mat4(1.0f),
+                    glm::radians(quad.Rotaion),
+                    glm::vec3(0.0f, 0.0f, 1.0f)
+                )
+                *
+                glm::scale(
+                    glm::mat4(1.0f),
+                    glm::vec3(quad.Size, 1.0f)
+                );
+
+            uniforms.Color =
+                quad.Color;
+
+            [encoder setVertexBytes:&uniforms
+                            length:sizeof(MetalSpriteUniforms)
+                            atIndex:0];
+
+            [encoder drawPrimitives:MTLPrimitiveTypeTriangle
+                        vertexStart:0
+                        vertexCount:6];
+        }
+
+        [encoder endEncoding];
+        [commandBuffer commit];
+
+        m_Stats.DrawCalls =
+            static_cast<uint32_t>(m_QuadQueue.size());
     }
 
     void MetalRenderAPI::DrawQuad(
@@ -349,11 +646,15 @@ void MetalRenderAPI::DrawFrame()
         int layer
     )
     {
-        (void)position;
-        (void)rotation;
-        (void)size;
-        (void)color;
-        (void)layer;
+        m_QuadQueue.push_back({
+            position,
+            rotation,
+            size,
+            color,
+            layer
+        });
+
+        m_Stats.QuadCount++;
     }
 
     void MetalRenderAPI::EndScene()

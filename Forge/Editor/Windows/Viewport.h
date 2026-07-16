@@ -4,10 +4,13 @@
 class Viewport
 {
 public:
-	Viewport();
-	void Draw();
-private:
-	anv::Ref<anv::RenderTarget> m_ViewportTarget;
-	anv::_shared<anv::Camera2D> m_Camera;
-};
+    Viewport();
+    void Draw();
 
+private:
+    anv::Ref<anv::RenderTarget> m_ViewportTarget;
+    anv::_shared<anv::Camera2D> m_Camera;
+
+    uint32_t m_LastTargetWidth = 0;
+    uint32_t m_LastTargetHeight = 0;
+};

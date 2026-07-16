@@ -73,7 +73,9 @@ namespace anv
         m_Layer.frame = view.bounds;
         m_Layer.autoresizingMask =
             kCALayerWidthSizable | kCALayerHeightSizable;
-
+        #if TARGET_OS_OSX
+        m_Layer.displaySyncEnabled = YES;
+        #endif
         view.layer = m_Layer;
 
         CreateSwapchain();

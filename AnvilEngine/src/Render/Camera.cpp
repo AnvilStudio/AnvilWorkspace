@@ -1,6 +1,6 @@
 #include <glm/gtc/matrix_transform.hpp>
+#include <algorithm>
 #include "Camera.h"
-#include "CameraController.h"
 
 namespace anv
 {
@@ -8,9 +8,11 @@ namespace anv
     // Camera2D constructor initializes the camera matrices
     Camera2D::Camera2D()
     {
-        m_Transform.position = glm::vec3(0.0f, 0.0f, 0.0f);
+        m_Transform.position = glm::vec2(0.0f);
         m_Transform.rotation = 0.f;
-        m_Transform.scale = glm::vec3(1.0f, 1.0f, 1.0f);
+        m_Transform.scale = glm::vec2(1.0f);
+
+        calc_view();
     }
 
     void Camera2D::Update(float _deltaTime)
@@ -29,7 +31,12 @@ namespace anv
             glm::translate(
                 glm::mat4(1.0f),
                 glm::vec3(m_Transform.position, 0.0f)
-            );
+            )
+            *
+            glm::rotate(
+                glm::mat4(1.0f),
+                glm::radians(m_Transform.rotation),
+                glm::vec3(0.0f, 0.0f, 1.0f));
 
         m_CameraUBO.View = glm::inverse(transform);
 
@@ -44,7 +51,8 @@ namespace anv
 
     void Camera2D::SetZoom(float _zoom)
     {
-        m_ZoomLevel = _zoom;
+        m_ZoomLevel = std::max(_zoom, 0.1f);
+        calc_view();
     }
 
     void Camera2D::SetProjection(float left, float right, float bottom, float top)
@@ -55,6 +63,9 @@ namespace anv
 
     void Camera2D::SetAspectRatio(float _ratio)
     {
+        if (_ratio <= 0.0f)
+            return;
+
         m_AspectRatio = _ratio;
         calc_view();
     }

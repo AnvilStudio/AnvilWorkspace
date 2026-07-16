@@ -1,11 +1,14 @@
 #include "CameraController.h"
 
+#include <algorithm>
+
 namespace anv
 {
     CameraController::CameraController(_shared<InputSystem>_is, _shared<Camera2D> _cam)
         : m_InputSystem(_is), m_Camera(_cam)
     {
-        
+        if (m_Camera)
+            m_ZoomLevel = m_Camera->GetZoom();
     }
 
     CameraController::~CameraController()
@@ -14,6 +17,9 @@ namespace anv
 
     void CameraController::Update(float dt)
     {
+        if (!m_InputSystem || !m_Camera)
+            return;
+
         glm::vec2 movement(0.0f);
 
         float scroll = m_InputSystem->GetMouseScrollY();
@@ -24,10 +30,10 @@ namespace anv
         }
 
         if (m_InputSystem->IsKeyPressed(ANV_KEY_W))
-            movement.y -= 1.0f;
+            movement.y += 1.0f;
 
         if (m_InputSystem->IsKeyPressed(ANV_KEY_S))
-            movement.y += 1.0f;
+            movement.y -= 1.0f;
 
         if (m_InputSystem->IsKeyPressed(ANV_KEY_D))
             movement.x += 1.0f;
@@ -40,15 +46,16 @@ namespace anv
             movement = glm::normalize(movement);
 
             m_Camera->Move(
-                movement * m_Speed * dt
+                movement * m_Speed * m_ZoomLevel * dt
             );
-
-            m_Camera->Update(dt);
         }
+
+        m_Camera->Update(dt);
     }
     void CameraController::OnResize(float width, float height)
     {
-        //m_AspectRatio = width / height;
+        if (m_Camera && height > 0.0f)
+            m_Camera->SetAspectRatio(width / height);
     }
 
     void CameraController::OnMouseScrolled(float yOffset)

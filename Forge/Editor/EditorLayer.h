@@ -2,6 +2,7 @@
 #include <Anvil.h>
 //#include "Windows/Viewport.h" // TODO: Get viewports back!
 #include "Windows/DevNotes.h"
+#include "Windows/Viewport.h"
 
 class EditorLayer : public anv::Layer
 {
@@ -23,7 +24,6 @@ public:
 private:
 	void begin_dock_space();
 	void draw_menu_bar();
-	void draw_viewport();
 	void draw_scene_hierarchy();
 	void draw_inspector();
 	void draw_add_component_menu(
@@ -37,7 +37,7 @@ private:
 
 	SceneState m_SceneState = SceneState::Edit;
 
-	//Viewport m_Viewport;
+	Viewport m_Viewport;
 	DevNotesPanel m_DevNotes;
 };
 

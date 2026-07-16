@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Render/RenderAPI.h>
+#include <Render/RenderData.h>
 #include "MtlContext.h"
 
 namespace anv
@@ -33,7 +34,7 @@ namespace anv
         void SetMainCamera(_shared<Camera2D> camera) override;
 
     private:
-        void create_triangle_pipeline();
+        void create_sprite_pipeline();
 
         void initialize_imgui();
         void shutdown_imgui();
@@ -41,9 +42,15 @@ namespace anv
         _shared<MetalContext> m_MetalContext = nullptr;
 
         // Stored opaquely because this header is included by normal C++.
-        void* m_TrianglePipeline = nullptr;
+        void* m_SpritePipeline = nullptr;
+
+        _vec<QuadSubmission> m_QuadQueue{};
 
         RendererStats m_Stats{};
+
+        bool m_ImGuiGlfwInitialized = false;
+        bool m_ImGuiMetalInitialized = false;
+        bool m_HasShutdown = false;
 
         void* m_CurrentDrawable = nullptr;
         void* m_CurrentCommandBuffer = nullptr;
