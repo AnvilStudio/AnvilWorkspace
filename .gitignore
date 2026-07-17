@@ -128,5 +128,8 @@ Setup/
 /MacOS_Test
 *.ini
 /TestProject
-.DS_Store
 
+
+ProjectCreator/__pycache__/project_creator.cpython-313.pyc
+.DS_Store
+ProjectCreator/.anvil/forge_launcher.json
