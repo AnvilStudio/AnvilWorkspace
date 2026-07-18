@@ -99,7 +99,7 @@ class ForgeLauncher(tk.Tk):
             header,
             text="Settings",
             command=self.open_settings,
-        ).pack(side=tk.RIGHT)
+        ).pack(side=tk.RIGHT) 
 
         ttk.Label(
             outer,
