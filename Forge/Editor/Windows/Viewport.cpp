@@ -17,6 +17,15 @@ void Viewport::Draw()
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::Begin("Viewport");
 
+    auto scene = anv::App::GetInstance()->GetSceneManager()->GetActive();
+    if (scene)
+    {
+        const bool viewportFocused = ImGui::IsWindowFocused(
+            ImGuiFocusedFlags_RootAndChildWindows
+        );
+        scene->SetCameraInputEnabled(viewportFocused);
+    }
+
     ImVec2 viewportSize = ImGui::GetContentRegionAvail();
 
     bool validSize = viewportSize.x > 0 && viewportSize.y > 0;
