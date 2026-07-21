@@ -30,6 +30,12 @@ namespace anv
         _shared<Camera2D> GetMainCamera() { return m_MainCamera; }
         entt::registry& Registry() { return m_Registry; }
 
+        void SetCameraInputEnabled(bool enabled)
+        {
+            if (m_CameraController)
+                m_CameraController->SetInputEnabled(enabled);
+        }
+
 
         entt::entity CreateEntity (std::string _tag);
         entt::entity RegisterEntity(std::string _tag, uuid::EntityUUID _uuid);
