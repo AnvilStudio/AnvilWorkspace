@@ -20,6 +20,12 @@ namespace anv
         if (!m_InputSystem || !m_Camera)
             return;
 
+        if (!m_InputEnabled)
+        {
+            m_Camera->Update(dt);
+            return;
+        }
+
         glm::vec2 movement(0.0f);
 
         float scroll = m_InputSystem->GetMouseScrollY();
@@ -52,6 +58,7 @@ namespace anv
 
         m_Camera->Update(dt);
     }
+
     void CameraController::OnResize(float width, float height)
     {
         if (m_Camera && height > 0.0f)
