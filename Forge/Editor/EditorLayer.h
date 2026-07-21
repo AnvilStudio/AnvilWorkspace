@@ -2,6 +2,7 @@
 #include <Anvil.h>
 //#include "Windows/Viewport.h" // TODO: Get viewports back!
 #include "Windows/DevNotes.h"
+#include "Windows/FileBrowser.h"
 #include "Windows/Viewport.h"
 
 class EditorLayer : public anv::Layer
@@ -30,7 +31,6 @@ private:
 		anv::Ref<anv::Scene> scene,
 		entt::entity entity);
 	void draw_stats();
-	void draw_filesys();
 
 	entt::entity m_SelectedEntity = entt::null;
 	entt::entity m_EntityToDelete = entt::null;
@@ -39,5 +39,5 @@ private:
 
 	Viewport m_Viewport;
 	DevNotesPanel m_DevNotes;
+	FileBrowser m_FileBrowser;
 };
-
