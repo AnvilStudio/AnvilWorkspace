@@ -5,7 +5,9 @@
 using namespace anv;
 
 EditorLayer::EditorLayer()
-	: anv::Layer("Editor Layer"), m_DevNotes(anv::App::GetInstance()->GetFS().GetKeyVal("Assets")/"Notes.toml")
+	: anv::Layer("Editor Layer"),
+      m_DevNotes(anv::App::GetInstance()->GetFS().GetKeyVal("Assets")/"Notes.toml"),
+      m_FileBrowser(anv::App::GetInstance()->GetFS().GetKeyVal("Assets"))
 {
 }
 
@@ -110,7 +112,7 @@ void EditorLayer::OnImGuiRender()
     draw_scene_hierarchy();
     draw_inspector();
     draw_stats();
-    draw_filesys();
+    m_FileBrowser.Draw();
     m_DevNotes.OnImGuiRender();
 }
 
@@ -324,12 +326,6 @@ void EditorLayer::draw_stats()
         stats.frameTime
     );
 
-    ImGui::End();
-}
-
-void EditorLayer::draw_filesys()
-{
-    ImGui::Begin("Files");
     ImGui::End();
 }
 
