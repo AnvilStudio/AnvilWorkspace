@@ -2,6 +2,8 @@
 #include "../Component.h"
 #include "../vendor/entt/single_include/entt/entt.hpp"
 #include <Render/Renderer.h>
+#include <algorithm>
+#include <vector>
 
 namespace anv
 {
@@ -11,17 +13,34 @@ namespace anv
             Component::Transform2d,
             Component::SpriteRenderer>();
 
-        view.each([](
-            auto entity,
-            Component::Transform2d& transform,
-            Component::SpriteRenderer& sprite)
+        std::vector<entt::entity> drawOrder;
+        drawOrder.reserve(view.size_hint());
+
+        for (auto entity : view)
+            drawOrder.push_back(entity);
+
+        std::stable_sort(
+            drawOrder.begin(),
+            drawOrder.end(),
+            [&](entt::entity left, entt::entity right)
             {
-                Renderer2D::DrawQuad(
-                    transform.position,
-                    transform.rotation,
-                    transform.scale,
-                    sprite.color, 
-                    sprite.drawLayer);
-            });
+                return view.get<Component::SpriteRenderer>(left).drawLayer <
+                    view.get<Component::SpriteRenderer>(right).drawLayer;
+            }
+        );
+
+        for (auto entity : drawOrder)
+        {
+            auto& transform = view.get<Component::Transform2d>(entity);
+            auto& sprite = view.get<Component::SpriteRenderer>(entity);
+
+            Renderer2D::DrawQuad(
+                transform.position,
+                transform.rotation,
+                transform.scale,
+                sprite.color,
+                sprite.drawLayer
+            );
+        }
 	}
 }
