@@ -1,4 +1,30 @@
 #include "Viewport.h"
+#include <Asset/AssetTypes/Texture.h>
+#include <algorithm>
+#include <cctype>
+
+namespace
+{
+    bool IsTextureFile(const std::filesystem::path& path)
+    {
+        std::string extension = path.extension().string();
+        std::transform(
+            extension.begin(),
+            extension.end(),
+            extension.begin(),
+            [](unsigned char character)
+            {
+                return static_cast<char>(std::tolower(character));
+            }
+        );
+
+        return extension == ".png" ||
+               extension == ".jpg" ||
+               extension == ".jpeg" ||
+               extension == ".bmp" ||
+               extension == ".tga";
+    }
+}
 
 Viewport::Viewport()
 {
@@ -70,6 +96,34 @@ void Viewport::Draw()
             m_ViewportTarget->GetImGuiTextureID(),
             viewportSize
         );
+
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload* payload =
+                ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
+            {
+                const auto* pathData = static_cast<const char*>(payload->Data);
+                const std::filesystem::path assetPath(pathData);
+
+                if (scene && IsTextureFile(assetPath))
+                {
+                    auto assetManager = anv::App::GetInstance()->GetAssetManager();
+                    auto texture = assetManager->GetOrCreate<anv::Texture>(assetPath);
+
+                    if (texture && texture->Data())
+                    {
+                        const entt::entity entity =
+                            scene->CreateEntity(assetPath.stem().string());
+
+                        auto& sprite =
+                            scene->AddComponent<anv::Component::SpriteRenderer>(entity);
+                        sprite.texture = texture->GetAssetID();
+                    }
+                }
+            }
+
+            ImGui::EndDragDropTarget();
+        }
     }
 
     ImGui::End();
