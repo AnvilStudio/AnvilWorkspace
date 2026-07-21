@@ -63,7 +63,7 @@ namespace anv
     // ========================
 
     namespace Component
-    {     
+    {
         struct Tag
         {
             std::string value = "";
@@ -132,7 +132,7 @@ namespace anv
         {
             uuid::AssetUUID texture{};
             glm::vec4 color{ 1, 1, 1, 1 };
-            int drawLayer;
+            int drawLayer = 0;
 
             void Serialize(Serializer& _ser)
             {
@@ -156,5 +156,5 @@ namespace anv
         };
 
     } // namespace Component
-    
+
 } // namespace anv
