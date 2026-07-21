@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <system_error>
 
 namespace
@@ -208,6 +209,13 @@ void FileBrowser::DrawEntries()
 
         ImGui::EndTable();
     }
+
+    if (!m_PendingDirectory.empty())
+    {
+        const auto directory = m_PendingDirectory;
+        m_PendingDirectory.clear();
+        NavigateTo(directory);
+    }
 }
 
 void FileBrowser::DrawEntry(const Entry& entry)
@@ -228,7 +236,7 @@ void FileBrowser::DrawEntry(const Entry& entry)
         m_SelectedPath = entry.path;
 
         if (entry.isDirectory && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-            NavigateTo(entry.path);
+            m_PendingDirectory = entry.path;
     }
 
     if (ImGui::BeginDragDropSource())
@@ -246,7 +254,7 @@ void FileBrowser::DrawEntry(const Entry& entry)
     if (ImGui::BeginPopupContextItem())
     {
         if (entry.isDirectory && ImGui::MenuItem("Open"))
-            NavigateTo(entry.path);
+            m_PendingDirectory = entry.path;
 
         if (ImGui::MenuItem("Copy Path"))
             ImGui::SetClipboardText(entry.path.string().c_str());
