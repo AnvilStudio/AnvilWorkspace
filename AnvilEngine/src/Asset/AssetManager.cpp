@@ -4,6 +4,7 @@
 #include "Render/RenderAPI.h"
 #include "Render/Platform/Vulkan/VulkanPipeline.h"
 #include <Core/App.h>
+#include <system_error>
 
 namespace anv
 {
@@ -23,6 +24,23 @@ namespace anv
 		}
 	}
 
+	std::string AssetManager::NormalizeResource(const std::filesystem::path& _resource)
+	{
+		std::error_code error;
+		auto normalized = std::filesystem::weakly_canonical(_resource, error);
+
+		if (error)
+		{
+			error.clear();
+			normalized = std::filesystem::absolute(_resource, error);
+		}
+
+		if (error)
+			normalized = _resource.lexically_normal();
+
+		return normalized.generic_string();
+	}
+
 	Ref<Asset> AssetManager::Get(const uuid::AssetUUID& _id) const
 	{
 		auto it = m_AssetReg.find(_id);
@@ -31,20 +49,33 @@ namespace anv
 		return it->second;
 	}
 
+	Ref<Asset> AssetManager::GetByResource(const std::filesystem::path& _resource) const
+	{
+		auto resourceIt = m_ByResource.find(NormalizeResource(_resource));
+		if (resourceIt == m_ByResource.end())
+			return nullptr;
+
+		return Get(resourceIt->second);
+	}
+
 	void AssetManager::create(Deserialized& _dser)
 	{
 		if (_dser.type == "Shader")
 		{
-			// needs to use asset manager to create
 			auto shader = Shader::Create(_dser);
 			shader->GenMetaFile();
 			m_AssetReg.try_emplace(shader->GetAssetID(), shader);
+
+			if (!shader->GetResourcePath().empty())
+				m_ByResource.insert_or_assign(
+					NormalizeResource(shader->GetResourcePath()),
+					shader->GetAssetID());
 		}
 
 		if (_dser.type == "Texture")
 		{
 			ANV_LOG_DEBUG("Texture");
-			Create<Texture>(_dser)->GenMetaFile();
+			Create<Texture>(_dser);
 		}
 	}
 
@@ -60,11 +91,15 @@ namespace anv
 
 	Ref<Shader> AssetManager::CreateShader(const std::string& _shaderPath, _shared<Context> _ctx)
 	{
+		if (auto existing = GetByResourceAs<Shader>(_shaderPath))
+			return existing;
+
 		auto s = Shader::Create(_shaderPath, _ctx);
 
 		const uuid::AssetUUID id = s->GetAssetID();
 		s->GenMetaFile();
 		m_AssetReg.try_emplace(id, s.As<Asset>());
+		m_ByResource.insert_or_assign(NormalizeResource(s->GetResourcePath()), id);
 		return s;
 	}
 
@@ -83,14 +118,11 @@ namespace anv
 					ser.FieldStrict("Resource", dser.resource);
 					ser.FieldStrict("UUID", dser.uuid);
 					ser.ObjectStrict("Spec", [&] {
-					//	ser.FieldStrict("Cache", cache);
-					//	ser.FieldStrict("ShaderName", shaderName);
 					ser.FieldStrict("Type", dser.type);
+						});
 					});
-				});
 
 				create(dser);
 		});
-		
 	}
 }
