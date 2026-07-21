@@ -16,12 +16,15 @@ namespace anv
 		void OnResize(float width, float height);
 		void OnMouseScrolled(float yOffset);
 
+		void SetInputEnabled(bool enabled) { m_InputEnabled = enabled; }
+		bool IsInputEnabled() const { return m_InputEnabled; }
+
 	private:
 		_shared<InputSystem> m_InputSystem;
 		_shared<Camera2D>    m_Camera;
 
 		float m_Speed = 2.f;
 		float m_ZoomLevel = 1.0f;
+		bool m_InputEnabled = false;
 	};
 }
-
