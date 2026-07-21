@@ -47,6 +47,7 @@ private:
     std::filesystem::path m_RootDirectory;
     std::filesystem::path m_CurrentDirectory;
     std::filesystem::path m_SelectedPath;
+    std::filesystem::path m_PendingDirectory;
 
     std::vector<Entry> m_Entries;
     char m_SearchBuffer[256]{};
