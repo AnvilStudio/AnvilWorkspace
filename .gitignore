@@ -134,3 +134,5 @@ ProjectCreator/__pycache__/project_creator.cpython-313.pyc
 .DS_Store
 ProjectCreator/.anvil/forge_launcher.json
 ProjectCreator/ProjectCreator/.anvil/forge_launcher.json
+.DS_Store
+.anvil/forge_launcher.json

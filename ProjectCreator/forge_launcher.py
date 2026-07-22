@@ -337,7 +337,7 @@ class ForgeLauncher(tk.Tk):
 
         for d in dirs:
             d.mkdir(parents=True, exist_ok=True)
-        cpy_file(Path.cwd() / "ProjectCreator" / "JetBrainsMono-Bold.ttf", assets / "Fonts")
+        cpy_file("JetBrainsMono-Bold.ttf", assets / "Fonts")
 
         write(project_dir / f"{project_name}.anv", f"""[Settings]
         Description = 'Anvil Project'
