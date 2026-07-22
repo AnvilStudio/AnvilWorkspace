@@ -55,18 +55,24 @@ namespace anv
 
     void Asset::Save()
     {
-        ANV_ASSERT(!m_Meta.empty(), "Asset meta path not generated");
+        ANV_ASSERT(
+            !m_Meta.empty(),
+            "Asset meta path not generated");
 
-        Serializer ser(m_Meta,
-                       Serializer::Mode::SER_MODE_TOML,
-                       Serializer::Direction::Write);
+        Serializer ser(
+            m_Meta,
+            Serializer::Mode::SER_MODE_TOML,
+            Serializer::Direction::Write);
+
+        std::string resource =
+            m_ResourcePath.generic_string();
 
         ser.Object("Asset", [&]
                    {
-                ser.Field("Name", m_Name);
-                ser.Field("Resource", m_ResourcePath.string().c_str()); // full file path now
-                ser.Field("UUID", m_Uuid.uuid);
+        ser.Field("Name", m_Name);
+        ser.Field("Resource", resource);
+        ser.Field("UUID", m_Uuid.uuid);
 
-                this->OnSave(ser); });
+        OnSave(ser); });
     }
 }

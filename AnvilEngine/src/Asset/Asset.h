@@ -29,7 +29,7 @@ namespace anv
         uuid::AssetUUID GetAssetID() const { return m_Uuid; }
 
         const std::string &GetName() const { return m_Name; }
-        const std::string &GetResourcePath() const { return m_ResourcePath.string(); }
+        const std::string GetResourcePath() const { return m_ResourcePath.string(); }
         const std::filesystem::path &GetMetaPath() const { return m_Meta; }
         void GenMetaFile();
         
