@@ -13,10 +13,8 @@ namespace anv
         ~MetalRenderAPI() override;
 
         RendererStats GetStats() override;
-
         void DrawFrame() override;
         void OnShutdown() override;
-
         void BeginScene() override;
         void BeginScene(Ref<RenderTarget> renderTarget) override;
         void DrawScene(Ref<RenderTarget> renderTarget) override;
@@ -26,32 +24,27 @@ namespace anv
             float rotation,
             const glm::vec2& size,
             glm::vec4 color,
-            int layer
-        ) override;
+            Ref<Texture> texture,
+            int layer) override;
 
         void EndScene() override;
-
         void SetMainCamera(_shared<Camera2D> camera) override;
 
     private:
         void create_sprite_pipeline();
-
         void initialize_imgui();
         void shutdown_imgui();
+        void encode_quads(void* encoder);
+
     private:
         _shared<MetalContext> m_MetalContext = nullptr;
-
-        // Stored opaquely because this header is included by normal C++.
         void* m_SpritePipeline = nullptr;
-
+        void* m_Sampler = nullptr;
         _vec<QuadSubmission> m_QuadQueue{};
-
         RendererStats m_Stats{};
-
         bool m_ImGuiGlfwInitialized = false;
         bool m_ImGuiMetalInitialized = false;
         bool m_HasShutdown = false;
-
         void* m_CurrentDrawable = nullptr;
         void* m_CurrentCommandBuffer = nullptr;
         void* m_CurrentRenderPass = nullptr;
