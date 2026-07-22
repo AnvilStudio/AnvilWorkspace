@@ -6,6 +6,8 @@
 #include "../src/Render/Renderer.h"
 #include "../src/Render/RenderTarget.h"
 #include "../src/Render/Camera.h"
+#include "../src/Asset/AssetManager.h"
+#include "../src/Asset/AssetTypes/Texture.h"
 #include "../src/Scene/Component.h"
 #include "../src/Scene/Scene.h"
 #include "../vendor/imgui/misc/cpp/imgui_stdlib.h"
