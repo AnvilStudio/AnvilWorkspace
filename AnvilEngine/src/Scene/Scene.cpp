@@ -1,8 +1,9 @@
 #include "Scene.h"
 #include <Core/App.h>
+#include <Asset/AssetTypes/Texture.h>
 #include <Util/Serialize/Serializer.h>
 #include <Render/CameraController.h>
-#include<Render/Renderer.h>
+#include <Render/Renderer.h>
 
 namespace anv
 {
@@ -196,16 +197,23 @@ namespace anv
             Component::Transform2d,
             Component::SpriteRenderer>();
 
-        view.each([](
+        auto assetManager = App::GetInstance()->GetAssetManager();
+
+        view.each([&](
             auto entity,
             Component::Transform2d& transform,
             Component::SpriteRenderer& sprite)
             {
+                Ref<Texture> texture = assetManager
+                    ? assetManager->GetAs<Texture>(sprite.texture)
+                    : nullptr;
+
                 Renderer2D::DrawQuad(
                     transform.position,
                     transform.rotation,
                     transform.scale,
-                    sprite.color, 
+                    sprite.color,
+                    texture,
                     sprite.drawLayer);
             });
     }
@@ -228,10 +236,5 @@ namespace anv
         m_Registry.emplace<uuid::EntityUUID>(entity, _uuid);
 
         return entity;
-    }
-
-    void Scene::DestroyEntity(entt::entity _ent)
-    {
-        m_Registry.destroy(_ent);
     }
 }
