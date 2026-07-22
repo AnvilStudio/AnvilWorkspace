@@ -1,5 +1,4 @@
 #include "Viewport.h"
-#include <Asset/AssetTypes/Texture.h>
 #include <algorithm>
 #include <cctype>
 
