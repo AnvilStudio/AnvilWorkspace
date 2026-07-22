@@ -9,6 +9,7 @@
 namespace anv
 {
     class FileSystem;
+    class Texture;
 
     class AssetManager
     {
@@ -16,61 +17,58 @@ namespace anv
         AssetManager();
         ~AssetManager();
 
-        // -------- GET (never creates) --------
-        Ref<Asset> Get(const uuid::AssetUUID& _id) const;
-        Ref<Asset> GetByResource(const std::filesystem::path& _resource) const;
+        Ref<Asset> Get(const uuid::AssetUUID& id) const;
+        Ref<Asset> GetByResource(const std::filesystem::path& resource) const;
 
         template<class TAsset>
-        Ref<TAsset> GetAs(const uuid::AssetUUID& _id) const
+        Ref<TAsset> GetAs(const uuid::AssetUUID& id) const
         {
             static_assert(std::is_base_of_v<Asset, TAsset>);
-            return Get(_id).Cast<TAsset>();
+            auto asset = Get(id);
+            return asset ? asset.Cast<TAsset>() : nullptr;
         }
 
         template<class TAsset>
-        Ref<TAsset> GetByResourceAs(const std::filesystem::path& _resource) const
+        Ref<TAsset> GetByResourceAs(const std::filesystem::path& resource) const
         {
             static_assert(std::is_base_of_v<Asset, TAsset>);
-            return GetByResource(_resource).Cast<TAsset>();
+            auto asset = GetByResource(resource);
+            return asset ? asset.Cast<TAsset>() : nullptr;
         }
 
-        // -------- CREATE (never searches) --------
         template<class TAsset, class... Args>
-        Ref<TAsset> Create(Args&&... _args)
+        Ref<TAsset> Create(Args&&... args)
         {
             static_assert(std::is_base_of_v<Asset, TAsset>);
 
-            Ref<TAsset> asset = Ref<TAsset>::Create(std::forward<Args>(_args)...);
-            const uuid::AssetUUID id = asset->GetAssetID();
-
-            asset->GenMetaFile();
-
-            m_AssetReg.try_emplace(id, asset.template As<Asset>());
-
-            if (!asset->GetResourcePath().empty())
-                m_ByResource.insert_or_assign(NormalizeResource(asset->GetResourcePath()), id);
-
+            Ref<TAsset> asset = Ref<TAsset>::Create(std::forward<Args>(args)...);
+            Register(asset.As<Asset>());
             return asset;
         }
 
         template<class TAsset, class... Args>
-        Ref<TAsset> GetOrCreate(const std::filesystem::path& _resource, Args&&... _args)
+        Ref<TAsset> GetOrCreate(const std::filesystem::path& resource, Args&&... args)
         {
             static_assert(std::is_base_of_v<Asset, TAsset>);
 
-            if (auto existing = GetByResourceAs<TAsset>(_resource))
+            if (auto existing = GetByResourceAs<TAsset>(resource))
                 return existing;
 
-            return Create<TAsset>(_resource, std::forward<Args>(_args)...);
+            return Create<TAsset>(resource, std::forward<Args>(args)...);
         }
 
-        Ref<GraphicsPipeline> CreateGraphicsPipeline(_shared<Context> _ctx, std::string _dName);
-        Ref<Shader> CreateShader(const std::string& _shaderPath, _shared<Context> _ctx);
+        Ref<Texture> CreateTexture(const std::filesystem::path& resource);
+        Ref<Texture> CreateTexture(Deserialized& deserialized);
+        Ref<Texture> GetOrCreateTexture(const std::filesystem::path& resource);
+
+        Ref<GraphicsPipeline> CreateGraphicsPipeline(_shared<Context> context, std::string displayName);
+        Ref<Shader> CreateShader(const std::string& shaderPath, _shared<Context> context);
 
     private:
-        static std::string NormalizeResource(const std::filesystem::path& _resource);
+        static std::string NormalizeResource(const std::filesystem::path& resource);
+        void Register(Ref<Asset> asset);
         void resolve_assets();
-        void create(Deserialized& _dser);
+        void create(Deserialized& deserialized);
 
     private:
         FileSystem& m_Fs;
