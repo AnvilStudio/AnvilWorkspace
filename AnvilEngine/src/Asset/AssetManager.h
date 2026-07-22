@@ -42,7 +42,7 @@ namespace anv
             static_assert(std::is_base_of_v<Asset, TAsset>);
 
             Ref<TAsset> asset = Ref<TAsset>::Create(std::forward<Args>(args)...);
-            Register(asset.As<Asset>());
+            Register(asset.template As<Asset>());
             return asset;
         }
 
