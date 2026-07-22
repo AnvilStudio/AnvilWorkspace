@@ -1,37 +1,37 @@
 #pragma once
 
 #include "../Asset.h"
-#include "../AssetManager.h"
 
 namespace anv
 {
-	class Texture
-		: public Asset
-	{
-	public:
-		~Texture();
+    class Texture : public Asset
+    {
+    public:
+        ~Texture() override;
 
-		void Load();
-		void Unload();
+        static Ref<Texture> Create(const std::filesystem::path& path);
+        static Ref<Texture> Create(Deserialized& deserialized);
 
-		int Width();
-		int Height();
-		int Channels();
-		unsigned char* Data();
+        int Width() const { return m_Width; }
+        int Height() const { return m_Height; }
+        int Channels() const { return m_Channels; }
+        unsigned char* Data() const { return m_Data; }
 
-	protected:
-		Texture(const std::filesystem::path&  _path);
-		Texture(Deserialized& _dser);
-		void OnSave(Serializer& _ser) override;
+        virtual bool IsGPUReady() const = 0;
+        virtual void* GetNativeHandle() const = 0;
 
-		friend class AssetManager;
-		friend class Ref <Texture>;
+    protected:
+        explicit Texture(const std::filesystem::path& path);
+        explicit Texture(Deserialized& deserialized);
 
-	private:
-		int m_Width;
-		int m_Height;
-		int m_Channels;
-		unsigned char* m_Data;
+        void Load();
+        void Unload();
+        void OnSave(Serializer& serializer) override;
 
-	};
+    protected:
+        int m_Width = 0;
+        int m_Height = 0;
+        int m_Channels = 0;
+        unsigned char* m_Data = nullptr;
+    };
 }
