@@ -1,5 +1,7 @@
 #include "AnvLog.h"
 
+#include <utility>
+
 namespace anv_log
 {
 	struct LogFile
@@ -26,7 +28,8 @@ namespace anv_log
 
 		void CheckExists()
 		{
-			if (!std::filesystem::exists(m_Path)) {
+			if (!std::filesystem::exists(m_Path))
+			{
 				std::ofstream newFile(m_Path);
 				if (!newFile)
 				{
@@ -59,11 +62,17 @@ namespace anv_log
 
 		// Format the message
 		std::string formattedMessage = formatString(_str, args);
+		const std::string timestamp = GetTime();
 
 		std::stringstream out;
 		out << GetTime();
 		out << level_to_string(_lev);
 		out << formattedMessage;
+
+		Dispatch(
+			_lev,
+			timestamp,
+			formattedMessage);
 
 		if (m_CreationInfo.fileOutput)
 		{
@@ -91,10 +100,17 @@ namespace anv_log
 		// Format the message
 		std::string formattedMessage = formatString(_str, args);
 
+		const std::string timestamp = GetTime();
+
 		std::stringstream out;
-		out << GetTime();
+		out << timestamp;
 		out << "[INFO]: ";
 		out << formattedMessage;
+
+		Dispatch(
+			LogLevel::LL_INFO,
+			timestamp,
+			formattedMessage);
 
 		if (m_CreationInfo.fileOutput)
 		{
@@ -117,10 +133,17 @@ namespace anv_log
 		// Format the message
 		std::string formattedMessage = formatString(_str, args);
 
+		const std::string timestamp = GetTime();
+
 		std::stringstream out;
-		out << GetTime();
+		out << timestamp;
 		out << "[DEBUG]: ";
 		out << formattedMessage;
+
+		Dispatch(
+			LogLevel::LL_DEBUG,
+			timestamp,
+			formattedMessage);
 
 		if (m_CreationInfo.fileOutput)
 		{
@@ -142,11 +165,17 @@ namespace anv_log
 
 		// Format the message
 		std::string formattedMessage = formatString(_str, args);
+		const std::string timestamp = GetTime();
 
 		std::stringstream out;
-		out << GetTime();
+		out << timestamp;
 		out << "[WARN]: ";
 		out << formattedMessage;
+
+		Dispatch(
+			LogLevel::LL_WARN,
+			timestamp,
+			formattedMessage);
 
 		if (m_CreationInfo.fileOutput)
 		{
@@ -169,10 +198,17 @@ namespace anv_log
 		// Format the message
 		std::string formattedMessage = formatString(_str, args);
 
+		const std::string timestamp = GetTime();
+
 		std::stringstream out;
-		out << GetTime();
+		out << timestamp;
 		out << "[ERROR]: ";
 		out << formattedMessage;
+
+		Dispatch(
+			LogLevel::LL_ERROR,
+			timestamp,
+			formattedMessage);
 
 		if (m_CreationInfo.fileOutput)
 		{
@@ -197,12 +233,19 @@ namespace anv_log
 
 		// Format the message
 		std::string formattedMessage = formatString(_str, args);
+		const std::string timestamp = GetTime();
 
 		std::stringstream out;
-		out << GetTime();
+		out << timestamp;
 		out << "[FATAL]";
 		out << "[" << _fn << "]";
 		out << formattedMessage;
+
+		Dispatch(
+			LogLevel::LL_FATAL,
+			timestamp,
+			formattedMessage,
+			_fn);
 
 		if (m_CreationInfo.fileOutput)
 		{
@@ -217,6 +260,43 @@ namespace anv_log
 		va_end(args);
 
 		std::abort();
+	}
+
+	void AnvLog::SetCallback(LogCallback callback)
+	{
+		std::scoped_lock lock(m_CallbackMutex);
+		m_Callback = std::move(callback);
+	}
+
+	void AnvLog::ClearCallback()
+	{
+		std::scoped_lock lock(m_CallbackMutex);
+		m_Callback = nullptr;
+	}
+
+	void AnvLog::Dispatch(
+		LogLevel level,
+		const std::string &timestamp,
+		const std::string &message,
+		const std::string &source)
+	{
+		LogCallback callback;
+
+		{
+			std::scoped_lock lock(m_CallbackMutex);
+			callback = m_Callback;
+		}
+
+		// Invoke outside the mutex. The callback may itself log or lock.
+		if (callback)
+		{
+			callback(
+				LogRecord{
+					.level = level,
+					.timestamp = timestamp,
+					.message = message,
+					.source = source});
+		}
 	}
 
 	// returns a time formatted by the users pref
@@ -235,7 +315,7 @@ namespace anv_log
 		return ss.str();
 	}
 
-	std::string AnvLog::formatString(const std::string& format, va_list args)
+	std::string AnvLog::formatString(const std::string &format, va_list args)
 	{
 		char buffer[1024];
 		vsnprintf(buffer, sizeof(buffer), format.c_str(), args);

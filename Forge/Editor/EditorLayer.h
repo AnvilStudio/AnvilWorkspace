@@ -4,13 +4,14 @@
 #include "Windows/FileBrowser.h"
 #include "Windows/Viewport.h"
 #include "Windows/AssetRegistry.h"
+#include "Windows/ConsolePanel.h"
 
 struct Windows
 {
 	bool showAssetRegistry = true;
 	bool showStats = true;
 	bool showDevNotes = true;
-
+	bool showConsole = true;
 };
 
 class EditorLayer : public anv::Layer
@@ -27,6 +28,7 @@ public:
 	EditorLayer();
 
 	void OnAttach() override;
+	void OnDetach() override;
 	void OnUpdate(float dt) override;
 	void OnImGuiRender() override;
 
@@ -49,6 +51,7 @@ private:
 	DevNotesPanel m_DevNotes;
 	FileBrowser m_FileBrowser;
 	AssetRegistryPanel m_AssetRegistryPanel;
+	anv::ConsolePanel m_Console;
 
 	Windows m_Windows{false};
 };
