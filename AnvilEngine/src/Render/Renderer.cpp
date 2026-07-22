@@ -5,54 +5,56 @@
 
 namespace anv
 {
+    void Renderer2D::Init(Render2DCreateInfo info)
+    {
+        ANV_PROFILE_SCOPE();
+        m_RenderCreateInfo = info;
+        m_RenderAPI = info.pTarget->GetContext()->InitAPI(info);
+    }
 
-	void Renderer2D::Init(Render2DCreateInfo _info)
-	{
-		ANV_PROFILE_SCOPE();
-		m_RenderCreateInfo = _info;
+    void Renderer2D::Shutdown()
+    {
+        m_RenderAPI->OnShutdown();
+    }
 
-		m_RenderAPI = _info.pTarget->GetContext()->InitAPI(_info);
+    void Renderer2D::SetCamera(_shared<Camera2D> mainCamera)
+    {
+        m_RenderAPI->SetMainCamera(mainCamera);
+    }
 
-	}
+    void Renderer2D::BeginScene()
+    {
+        m_RenderAPI->BeginScene();
+    }
 
-	void Renderer2D::Shutdown()
-	{
-		m_RenderAPI->OnShutdown();
-	}
+    void Renderer2D::DrawScene(Ref<RenderTarget> renderTarget)
+    {
+        m_RenderAPI->DrawScene(renderTarget);
+    }
 
-	void Renderer2D::SetCamera(_shared<Camera2D> _main)
-	{
-		m_RenderAPI->SetMainCamera(_main);
-	}
+    void Renderer2D::EndScene()
+    {
+        m_RenderAPI->EndScene();
+    }
 
-	void Renderer2D::BeginScene(/*Ref<RenderTarget> _renderTarget*/)
-	{
-		m_RenderAPI->BeginScene(/*_renderTarget*/);
-	}
+    void Renderer2D::DrawQuad(
+        const glm::vec2& position,
+        float rotation,
+        const glm::vec2& size,
+        glm::vec4 color,
+        Ref<Texture> texture,
+        int layer)
+    {
+        m_RenderAPI->DrawQuad(position, rotation, size, color, texture, layer);
+    }
 
-	void Renderer2D::DrawScene(Ref<RenderTarget> _renderTarget)
-	{
-		m_RenderAPI->DrawScene(_renderTarget);
-	}
+    void Renderer2D::DrawFrame()
+    {
+        m_RenderAPI->DrawFrame();
+    }
 
-	void Renderer2D::EndScene()
-	{
-		m_RenderAPI->EndScene();
-	}
-
-	void anv::Renderer2D::DrawQuad(const glm::vec2& position, float rotation, const glm::vec2& size, glm::vec4 color, int layer)
-	{
-		m_RenderAPI->DrawQuad(position, rotation, size, color, layer);
-	}
-
-	void Renderer2D::DrawFrame()
-	{
-		m_RenderAPI->DrawFrame();
-	}
-
-	void Renderer2D::WaitIdle()
-	{
-		App::GetInstance()->GetMainWindow()->GetContext()->WaitIdle();
-	}
-
+    void Renderer2D::WaitIdle()
+    {
+        App::GetInstance()->GetMainWindow()->GetContext()->WaitIdle();
+    }
 }
