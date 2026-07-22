@@ -2,6 +2,7 @@
 #include "../Util/UMacros.h"
 #include "../Core/Macros.h"
 #include "../Core/Reference.h"
+#include "../Asset/AssetTypes/Texture.h"
 #include "RenderTarget.h"
 #include "Camera.h"
 #include "Framebuffer.h"
@@ -11,7 +12,6 @@
 namespace anv
 {
     class Context;
-    class Texture;
     struct Render2DCreateInfo;
 
     enum class GraphicsAPI
