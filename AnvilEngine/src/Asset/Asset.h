@@ -31,6 +31,8 @@ namespace anv
         const std::string &GetName() const { return m_Name; }
         const std::string GetResourcePath() const { return m_ResourcePath.string(); }
         const std::filesystem::path &GetMetaPath() const { return m_Meta; }
+        const std::string GetAssetType() const { return m_Type; }
+        
         void GenMetaFile();
         
         bool HasMetaPath() const
@@ -49,6 +51,7 @@ namespace anv
         uuid::AssetUUID m_Uuid{};
         std::filesystem::path m_ResourcePath; // full path to file, empty if meta-only assets
         std::string m_Name;                   // filename
+        std::string m_Type;                   // filename
         std::filesystem::path m_Meta;         // full path to .aamta
     };
 }

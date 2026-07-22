@@ -114,6 +114,7 @@ void EditorLayer::OnImGuiRender()
     draw_stats();
     m_FileBrowser.Draw();
     m_DevNotes.OnImGuiRender();
+    m_AssetRegistryPanel.Draw(&m_Windows.showAssetRegistry);
 }
 
 void EditorLayer::draw_scene_hierarchy()
@@ -491,6 +492,16 @@ void EditorLayer::draw_menu_bar()
             {
                 App::GetInstance()->Close();
             }
+
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Window"))
+        {
+            ImGui::MenuItem(
+                "Asset Registry",
+                nullptr,
+                &m_Windows.showAssetRegistry);
 
             ImGui::EndMenu();
         }

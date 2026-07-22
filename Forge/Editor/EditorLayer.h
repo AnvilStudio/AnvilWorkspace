@@ -1,9 +1,14 @@
 #pragma once
 #include <Anvil.h>
-//#include "Windows/Viewport.h" // TODO: Get viewports back!
 #include "Windows/DevNotes.h"
 #include "Windows/FileBrowser.h"
 #include "Windows/Viewport.h"
+#include "Windows/AssetRegistry.h"
+
+struct Windows
+{
+	bool showAssetRegistry = true;
+};
 
 class EditorLayer : public anv::Layer
 {
@@ -40,4 +45,7 @@ private:
 	Viewport m_Viewport;
 	DevNotesPanel m_DevNotes;
 	FileBrowser m_FileBrowser;
+	AssetRegistryPanel m_AssetRegistryPanel;
+
+	Windows m_Windows{false};
 };

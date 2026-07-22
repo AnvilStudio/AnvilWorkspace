@@ -66,6 +66,7 @@ namespace anv
 	Shader::Shader(std::string& _name)
 		: Asset(_name)
 	{
+		m_Type = "Shader";
 	}
 
 	Shader::Shader(Deserialized& _dser)

@@ -18,6 +18,7 @@ namespace anv
     Texture::Texture(const std::filesystem::path& path)
         : Asset(path)
     {
+        m_Type = "Texture";
         Load();
     }
 

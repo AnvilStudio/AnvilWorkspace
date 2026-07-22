@@ -22,6 +22,7 @@ namespace anv
         : m_Uuid(deserialized.uuid),
           m_ResourcePath(deserialized.resource),
           m_Name(deserialized.name),
+          m_Type(deserialized.type),
           m_Meta(deserialized.metaPath)
     {
     }
