@@ -1,9 +1,9 @@
 #include "Scene.h"
 #include <Core/App.h>
-#include <Asset/AssetTypes/Texture.h>
 #include <Util/Serialize/Serializer.h>
 #include <Render/CameraController.h>
 #include <Render/Renderer.h>
+#include <Asset/AssetTypes/Texture.h>
 
 namespace anv
 {
@@ -236,5 +236,13 @@ namespace anv
         m_Registry.emplace<uuid::EntityUUID>(entity, _uuid);
 
         return entity;
+    }
+
+    void Scene::DestroyEntity(entt::entity entity)
+    {
+        if (!m_Registry.valid(entity))
+            return;
+
+        m_Registry.destroy(entity);
     }
 }
