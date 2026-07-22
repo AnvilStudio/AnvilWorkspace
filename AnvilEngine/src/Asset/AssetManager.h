@@ -65,8 +65,11 @@ namespace anv
         Ref<Shader> CreateShader(const std::string& shaderPath, _shared<Context> context);
 
     private:
-        static std::string NormalizeResource(const std::filesystem::path& resource);
-        void Register(Ref<Asset> asset);
+        std::string NormalizeResource(const std::filesystem::path& resource) const;
+        // void Register(Ref<Asset> asset);
+        void Register(
+            Ref<Asset> asset,
+            bool generateMetadata = true);
         void resolve_assets();
         void create(Deserialized& deserialized);
 

@@ -254,15 +254,114 @@ void EditorLayer::draw_inspector()
             scene,
             [&](Component::SpriteRenderer& sprite)
             {
-                if (ImGui::BeginTable("SpriteProps", 2,
-                    ImGuiTableFlags_SizingStretchProp))
-                {
-                    ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-                    ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+                auto assetManager = App::GetInstance()->GetAssetManager();
 
+                Ref<Texture> currentTexture = assetManager
+                    ? assetManager->GetAs<Texture>(sprite.texture)
+                    : nullptr;
+
+                if (ImGui::BeginTable(
+                        "SpriteProps",
+                        2,
+                        ImGuiTableFlags_SizingStretchProp))
+                {
+                    ImGui::TableSetupColumn(
+                        "Label",
+                        ImGuiTableColumnFlags_WidthFixed,
+                        80.0f);
+
+                    ImGui::TableSetupColumn(
+                        "Value",
+                        ImGuiTableColumnFlags_WidthStretch);
+
+                    // Texture
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::TextUnformatted("Texture");
+
+                    ImGui::TableSetColumnIndex(1);
+
+                    const char* textureLabel = currentTexture
+                        ? currentTexture->GetName().c_str()
+                        : "None — drop texture here";
+
+                    ImGui::Button(
+                        textureLabel,
+                        ImVec2(-1.0f, 0.0f));
+
+                    if (ImGui::BeginDragDropTarget())
+                    {
+                        if (const ImGuiPayload* payload =
+                                ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
+                        {
+                            const char* pathData =
+                                static_cast<const char*>(payload->Data);
+
+                            std::filesystem::path texturePath(pathData);
+
+                            const std::string extension =
+                                texturePath.extension().string();
+
+                            const bool isTexture =
+                                extension == ".png" ||
+                                extension == ".jpg" ||
+                                extension == ".jpeg" ||
+                                extension == ".bmp" ||
+                                extension == ".tga";
+
+                            if (isTexture && assetManager)
+                            {
+                                Ref<Texture> texture =
+                                    assetManager->GetOrCreateTexture(texturePath);
+
+                                if (texture && texture->IsGPUReady())
+                                {
+                                    sprite.texture = texture->GetAssetID();
+                                    currentTexture = texture;
+
+                                    scene->Save();
+                                }
+                                else
+                                {
+                                    ANV_LOG_ERROR(
+                                        "Failed to assign texture to SpriteRenderer: %s",
+                                        texturePath.string().c_str());
+                                }
+                            }
+                        }
+
+                        ImGui::EndDragDropTarget();
+                    }
+
+                    if (currentTexture)
+                    {
+                        ImGui::TextDisabled(
+                            "%dx%d | %s",
+                            currentTexture->Width(),
+                            currentTexture->Height(),
+                            currentTexture->IsGPUReady()
+                                ? "GPU ready"
+                                : "GPU unavailable");
+
+                        if (ImGui::Button("Clear Texture"))
+                        {
+                            sprite.texture = {};
+                            currentTexture = nullptr;
+                            scene->Save();
+                        }
+                    }
+                    else if (!sprite.texture.uuid.empty())
+                    {
+                        ImGui::TextDisabled(
+                            "Missing asset: %s",
+                            sprite.texture.uuid.c_str());
+                    }
+
+                    // Color
                     ImGui::TableNextRow();
                     property_color4("Color", &sprite.color.x);
 
+                    // Draw layer
                     ImGui::TableNextRow();
                     property_int("Draw Layer", &sprite.drawLayer);
 

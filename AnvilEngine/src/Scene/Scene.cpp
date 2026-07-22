@@ -229,6 +229,17 @@ namespace anv
         return entity;
     }
 
+    void Scene::DestroyEntity(entt::entity entity)
+    {
+        if (entity == entt::null)
+            return;
+
+        if (!m_Registry.valid(entity))
+            return;
+
+        m_Registry.destroy(entity);
+    }       
+
     entt::entity Scene::RegisterEntity(std::string _tag, uuid::EntityUUID _uuid)
     {
         auto entity = m_Registry.create();
