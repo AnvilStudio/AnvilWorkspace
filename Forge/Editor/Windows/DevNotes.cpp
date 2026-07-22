@@ -9,8 +9,11 @@ DevNotesPanel::DevNotesPanel(const std::filesystem::path& savePath)
     Load();
 }
 
-void DevNotesPanel::OnImGuiRender()
+void DevNotesPanel::OnImGuiRender(bool* draw)
 {
+    if (!draw || !*draw)
+        return;
+
     ImGui::Begin("Dev Notes");
 
     if (ImGui::Button("Save"))

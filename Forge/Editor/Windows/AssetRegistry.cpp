@@ -91,6 +91,9 @@ namespace
 
 void AssetRegistryPanel::Draw(bool* open)   
 {
+    if (!open || !*open) // dont draw
+        return;
+
     if (!ImGui::Begin("Asset Registry", open))
     {
         ImGui::End();

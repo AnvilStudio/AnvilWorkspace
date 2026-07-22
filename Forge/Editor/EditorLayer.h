@@ -8,6 +8,9 @@
 struct Windows
 {
 	bool showAssetRegistry = true;
+	bool showStats = true;
+	bool showDevNotes = true;
+
 };
 
 class EditorLayer : public anv::Layer

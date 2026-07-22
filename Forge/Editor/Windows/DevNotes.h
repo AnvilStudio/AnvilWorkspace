@@ -7,7 +7,7 @@ class DevNotesPanel
 public:
     DevNotesPanel(const std::filesystem::path& savePath);
 
-    void OnImGuiRender();
+    void OnImGuiRender(bool* open=nullptr);
 
     void Load();
     void Save();

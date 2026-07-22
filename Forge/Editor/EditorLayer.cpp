@@ -108,13 +108,14 @@ void EditorLayer::OnImGuiRender()
 {
     begin_dock_space();
     draw_menu_bar();
-    m_Viewport.Draw();
     draw_scene_hierarchy();
     draw_inspector();
     draw_stats();
     m_FileBrowser.Draw();
-    m_DevNotes.OnImGuiRender();
+    m_DevNotes.OnImGuiRender(&m_Windows.showDevNotes);
     m_AssetRegistryPanel.Draw(&m_Windows.showAssetRegistry);
+
+    m_Viewport.Draw(); // viewport drawn last so its auto focused on startup
 }
 
 void EditorLayer::draw_scene_hierarchy()
@@ -411,6 +412,9 @@ void EditorLayer::draw_add_component_menu(
 
 void EditorLayer::draw_stats()
 {
+    if (!m_Windows.showStats)
+        return;
+
     ImGui::Begin("Stats");
 
     auto& stats =
@@ -502,6 +506,16 @@ void EditorLayer::draw_menu_bar()
                 "Asset Registry",
                 nullptr,
                 &m_Windows.showAssetRegistry);
+
+            ImGui::MenuItem(
+                "Dev Notes",
+                nullptr,
+                &m_Windows.showDevNotes);            
+
+            ImGui::MenuItem(
+                "Stats",
+                nullptr,
+                &m_Windows.showStats);
 
             ImGui::EndMenu();
         }
