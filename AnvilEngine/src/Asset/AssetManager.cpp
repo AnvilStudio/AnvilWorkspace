@@ -99,112 +99,60 @@ namespace anv
         return normalized.generic_string();
     }
 
-    // void AssetManager::Register(Ref<Asset> asset)
-    // {
-    //     if (!asset)
-    //         return;
-
-    //     const uuid::AssetUUID id = asset->GetAssetID();
-    //     const std::filesystem::path resource =
-    //         asset->GetResourcePath();
-
-    //     if (!resource.empty())
-    //     {
-    //         const std::string normalized =
-    //             NormalizeResource(resource);
-
-    //         auto resourceIt = m_ByResource.find(normalized);
-
-    //         if (resourceIt != m_ByResource.end())
-    //         {
-    //             const uuid::AssetUUID &existingID =
-    //                 resourceIt->second;
-
-    //             if (existingID != id)
-    //             {
-    //                 ANV_LOG_ERROR(
-    //                     "Duplicate asset resource rejected: %s | "
-    //                     "Existing UUID: %s | New UUID: %s",
-    //                     normalized.c_str(),
-    //                     existingID.uuid.c_str(),
-    //                     id.uuid.c_str());
-
-    //                 return;
-    //             }
-    //         }
-    //     }
-
-    //     auto idIt = m_AssetReg.find(id);
-
-    //     if (idIt != m_AssetReg.end())
-    //     {
-    //         ANV_LOG_WARN(
-    //             "Asset UUID already registered: %s",
-    //             id.uuid.c_str());
-
-    //         return;
-    //     }
-
-    //     asset->GenMetaFile();
-
-    //     m_AssetReg.emplace(id, asset);
-
-    //     if (!resource.empty())
-    //     {
-    //         m_ByResource.insert_or_assign(
-    //             NormalizeResource(resource),
-    //             id);
-    //     }
-    // }
-
     void AssetManager::Register(
         Ref<Asset> asset,
         bool generateMetadata)
     {
         if (!asset)
+        {
+            ANV_LOG_ERROR("AssetManager::Register received null asset");
             return;
+        }
 
         const uuid::AssetUUID id = asset->GetAssetID();
         const std::filesystem::path resource =
             asset->GetResourcePath();
 
-        if (!resource.empty())
+        ANV_LOG_INFO(
+            "Register manager=%p asset='%s' UUID='%s' resource='%s'",
+            static_cast<void *>(this),
+            asset->GetName().c_str(),
+            id.uuid.c_str(),
+            resource.string().c_str());
+
+        if (resource.empty())
         {
-            const std::string normalized =
-                NormalizeResource(resource);
-
-            auto resourceIt = m_ByResource.find(normalized);
-
-            if (resourceIt != m_ByResource.end())
-            {
-                if (resourceIt->second != id)
-                {
-                    ANV_LOG_ERROR(
-                        "Duplicate asset resource rejected: %s | "
-                        "Existing UUID: %s | New UUID: %s",
-                        normalized.c_str(),
-                        resourceIt->second.uuid.c_str(),
-                        id.uuid.c_str());
-
-                    return;
-                }
-            }
+            ANV_LOG_WARN(
+                "Asset '%s' has no resource path; it cannot be indexed by resource",
+                asset->GetName().c_str());
         }
 
+        // Register by UUID.
         m_AssetReg.insert_or_assign(id, asset);
 
+        // Register by normalized resource.
         if (!resource.empty())
         {
-            const std::string key =
-                NormalizeResource(asset->GetResourcePath());
+            const std::string key = NormalizeResource(resource);
 
-            ANV_LOG_INFO(
-                "Register asset resource='%s' normalized='%s' UUID='%s'",
-                asset->GetResourcePath().c_str(),
-                key.c_str(),
-                id.uuid.c_str());
+            if (key.empty())
+            {
+                ANV_LOG_ERROR(
+                    "Failed to normalize resource path for asset '%s'",
+                    asset->GetName().c_str());
+            }
+            else
+            {
+                m_ByResource.insert_or_assign(key, id);
 
-            m_ByResource.insert_or_assign(key, id);
+                ANV_LOG_INFO(
+                    "Indexed resource manager=%p key='%s' UUID='%s' "
+                    "resourceCount=%zu",
+                    static_cast<void *>(this),
+                    key.c_str(),
+                    id.uuid.c_str(),
+                    m_ByResource.size());
+            }
         }
 
         if (generateMetadata)
@@ -226,28 +174,47 @@ namespace anv
     Ref<Texture> AssetManager::CreateTexture(
         const std::filesystem::path &resource)
     {
+        const std::string key = NormalizeResource(resource);
+
         if (auto existing = GetByResourceAs<Texture>(resource))
         {
-            ANV_LOG_WARN(
-                "CreateTexture called for existing resource; "
-                "returning existing texture: %s",
-                resource.string().c_str());
+            ANV_LOG_INFO(
+                "CreateTexture reused existing texture UUID='%s'",
+                existing->GetAssetID().uuid.c_str());
 
             return existing;
         }
 
-        auto texture = Texture::Create(resource);
+        Ref<Texture> texture = Texture::Create(resource);
 
         if (!texture)
         {
             ANV_LOG_ERROR(
-                "Failed to create texture: %s",
+                "Texture::Create failed for '%s'",
                 resource.string().c_str());
 
             return nullptr;
         }
 
         Register(texture.As<Asset>(), true);
+
+        auto registeredIt = m_ByResource.find(key);
+
+        if (registeredIt == m_ByResource.end())
+        {
+            ANV_LOG_ERROR(
+                "Texture was created but not indexed: manager=%p key='%s'",
+                static_cast<void *>(this),
+                key.c_str());
+        }
+        else
+        {
+            ANV_LOG_INFO(
+                "Texture creation registered key='%s' UUID='%s'",
+                key.c_str(),
+                registeredIt->second.uuid.c_str());
+        }
+
         return texture;
     }
 
@@ -281,19 +248,37 @@ namespace anv
         const std::string key = NormalizeResource(resource);
 
         ANV_LOG_INFO(
-            "GetOrCreateTexture input='%s' normalized='%s'",
+            "GetOrCreateTexture manager=%p input='%s' normalized='%s' "
+            "resourceCount=%zu assetCount=%zu",
+            static_cast<void *>(this),
             resource.string().c_str(),
-            key.c_str());
+            key.c_str(),
+            m_ByResource.size(),
+            m_AssetReg.size());
 
         auto resourceIt = m_ByResource.find(key);
 
         if (resourceIt != m_ByResource.end())
         {
-            ANV_LOG_INFO(
-                "Reusing texture UUID: %s",
+            Ref<Texture> existing =
+                GetAs<Texture>(resourceIt->second);
+
+            if (existing)
+            {
+                ANV_LOG_INFO(
+                    "Reusing texture UUID='%s'",
+                    resourceIt->second.uuid.c_str());
+
+                return existing;
+            }
+
+            ANV_LOG_ERROR(
+                "Resource index contains UUID='%s', but UUID registry does not "
+                "contain a Texture",
                 resourceIt->second.uuid.c_str());
 
-            return GetAs<Texture>(resourceIt->second);
+            // Remove a broken index entry.
+            m_ByResource.erase(resourceIt);
         }
 
         ANV_LOG_WARN(
@@ -302,7 +287,7 @@ namespace anv
 
         return CreateTexture(resource);
     }
-    
+
     void AssetManager::create(Deserialized &deserialized)
     {
         if (deserialized.type == "Shader")

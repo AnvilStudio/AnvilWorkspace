@@ -249,11 +249,11 @@ namespace anv
         return entity;
     }
 
-    void Scene::DestroyEntity(entt::entity entity)
-    {
-        if (!m_Registry.valid(entity))
-            return;
+    // void Scene::DestroyEntity(entt::entity entity)
+    // {
+    //     if (!m_Registry.valid(entity))
+    //         return;
 
-        m_Registry.destroy(entity);
-    }
+    //     m_Registry.destroy(entity);
+    // }
 }

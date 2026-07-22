@@ -7,12 +7,14 @@ namespace anv
     Asset::Asset(const std::string &_name)
         : m_Uuid(uuid::uuid_GenAssetID())
     {
+        ANV_LOG_DEBUG("Asset Path: %s", _name.c_str())
         set_resource(_name);
     }
 
     Asset::Asset(const std::filesystem::path &_resource)
         : m_Uuid(uuid::uuid_GenAssetID())
     {
+        ANV_LOG_DEBUG("Asset Path: %s", _resource.string().c_str())
         set_resource(_resource);
     }
 

@@ -38,13 +38,13 @@ namespace anv
         {
         case GraphicsAPI::MTL:
 #ifdef PLATFORM_APPLE
-            return Ref<MetalTexture>::Create(path).As<Texture>();
+            return Ref<MetalTexture>::Create(path);
 #else
             break;
 #endif
         case GraphicsAPI::VK:
 #if defined(PLATFORM_WIN64) || defined(PLATFORM_LINUX)
-            return Ref<VulkanTexture>::Create(path).As<Texture>();
+            return Ref<VulkanTexture>::Create(path);
 #else
             break;
 #endif
