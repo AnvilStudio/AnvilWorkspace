@@ -1,7 +1,7 @@
 #include "Anvil.h"
 #include "Entry.h"
 #include "Editor/EditorLayer.h"
-#include "Editor/ScriptInspectorLayer.h"
+#include "Editor/InspectorExtensionLayer.h"
 
 #include <filesystem>
 
@@ -26,7 +26,10 @@ public:
 
         auto* editorLayer = new EditorLayer();
         App::PushOverlay(editorLayer);
-        App::PushOverlay(new ScriptInspectorLayer(editorLayer));
+
+        // Registered after EditorLayer so the Files panel creates its current
+        // drag/drop payload before the Inspector accepts it.
+        App::PushOverlay(new InspectorExtensionLayer(editorLayer));
     }
 
     inline void OnUpdate() override
