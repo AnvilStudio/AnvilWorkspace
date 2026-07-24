@@ -119,9 +119,9 @@ bool CodeEditorPanel::OpenFile(const std::filesystem::path& _path)
         return false;
     }
 
-    std::string contents(
+    std::string contents{
         std::istreambuf_iterator<char>(stream),
-        std::istreambuf_iterator<char>());
+        std::istreambuf_iterator<char>()};
 
     m_Buffer.assign(contents.begin(), contents.end());
     m_Buffer.push_back('\0');
