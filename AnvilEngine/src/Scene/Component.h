@@ -1,10 +1,12 @@
 #pragma once
+
 #include "../Core/Reference.h"
 #include "../Core/Uuid.h"
-#include "../Render/Camera.h"
+#include "Components/Transform2d.h"
 #include "../Scripting/ScriptTypes.h"
 #include "../Util/Serialize/Serializer.h"
 #include "../vendor/entt/single_include/entt/entt.hpp"
+
 #include <glm/glm.hpp>
 
 namespace anv
@@ -13,14 +15,14 @@ namespace anv
 
     template<typename T>
     concept SerializableComponent =
-        requires(T t, Serializer & ser)
+        requires(T t, Serializer& ser)
     {
         t.Serialize(ser);
     };
 
     template<typename T>
     concept DeserializableComponent =
-        requires(T t, Serializer & ser)
+        requires(T t, Serializer& ser)
     {
         t.Deserialize(ser);
     };
@@ -82,41 +84,10 @@ namespace anv
         struct UID
         {
             uuid::EntityUUID uid;
+
             UID()
             {
                 uid = uuid::uuid_GenEntID();
-            }
-        };
-
-        struct Transform2d
-        {
-            glm::vec2 position{0.0f};
-            glm::vec2 scale{1.0f};
-            float rotation = 0.f;
-
-            Transform2d() = default;
-
-            Transform2d(glm::vec2 _pos, float _rot, glm::vec2 _scale)
-                : position(_pos), rotation(_rot), scale(_scale)
-            {
-            }
-
-            void Serialize(Serializer& _ser)
-            {
-                _ser.Field("PositionX", position.x);
-                _ser.Field("PositionY", position.y);
-                _ser.Field("ScaleX", scale.x);
-                _ser.Field("ScaleY", scale.y);
-                _ser.Field("Rotation", rotation);
-            }
-
-            void Deserialize(Serializer& _ser)
-            {
-                _ser.Field("PositionX", position.x);
-                _ser.Field("PositionY", position.y);
-                _ser.Field("ScaleX", scale.x);
-                _ser.Field("ScaleY", scale.y);
-                _ser.Field("Rotation", rotation);
             }
         };
 
@@ -192,7 +163,5 @@ namespace anv
                 });
             }
         };
-
     } // namespace Component
-
 } // namespace anv
