@@ -32,6 +32,7 @@ public:
     void OnImGuiRender() override;
 
     entt::entity GetSelectedEntity() const { return m_SelectedEntity; }
+    SceneState GetSceneState() const { return m_SceneState; }
 
 private:
     void begin_dock_space();
