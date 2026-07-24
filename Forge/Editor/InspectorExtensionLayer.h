@@ -9,11 +9,11 @@
 class EditorLayer;
 
 /**
- * @brief Appends script editing, component creation, and asset drop handling to
- * the existing Forge Inspector window.
+ * @brief Appends Python script editing and component creation to Forge's
+ * Inspector window.
  *
- * This layer is registered after EditorLayer so it renders after the Files
- * panel has produced its drag/drop payload for the current frame.
+ * Python files may be dropped anywhere in the Inspector. Texture assignment is
+ * intentionally owned by the Sprite Renderer texture slot and the Viewport.
  */
 class InspectorExtensionLayer : public anv::Layer
 {
@@ -38,11 +38,11 @@ private:
         anv::Ref<anv::Scene> _scene,
         entt::entity _entity);
 
-    void draw_asset_drop_target(
+    void draw_inspector_script_drop_target(
         anv::Ref<anv::Scene> _scene,
         entt::entity _entity);
 
-    void handle_dropped_path(
+    void assign_script(
         anv::Ref<anv::Scene> _scene,
         entt::entity _entity,
         const std::filesystem::path& _path);
