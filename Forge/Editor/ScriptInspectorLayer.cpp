@@ -4,8 +4,8 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <fstream>
-#include <sstream>
 
 using namespace anv;
 
@@ -16,17 +16,17 @@ namespace
         const auto first = std::find_if_not(
             _value.begin(),
             _value.end(),
-            [](unsigned char character)
+            [](unsigned char _character)
             {
-                return std::isspace(character) != 0;
+                return std::isspace(_character) != 0;
             });
 
         const auto last = std::find_if_not(
             _value.rbegin(),
             _value.rend(),
-            [](unsigned char character)
+            [](unsigned char _character)
             {
-                return std::isspace(character) != 0;
+                return std::isspace(_character) != 0;
             }).base();
 
         if (first >= last)
@@ -59,7 +59,7 @@ void ScriptInspectorLayer::OnImGuiRender()
     if (!m_EditorLayer)
         return;
 
-    const Ref<Scene> scene =
+    Ref<Scene> scene =
         App::GetInstance()->GetSceneManager()->GetActive();
 
     if (!scene)
@@ -84,7 +84,7 @@ void ScriptInspectorLayer::OnImGuiRender()
 }
 
 void ScriptInspectorLayer::draw_add_component_menu(
-    const Ref<Scene>& _scene,
+    Ref<Scene> _scene,
     entt::entity _entity)
 {
     const float width = ImGui::GetContentRegionAvail().x;
@@ -123,7 +123,7 @@ void ScriptInspectorLayer::draw_add_component_menu(
 }
 
 void ScriptInspectorLayer::draw_script_component(
-    const Ref<Scene>& _scene,
+    Ref<Scene> _scene,
     entt::entity _entity,
     Component::Script& _script)
 {
@@ -140,7 +140,7 @@ void ScriptInspectorLayer::draw_script_component(
         changed = true;
 
     ImGui::SameLine();
-    if (ImGui::Button("Reload"))
+    if (ImGui::Button("Reload") && !_script.modulePath.empty())
         PythonScriptEngine::RequestReload(_script.modulePath);
 
     ImGui::SameLine();
@@ -165,7 +165,6 @@ void ScriptInspectorLayer::draw_script_component(
                 _script.className.clear();
                 _script.fields.clear();
                 changed = true;
-                PythonScriptEngine::RequestReload(_script.modulePath);
             }
 
             if (selected)
@@ -193,7 +192,6 @@ void ScriptInspectorLayer::draw_script_component(
                     _script.className = className;
                     _script.fields.clear();
                     changed = true;
-                    PythonScriptEngine::RequestReload(_script.modulePath);
                 }
 
                 if (selected)
@@ -214,8 +212,12 @@ void ScriptInspectorLayer::draw_script_component(
 
         std::vector<std::string> fieldNames;
         fieldNames.reserve(_script.fields.size());
+
         for (const auto& [name, field] : _script.fields)
+        {
+            (void)field;
             fieldNames.push_back(name);
+        }
 
         std::sort(fieldNames.begin(), fieldNames.end());
 
@@ -235,19 +237,23 @@ void ScriptInspectorLayer::draw_script_component(
     if (changed)
     {
         _scene->Save();
-        PythonScriptEngine::RequestReload(_script.modulePath);
+
+        if (!_script.modulePath.empty())
+            PythonScriptEngine::RequestReload(_script.modulePath);
     }
 
     ImGui::Separator();
     if (ImGui::Button("Remove Python Script"))
     {
-        PythonScriptEngine::RequestReload(_script.modulePath);
+        if (!_script.modulePath.empty())
+            PythonScriptEngine::RequestReload(_script.modulePath);
+
         _scene->RemoveComponent<Component::Script>(_entity);
         _scene->Save();
     }
 }
 
-void ScriptInspectorLayer::refresh_script_modules(const Ref<Scene>& _scene)
+void ScriptInspectorLayer::refresh_script_modules(Ref<Scene> _scene)
 {
     m_Modules.clear();
     m_ScriptsDirectory = find_scripts_directory(_scene);
@@ -299,7 +305,7 @@ void ScriptInspectorLayer::refresh_script_modules(const Ref<Scene>& _scene)
 }
 
 std::filesystem::path ScriptInspectorLayer::find_scripts_directory(
-    const Ref<Scene>& _scene) const
+    Ref<Scene> _scene) const
 {
     std::filesystem::path current = _scene->GetPath();
     if (!current.empty() && current.has_filename())
