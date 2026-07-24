@@ -8,31 +8,37 @@
 
 namespace anv
 {
+    class SceneManager
+    {
+    public:
+        SceneManager();
+        ~SceneManager();
 
-	class SceneManager
-	{
-	public:
+        Ref<Scene> Create(std::string _name);
 
-		SceneManager();
-		~SceneManager();
+        // Register is for "create a scene with externally supplied info"
+        // e.g. from disk metadata, editor registry, etc.
+        Ref<Scene> Register(std::string _path);
+        void Register(Ref<Scene> _scene);
 
-		Ref<Scene> Create(std::string _name);
+        Ref<Scene> GetActive();
+        void SetActive(uuid::AssetUUID _sceneUUID);
 
-		// Register is for "create a scene with externally supplied info"
-		// e.g. from disk metadata, editor registry, etc.
-		Ref<Scene> Register(std::string _path);
-		void Register(Ref<Scene> _scene);
+        /**
+         * @brief Replaces the active in-memory scene with a freshly loaded copy.
+         *
+         * The current scene path is preserved. Runtime script instances are shut
+         * down before the old scene is released. This is used by Forge to restore
+         * the edit-time scene after a Play session.
+         */
+        Ref<Scene> ReloadActive();
 
+        void Shutdown();
+        //void Unload(uuid::AssetUUID _sceneUUID);
 
-		Ref<Scene> GetActive();
-		void SetActive(uuid::AssetUUID _sceneUUID);
-		void Shutdown();
-		//void Unload(uuid::AssetUUID _sceneUUID);
-
-	private:
-		bool m_HasShutdown = false;
-		uuid::AssetUUID  m_Active;
-		std::unordered_map<uuid::AssetUUID, Ref<Scene>> m_Registry;
-	};
-	
+    private:
+        bool m_HasShutdown = false;
+        uuid::AssetUUID m_Active;
+        std::unordered_map<uuid::AssetUUID, Ref<Scene>> m_Registry;
+    };
 }
