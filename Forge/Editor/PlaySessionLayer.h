@@ -26,5 +26,6 @@ private:
     EditorLayer* m_EditorLayer = nullptr;
     bool m_WasPlaying = false;
     std::filesystem::path m_OriginalScenePath;
+    std::filesystem::path m_ResolvedScenePath;
     std::filesystem::path m_SnapshotPath;
 };
