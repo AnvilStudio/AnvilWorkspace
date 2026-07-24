@@ -16,8 +16,7 @@ namespace
             [](unsigned char character)
             {
                 return static_cast<char>(std::tolower(character));
-            }
-        );
+            });
 
         return value;
     }
@@ -26,6 +25,20 @@ namespace
 FileBrowser::FileBrowser(std::filesystem::path rootDirectory)
 {
     std::error_code error;
+
+    // Forge historically passed the Assets directory as the browser root.
+    // Use the project directory instead when a sibling Scripts directory exists
+    // so both project content roots are visible in the same browser.
+    const std::filesystem::path projectDirectory = rootDirectory.parent_path();
+    const std::filesystem::path scriptsDirectory = projectDirectory / "Scripts";
+
+    if (rootDirectory.filename() == "Assets" &&
+        std::filesystem::is_directory(scriptsDirectory, error))
+    {
+        rootDirectory = projectDirectory;
+    }
+
+    error.clear();
     m_RootDirectory = std::filesystem::weakly_canonical(rootDirectory, error);
 
     if (error)
@@ -66,8 +79,7 @@ void FileBrowser::Refresh()
     std::filesystem::directory_iterator iterator(
         m_CurrentDirectory,
         std::filesystem::directory_options::skip_permission_denied,
-        error
-    );
+        error);
 
     if (error)
     {
@@ -107,8 +119,7 @@ void FileBrowser::Refresh()
 
             return ToLower(left.path.filename().string()) <
                 ToLower(right.path.filename().string());
-        }
-    );
+        });
 }
 
 void FileBrowser::NavigateTo(const std::filesystem::path& directory)
@@ -148,23 +159,25 @@ void FileBrowser::DrawToolbar()
     ImGui::SetNextItemWidth(-1.0f);
     ImGui::InputTextWithHint(
         "##FileBrowserSearch",
-        "Search assets...",
+        "Search project files...",
         m_SearchBuffer,
-        sizeof(m_SearchBuffer)
-    );
+        sizeof(m_SearchBuffer));
 }
 
 void FileBrowser::DrawBreadcrumbs()
 {
-    if (ImGui::SmallButton("Assets"))
+    std::string rootLabel = m_RootDirectory.filename().string();
+    if (rootLabel.empty())
+        rootLabel = "Project";
+
+    if (ImGui::SmallButton(rootLabel.c_str()))
         NavigateTo(m_RootDirectory);
 
     std::error_code error;
     const auto relativePath = std::filesystem::relative(
         m_CurrentDirectory,
         m_RootDirectory,
-        error
-    );
+        error);
 
     if (error || relativePath.empty() || relativePath == ".")
         return;
@@ -188,13 +201,13 @@ void FileBrowser::DrawBreadcrumbs()
 void FileBrowser::DrawEntries()
 {
     if (ImGui::BeginTable(
-        "FileBrowserTable",
-        3,
-        ImGuiTableFlags_RowBg |
-        ImGuiTableFlags_BordersInnerV |
-        ImGuiTableFlags_Resizable |
-        ImGuiTableFlags_ScrollY,
-        ImVec2(0.0f, 0.0f)))
+            "FileBrowserTable",
+            3,
+            ImGuiTableFlags_RowBg |
+                ImGuiTableFlags_BordersInnerV |
+                ImGuiTableFlags_Resizable |
+                ImGuiTableFlags_ScrollY,
+            ImVec2(0.0f, 0.0f)))
     {
         ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 100.0f);
@@ -228,25 +241,27 @@ void FileBrowser::DrawEntry(const Entry& entry)
 
     ImGui::PushID(entry.path.string().c_str());
     if (ImGui::Selectable(
-        label.c_str(),
-        selected,
-        ImGuiSelectableFlags_SpanAllColumns |
-        ImGuiSelectableFlags_AllowDoubleClick))
+            label.c_str(),
+            selected,
+            ImGuiSelectableFlags_SpanAllColumns |
+                ImGuiSelectableFlags_AllowDoubleClick))
     {
         m_SelectedPath = entry.path;
 
-        if (entry.isDirectory && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+        if (entry.isDirectory &&
+            ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+        {
             m_PendingDirectory = entry.path;
+        }
     }
 
-    if (ImGui::BeginDragDropSource())
+    if (!entry.isDirectory && ImGui::BeginDragDropSource())
     {
         const std::string path = entry.path.string();
         ImGui::SetDragDropPayload(
             "ANV_ASSET_PATH",
             path.c_str(),
-            path.size() + 1
-        );
+            path.size() + 1);
         ImGui::TextUnformatted(entry.path.filename().string().c_str());
         ImGui::EndDragDropSource();
     }
@@ -266,8 +281,7 @@ void FileBrowser::DrawEntry(const Entry& entry)
     ImGui::TextUnformatted(
         entry.isDirectory
             ? "Folder"
-            : entry.path.extension().string().c_str()
-    );
+            : entry.path.extension().string().c_str());
 
     ImGui::TableSetColumnIndex(2);
     if (!entry.isDirectory)
@@ -296,7 +310,8 @@ bool FileBrowser::IsInsideRoot(const std::filesystem::path& path) const
     auto rootIterator = m_RootDirectory.begin();
     auto pathIterator = path.begin();
 
-    for (; rootIterator != m_RootDirectory.end(); ++rootIterator, ++pathIterator)
+    for (; rootIterator != m_RootDirectory.end();
+         ++rootIterator, ++pathIterator)
     {
         if (pathIterator == path.end() || *rootIterator != *pathIterator)
             return false;
@@ -320,13 +335,37 @@ std::string FileBrowser::FormatFileSize(std::uintmax_t bytes) const
     char buffer[64]{};
 
     if (bytes >= gigabyte)
-        std::snprintf(buffer, sizeof(buffer), "%.2f GB", static_cast<double>(bytes) / gigabyte);
+    {
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "%.2f GB",
+            static_cast<double>(bytes) / gigabyte);
+    }
     else if (bytes >= megabyte)
-        std::snprintf(buffer, sizeof(buffer), "%.2f MB", static_cast<double>(bytes) / megabyte);
+    {
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "%.2f MB",
+            static_cast<double>(bytes) / megabyte);
+    }
     else if (bytes >= kilobyte)
-        std::snprintf(buffer, sizeof(buffer), "%.2f KB", static_cast<double>(bytes) / kilobyte);
+    {
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "%.2f KB",
+            static_cast<double>(bytes) / kilobyte);
+    }
     else
-        std::snprintf(buffer, sizeof(buffer), "%llu B", static_cast<unsigned long long>(bytes));
+    {
+        std::snprintf(
+            buffer,
+            sizeof(buffer),
+            "%llu B",
+            static_cast<unsigned long long>(bytes));
+    }
 
     return buffer;
 }
