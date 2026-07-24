@@ -1,6 +1,9 @@
 #include "Anvil.h"
 #include "Entry.h"
 #include "Editor/EditorLayer.h"
+#include "Util/Time/Time.h"
+
+#include <filesystem>
 
 class Forge : public anv::App
 {
@@ -11,18 +14,27 @@ public:
 	{
 	}
 
-	inline void OnSetup()   override 
+	inline void OnSetup() override
 	{
 		ANV_LOG_INFO("hello from forge!");
+
+		const std::filesystem::path projectDirectory =
+			m_Settings.projectDir.empty()
+				? std::filesystem::path(m_Settings.projectPath).parent_path()
+				: std::filesystem::path(m_Settings.projectDir);
+
+		anv::PythonScriptEngine::Initialize(projectDirectory);
 		App::PushOverlay(new EditorLayer());
 	}
 
-	inline void OnUpdate()  override 
+	inline void OnUpdate() override
 	{
+		anv::PythonScriptEngine::Update(anv::Time::DeltaTime());
 	}
 
 	inline void OnDestroy() override
 	{
+		anv::PythonScriptEngine::Shutdown();
 	}
 
 	friend class EditorLayer;
@@ -32,5 +44,3 @@ anv::App* CreateApp(int arg_c, char* arg_v[])
 {
 	return new Forge(arg_c, arg_v);
 }
-
-
