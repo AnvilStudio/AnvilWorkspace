@@ -3,15 +3,22 @@
 #include <Anvil.h>
 
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <vector>
 
 class FileBrowser
 {
 public:
-    explicit FileBrowser(std::filesystem::path rootDirectory);
+    using OpenFileCallback = std::function<void(const std::filesystem::path&)>;
+
+    explicit FileBrowser(std::filesystem::path _rootDirectory);
 
     void Draw();
+    void SetOpenFileCallback(OpenFileCallback _callback)
+    {
+        m_OpenFileCallback = std::move(_callback);
+    }
 
     const std::filesystem::path& GetCurrentDirectory() const
     {
@@ -32,16 +39,21 @@ private:
     };
 
     void Refresh();
-    void NavigateTo(const std::filesystem::path& directory);
+    void NavigateTo(const std::filesystem::path& _directory);
     void DrawToolbar();
     void DrawBreadcrumbs();
     void DrawEntries();
-    void DrawEntry(const Entry& entry);
+    void DrawEntry(const Entry& _entry);
+    void DrawCreatePopup();
+    void DrawDeletePopup();
 
-    bool MatchesSearch(const Entry& entry) const;
-    bool IsInsideRoot(const std::filesystem::path& path) const;
-    std::string GetEntryLabel(const Entry& entry) const;
-    std::string FormatFileSize(std::uintmax_t bytes) const;
+    void create_file();
+    void delete_selected();
+
+    bool MatchesSearch(const Entry& _entry) const;
+    bool IsInsideRoot(const std::filesystem::path& _path) const;
+    std::string GetEntryLabel(const Entry& _entry) const;
+    std::string FormatFileSize(std::uintmax_t _bytes) const;
 
 private:
     std::filesystem::path m_RootDirectory;
@@ -50,6 +62,11 @@ private:
     std::filesystem::path m_PendingDirectory;
 
     std::vector<Entry> m_Entries;
+    OpenFileCallback m_OpenFileCallback;
+
     char m_SearchBuffer[256]{};
+    char m_NewFileName[256]{};
+    bool m_OpenCreatePopup = false;
+    bool m_OpenDeletePopup = false;
     std::string m_ErrorMessage;
 };
