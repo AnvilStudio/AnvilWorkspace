@@ -25,11 +25,6 @@ project "Forge"
         "%{ROOTDIR}AnvilEngine/vendor/glm", -- TODO: Remove
     }
 
-    --libdirs 
-    --{
-    --    "%{ROOTDIR}AnvilEngine/" .. outdir .. "/AnvilEngine"
-    --}
-
     links
     {
         "AnvilEngine"
@@ -38,12 +33,12 @@ project "Forge"
 filter "system:macosx"
     architecture "arm64"
 
+    local pythonLinkFlags = os.outputof("python3-config --embed --ldflags")
 
     defines
     {
         "PLATFORM_APPLE",
-        "PLATFORM_MACOS",
-        --"ANV_RENDER_API_METAL"
+        "PLATFORM_MACOS"
     }
 
     libdirs
@@ -68,6 +63,13 @@ filter "system:macosx"
     {
         "-fobjc-arc"
     }
+
+    if pythonLinkFlags ~= nil and pythonLinkFlags ~= "" then
+        linkoptions
+        {
+            pythonLinkFlags
+        }
+    end
 
 filter "system:windows"
     libdirs
