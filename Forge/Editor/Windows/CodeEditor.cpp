@@ -6,6 +6,8 @@
 #include <iterator>
 #include <system_error>
 
+CodeEditorPanel* CodeEditorPanel::s_ActiveEditor = nullptr;
+
 namespace
 {
     std::string to_lower(std::string _value)
@@ -18,7 +20,6 @@ namespace
             {
                 return static_cast<char>(std::tolower(_character));
             });
-
         return _value;
     }
 }
@@ -26,6 +27,19 @@ namespace
 CodeEditorPanel::CodeEditorPanel()
 {
     m_Buffer.resize(4096, '\0');
+    s_ActiveEditor = this;
+}
+
+CodeEditorPanel::CodeEditorPanel(const std::filesystem::path& _unusedPath)
+    : CodeEditorPanel()
+{
+    (void)_unusedPath;
+}
+
+CodeEditorPanel::~CodeEditorPanel()
+{
+    if (s_ActiveEditor == this)
+        s_ActiveEditor = nullptr;
 }
 
 void CodeEditorPanel::Draw(bool* _open)
@@ -42,7 +56,6 @@ void CodeEditorPanel::Draw(bool* _open)
     const std::string title = m_OpenPath.empty()
         ? "No file open"
         : m_OpenPath.filename().string() + (m_Dirty ? " *" : "");
-
     ImGui::TextUnformatted(title.c_str());
 
     if (!m_OpenPath.empty())
@@ -74,12 +87,11 @@ void CodeEditorPanel::Draw(bool* _open)
     if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_S))
         Save();
 
-    ImVec2 size = ImGui::GetContentRegionAvail();
     if (ImGui::InputTextMultiline(
             "##CodeEditorText",
             m_Buffer.data(),
             m_Buffer.size(),
-            size,
+            ImGui::GetContentRegionAvail(),
             ImGuiInputTextFlags_AllowTabInput |
                 ImGuiInputTextFlags_CallbackResize,
             input_callback,
@@ -94,7 +106,6 @@ void CodeEditorPanel::Draw(bool* _open)
 bool CodeEditorPanel::OpenFile(const std::filesystem::path& _path)
 {
     m_ErrorMessage.clear();
-
     if (!is_text_file(_path))
     {
         set_error("This file type is not supported by the text editor.");
@@ -115,7 +126,6 @@ bool CodeEditorPanel::OpenFile(const std::filesystem::path& _path)
     m_Buffer.assign(contents.begin(), contents.end());
     m_Buffer.push_back('\0');
     m_Buffer.resize(std::max<std::size_t>(m_Buffer.size() + 1024, 4096), '\0');
-
     m_OpenPath = _path;
     m_Dirty = false;
     return true;
@@ -133,7 +143,9 @@ bool CodeEditorPanel::Save()
         return false;
     }
 
-    stream.write(m_Buffer.data(), static_cast<std::streamsize>(std::char_traits<char>::length(m_Buffer.data())));
+    stream.write(
+        m_Buffer.data(),
+        static_cast<std::streamsize>(std::char_traits<char>::length(m_Buffer.data())));
     if (!stream)
     {
         set_error("Failed while writing file: " + m_OpenPath.string());
@@ -151,6 +163,11 @@ void CodeEditorPanel::Close()
     m_Buffer.assign(4096, '\0');
     m_Dirty = false;
     m_ErrorMessage.clear();
+}
+
+bool CodeEditorPanel::OpenInActiveEditor(const std::filesystem::path& _path)
+{
+    return s_ActiveEditor && s_ActiveEditor->OpenFile(_path);
 }
 
 int CodeEditorPanel::input_callback(ImGuiInputTextCallbackData* _data)
@@ -173,27 +190,13 @@ bool CodeEditorPanel::is_text_file(const std::filesystem::path& _path) const
     if (extension.empty())
         return true;
 
-    return extension == ".txt" ||
-           extension == ".md" ||
-           extension == ".py" ||
-           extension == ".cpp" ||
-           extension == ".c" ||
-           extension == ".h" ||
-           extension == ".hpp" ||
-           extension == ".inl" ||
-           extension == ".glsl" ||
-           extension == ".vert" ||
-           extension == ".frag" ||
-           extension == ".metal" ||
-           extension == ".json" ||
-           extension == ".toml" ||
-           extension == ".yaml" ||
-           extension == ".yml" ||
-           extension == ".ini" ||
-           extension == ".cfg" ||
-           extension == ".cmake" ||
-           extension == ".lua" ||
-           extension == ".sh";
+    return extension == ".txt" || extension == ".md" || extension == ".py" ||
+           extension == ".cpp" || extension == ".c" || extension == ".h" ||
+           extension == ".hpp" || extension == ".inl" || extension == ".glsl" ||
+           extension == ".vert" || extension == ".frag" || extension == ".metal" ||
+           extension == ".json" || extension == ".toml" || extension == ".yaml" ||
+           extension == ".yml" || extension == ".ini" || extension == ".cfg" ||
+           extension == ".cmake" || extension == ".lua" || extension == ".sh";
 }
 
 void CodeEditorPanel::set_error(std::string _message)
