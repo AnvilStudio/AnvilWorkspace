@@ -1,39 +1,54 @@
 #include "SceneLayer.h"
+
 #include <Render/Renderer.h>
+
 namespace anv
 {
-	SceneLayer::SceneLayer(_shared<SceneManager> _manager)
-		: Layer("Scene Layer"), m_ScnMgr(_manager)
-	{
-	}
+    SceneLayer::SceneLayer(_shared<SceneManager> _manager)
+        : Layer("Scene Layer"),
+          m_ScnMgr(std::move(_manager))
+    {
+    }
 
-	void SceneLayer::OnAttach()
-	{
-		ANV_ASSERT(m_ScnMgr, "Scene manager null!");
+    void SceneLayer::OnAttach()
+    {
+        ANV_ASSERT(m_ScnMgr, "Scene manager null!")
+        refresh_active_scene();
+        ANV_ASSERT(m_Active, "Active scene null!")
+    }
 
-		m_Active = m_ScnMgr->GetActive();
+    void SceneLayer::OnDetach()
+    {
+        if (m_Active)
+            m_Active->Shutdown();
+    }
 
-		ANV_ASSERT(m_Active, "Active scene null!");
+    void SceneLayer::OnRender()
+    {
+        refresh_active_scene();
 
-		auto camera = m_Active->GetMainCamera();
+        if (m_Active)
+            m_Active->Render();
+    }
 
-		ANV_ASSERT(camera, "Main camera null!");
+    void SceneLayer::OnUpdate(float _dt)
+    {
+        refresh_active_scene();
 
-		Renderer2D::SetCamera(camera);
-	}
+        if (m_Active)
+            m_Active->OnUpdate(_dt);
+    }
 
-	void SceneLayer::OnDetach()
-	{
-		m_Active->Shutdown();
-	}
+    void SceneLayer::refresh_active_scene()
+    {
+        Ref<Scene> active = m_ScnMgr ? m_ScnMgr->GetActive() : nullptr;
+        if (!active || active == m_Active)
+            return;
 
-	void SceneLayer::OnRender()
-	{
-		m_Active->Render();
-	}
+        m_Active = active;
 
-	void SceneLayer::OnUpdate(float dt)
-	{
-		m_Active->OnUpdate(dt);
-	}
+        auto camera = m_Active->GetMainCamera();
+        ANV_ASSERT(camera, "Main camera null!")
+        Renderer2D::SetCamera(camera);
+    }
 }
