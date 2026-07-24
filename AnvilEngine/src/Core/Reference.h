@@ -200,17 +200,31 @@ namespace anv
         }
 
         /**
-         * @brief Converts this reference to a compatible base or derived type.
+         * @brief Converts this reference to a related reference type.
          *
-         * As performs a compile-time checked pointer conversion. Use Cast when a
-         * runtime-checked downcast is required.
+         * Upcasts are resolved at compile time. Downcasts between polymorphic
+         * related types are checked at runtime and return a null Ref on failure.
          */
         template<typename T2>
         Ref<T2> As() const
         {
-            static_assert(std::is_convertible_v<T*, T2*>,
-                          "Ref::As requires compatible pointer types");
-            return Ref<T2>(*this);
+            static_assert(std::is_base_of_v<RefCounter, T2>,
+                          "Ref::As requires a RefCounter-derived target type");
+
+            if (!m_Instance)
+                return nullptr;
+
+            if constexpr (std::is_convertible_v<T*, T2*>)
+            {
+                return Ref<T2>(static_cast<T2*>(m_Instance));
+            }
+            else
+            {
+                static_assert(std::is_polymorphic_v<T>,
+                              "Ref::As downcasts require a polymorphic source type");
+                T2* castInstance = dynamic_cast<T2*>(m_Instance);
+                return castInstance ? Ref<T2>(castInstance) : Ref<T2>(nullptr);
+            }
         }
 
         /** @brief Performs a runtime-checked polymorphic cast. */
