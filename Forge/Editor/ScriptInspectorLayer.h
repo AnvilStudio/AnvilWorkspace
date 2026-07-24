@@ -4,7 +4,6 @@
 
 #include <filesystem>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 class EditorLayer;
@@ -24,17 +23,21 @@ private:
     };
 
     void draw_add_component_menu(
-        const anv::Ref<anv::Scene>& _scene,
+        anv::Ref<anv::Scene> _scene,
         entt::entity _entity);
 
     void draw_script_component(
-        const anv::Ref<anv::Scene>& _scene,
+        anv::Ref<anv::Scene> _scene,
         entt::entity _entity,
         anv::Component::Script& _script);
 
-    void refresh_script_modules(const anv::Ref<anv::Scene>& _scene);
-    std::filesystem::path find_scripts_directory(const anv::Ref<anv::Scene>& _scene) const;
-    const ScriptModuleInfo* find_module(const std::string& _relativePath) const;
+    void refresh_script_modules(anv::Ref<anv::Scene> _scene);
+
+    std::filesystem::path find_scripts_directory(
+        anv::Ref<anv::Scene> _scene) const;
+
+    const ScriptModuleInfo* find_module(
+        const std::string& _relativePath) const;
 
     static std::vector<std::string> discover_script_classes(
         const std::filesystem::path& _filePath);
