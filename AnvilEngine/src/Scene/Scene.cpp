@@ -4,6 +4,7 @@
 #include <Render/CameraController.h>
 #include <Render/Renderer.h>
 #include <Asset/AssetTypes/Texture.h>
+#include <Scripting/PythonScriptEngine.h>
 
 namespace anv
 {
@@ -27,14 +28,14 @@ namespace anv
 
     Scene::~Scene()
     {
-        //Shutdown();
+        PythonScriptEngine::ShutdownScene(*this);
     }
 
     void Scene::Init()
     {
         m_MainCamera = std::make_shared<Camera2D>();
-        m_CameraController = std::make_unique<CameraController>( 
-            App::GetInstance()->GetInputSystem(), 
+        m_CameraController = std::make_unique<CameraController>(
+            App::GetInstance()->GetInputSystem(),
             m_MainCamera
         );
 
@@ -44,8 +45,7 @@ namespace anv
     void Scene::Load()
     {
         Serializer ser(m_Path, Serializer::Mode::SER_MODE_TOML, Serializer::Direction::Read);
-         
-        // scene header
+
         ser.Object("Scene", [&]() {
             ser.Field("Name", m_Name);
             ser.Field("UUID", m_UUID.uuid);
@@ -60,7 +60,6 @@ namespace anv
             );
         });
 
-        // Camera
         ser.ObjectIf("Camera", [&]() {
             ser.Object("Transform", [&]() {
                 m_MainCamera->GetTransform().Deserialize(ser);
@@ -71,47 +70,51 @@ namespace anv
                 ser.Field<float>("Zoom", z);
 
                 m_MainCamera->SetZoom(z);
-                });
             });
+        });
 
-        // entities
         if (ser.HasObject("Entities"))
         {
             ser.Object("Entities", [&]()
+            {
+                ser.ForEachObject([&](const std::string& entityUUID)
                 {
-                    ser.ForEachObject([&](const std::string& entityUUID)
-                        {
-                            entt::entity entity = m_Registry.create();
+                    entt::entity entity = m_Registry.create();
 
-                            auto& id =
-                                m_Registry.emplace<uuid::EntityUUID>(entity);
+                    auto& id = m_Registry.emplace<uuid::EntityUUID>(entity);
+                    id.uuid = entityUUID;
 
-                            id.uuid = entityUUID;
+                    DeserializeIfPresent<Component::Tag>(
+                        m_Registry,
+                        entity,
+                        ser,
+                        "Tag"
+                    );
 
-                            DeserializeIfPresent<Component::Tag>(
-                                m_Registry,
-                                entity,
-                                ser,
-                                "Tag"
-                            );
+                    DeserializeIfPresent<Component::Transform2d>(
+                        m_Registry,
+                        entity,
+                        ser,
+                        "Transform2d"
+                    );
 
-                            DeserializeIfPresent<Component::Transform2d>(
-                                m_Registry,
-                                entity,
-                                ser,
-                                "Transform2d"
-                            );
+                    DeserializeIfPresent<Component::SpriteRenderer>(
+                        m_Registry,
+                        entity,
+                        ser,
+                        "SpriteRenderer"
+                    );
 
-                            DeserializeIfPresent<Component::SpriteRenderer>(
-                                m_Registry,
-                                entity,
-                                ser,
-                                "SpriteRenderer"
-                            );
-                        });
+                    DeserializeIfPresent<Component::Script>(
+                        m_Registry,
+                        entity,
+                        ser,
+                        "Script"
+                    );
                 });
+            });
         }
-        
+
         ser.Close();
     }
 
@@ -119,7 +122,6 @@ namespace anv
     {
         Serializer ser(m_Path, Serializer::Mode::SER_MODE_TOML, Serializer::Direction::Write);
 
-        // Header
         ser.Object("Scene", [&] {
             ser.Field("Name", m_Name);
             ser.Field("UUID", m_UUID.uuid);
@@ -130,13 +132,12 @@ namespace anv
                 SceneContext::CTX_3D,
                 SceneContextToString,
                 SceneContextFromString);
-            });
+        });
 
-        // Camera
         ser.Object("Camera", [&]() {
             ser.Object("Transform", [&]() {
                 m_MainCamera->GetTransform().Serialize(ser);
-                });
+            });
             ser.Object("Settings", [&]() {
                 float aspectRatio = m_MainCamera->GetAspectRatio();
                 float zoom = m_MainCamera->GetZoom();
@@ -146,32 +147,36 @@ namespace anv
             });
         });
 
-        // Entities
         ser.RemoveObject("Entities");
         auto view = m_Registry.view<uuid::EntityUUID, Component::Tag>();
-        for (auto [e, id, tag] : view.each())
+        for (auto [entity, id, tag] : view.each())
         {
             ser.ObjectKeyed("Entities", id.uuid, [&] {
-
                 SerializeIfPresent<Component::Tag>(
                     m_Registry,
-                    e,
+                    entity,
                     ser,
                     "Tag"
                 );
                 SerializeIfPresent<Component::Transform2d>(
                     m_Registry,
-                    e,
+                    entity,
                     ser,
                     "Transform2d"
                 );
                 SerializeIfPresent<Component::SpriteRenderer>(
                     m_Registry,
-                    e,
+                    entity,
                     ser,
                     "SpriteRenderer"
                 );
-                });
+                SerializeIfPresent<Component::Script>(
+                    m_Registry,
+                    entity,
+                    ser,
+                    "Script"
+                );
+            });
         }
 
         ser.Close();
@@ -183,12 +188,14 @@ namespace anv
             return;
 
         m_HasShutdown = true;
+        PythonScriptEngine::ShutdownScene(*this);
         Save();
     }
 
     void Scene::OnUpdate(float _deltaTime)
     {
         m_CameraController->Update(_deltaTime);
+        PythonScriptEngine::UpdateScene(*this, _deltaTime);
     }
 
     void Scene::Render()
@@ -203,19 +210,19 @@ namespace anv
             auto entity,
             Component::Transform2d& transform,
             Component::SpriteRenderer& sprite)
-            {
-                Ref<Texture> texture = assetManager
-                    ? assetManager->GetAs<Texture>(sprite.texture)
-                    : nullptr;
+        {
+            Ref<Texture> texture = assetManager
+                ? assetManager->GetAs<Texture>(sprite.texture)
+                : nullptr;
 
-                Renderer2D::DrawQuad(
-                    transform.position,
-                    transform.rotation,
-                    transform.scale,
-                    sprite.color,
-                    texture,
-                    sprite.drawLayer);
-            });
+            Renderer2D::DrawQuad(
+                transform.position,
+                transform.rotation,
+                transform.scale,
+                sprite.color,
+                texture,
+                sprite.drawLayer);
+        });
     }
 
     entt::entity Scene::CreateEntity(std::string _tag)
@@ -229,16 +236,14 @@ namespace anv
         return entity;
     }
 
-    void Scene::DestroyEntity(entt::entity entity)
+    void Scene::DestroyEntity(entt::entity _entity)
     {
-        if (entity == entt::null)
+        if (_entity == entt::null || !m_Registry.valid(_entity))
             return;
 
-        if (!m_Registry.valid(entity))
-            return;
-
-        m_Registry.destroy(entity);
-    }       
+        PythonScriptEngine::DestroyEntity(*this, _entity);
+        m_Registry.destroy(_entity);
+    }
 
     entt::entity Scene::RegisterEntity(std::string _tag, uuid::EntityUUID _uuid)
     {
@@ -248,12 +253,4 @@ namespace anv
 
         return entity;
     }
-
-    // void Scene::DestroyEntity(entt::entity entity)
-    // {
-    //     if (!m_Registry.valid(entity))
-    //         return;
-
-    //     m_Registry.destroy(entity);
-    // }
 }
