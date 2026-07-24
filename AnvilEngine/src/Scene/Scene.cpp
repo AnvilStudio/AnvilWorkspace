@@ -41,6 +41,20 @@ namespace anv
             m_MainCamera
         );
 
+        if (m_Path.empty())
+            return;
+
+        std::error_code error;
+        const std::filesystem::path scenePath(m_Path);
+        const bool exists = std::filesystem::exists(scenePath, error);
+        if (error || !exists)
+            return;
+
+        error.clear();
+        const std::uintmax_t fileSize = std::filesystem::file_size(scenePath, error);
+        if (error || fileSize == 0)
+            return;
+
         Load();
     }
 
