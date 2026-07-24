@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Anvil.h>
+#include "CodeEditor.h"
 
 #include <filesystem>
 #include <functional>
@@ -62,7 +63,10 @@ private:
     std::filesystem::path m_PendingDirectory;
 
     std::vector<Entry> m_Entries;
-    OpenFileCallback m_OpenFileCallback;
+    OpenFileCallback m_OpenFileCallback = [](const std::filesystem::path& _path)
+    {
+        CodeEditorPanel::OpenInActiveEditor(_path);
+    };
 
     char m_SearchBuffer[256]{};
     char m_NewFileName[256]{};
