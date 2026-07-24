@@ -6,6 +6,13 @@
 #include <string>
 #include <vector>
 
+// Compatibility with the ImGui version currently vendored by Anvil.
+// Newer ImGui versions expose ImGuiButtonFlags_AllowOverlap, but the
+// invisible Inspector drop target does not require that flag to function.
+#ifndef ImGuiButtonFlags_AllowOverlap
+#define ImGuiButtonFlags_AllowOverlap 0
+#endif
+
 class EditorLayer;
 
 class ScriptInspectorLayer : public anv::Layer
