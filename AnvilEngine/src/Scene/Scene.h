@@ -20,6 +20,7 @@ namespace anv
         void Init();
         void Load();
         void Save();
+        void Save() const { const_cast<Scene*>(this)->Save(); }
         void Shutdown();
         void OnUpdate(float _deltaTime);
         void Render();
@@ -58,9 +59,9 @@ namespace anv
         }
 
         template<typename comp>
-        const comp& GetComponent(entt::entity _entity) const
+        comp& GetComponent(entt::entity _entity) const
         {
-            return m_Registry.get<comp>(_entity);
+            return const_cast<entt::registry&>(m_Registry).get<comp>(_entity);
         }
 
         template<typename comp>
