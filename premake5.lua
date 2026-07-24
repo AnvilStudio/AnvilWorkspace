@@ -1,3 +1,62 @@
+-- Optional override for the macOS parallel build action.
+newoption {
+    trigger = "jobs",
+    value = "COUNT",
+    description = "Number of parallel macOS build jobs"
+}
+
+local function get_macos_job_count()
+    local requestedJobs = tonumber(_OPTIONS["jobs"])
+    if requestedJobs ~= nil and requestedJobs > 0 then
+        return math.floor(requestedJobs)
+    end
+
+    local detectedJobs = tonumber(os.outputof("sysctl -n hw.logicalcpu"))
+    if detectedJobs ~= nil and detectedJobs > 0 then
+        return math.floor(detectedJobs)
+    end
+
+    return 1
+end
+
+-- Builds generated macOS projects using all available logical CPU cores.
+-- Generate project files first with either `premake5 gmake2` or
+-- `premake5 xcode4`, then run `premake5 build-macos`.
+newaction {
+    trigger = "build-macos",
+    description = "Build Anvil on macOS using parallel compilation",
+    execute = function()
+        if os.host() ~= "macosx" then
+            error("The build-macos action can only run on macOS.")
+        end
+
+        local jobs = get_macos_job_count()
+        local command = nil
+
+        if os.isfile("Makefile") then
+            command = string.format("make -j%d", jobs)
+        elseif os.isdir("AnvilWorkspace.xcworkspace") then
+            command = string.format(
+                "xcodebuild -workspace AnvilWorkspace.xcworkspace -scheme Forge -parallelizeTargets -jobs %d build",
+                jobs
+            )
+        elseif os.isdir("AnvilWorkspace.xcodeproj") then
+            command = string.format(
+                "xcodebuild -project AnvilWorkspace.xcodeproj -scheme Forge -parallelizeTargets -jobs %d build",
+                jobs
+            )
+        else
+            error("No generated Makefile or Xcode project was found. Generate one before building.")
+        end
+
+        print(string.format("Building with %d parallel jobs...", jobs))
+        local result = os.execute(command)
+        if result ~= 0 then
+            error("macOS build failed.")
+        end
+    end
+}
+
 -- cleaning gen project files
 newaction {
     trigger     = "clean",
@@ -66,4 +125,3 @@ workspace "AnvilWorkspace"
         --VULKAN_LIB = "/usr/local/lib"
 
     --print("Vulkan SDK: ", VULKAN_SDK)
-    
