@@ -115,9 +115,13 @@ void EditorLayer::OnImGuiRender()
     begin_dock_space();
     draw_menu_bar();
     draw_scene_hierarchy();
+
+    // Draw the source panel before drop targets so a newly-started drag is
+    // available to the Sprite Renderer slot and Viewport in the same frame.
+    m_FileBrowser.Draw();
+
     draw_inspector();
     draw_stats();
-    m_FileBrowser.Draw();
     m_DevNotes.OnImGuiRender(&m_Windows.showDevNotes);
     m_AssetRegistryPanel.Draw(&m_Windows.showAssetRegistry);
     m_Console.Draw(&m_Windows.showConsole);
@@ -184,9 +188,10 @@ void EditorLayer::draw_scene_hierarchy()
 
     if (m_EntityToDelete != entt::null)
     {
-        scene->DestroyEntity(m_EntityToDelete);
+        const entt::entity deletedEntity = m_EntityToDelete;
+        scene->DestroyEntity(deletedEntity);
         m_EntityToDelete = entt::null;
-        if (m_SelectedEntity == m_EntityToDelete)
+        if (m_SelectedEntity == deletedEntity)
             m_SelectedEntity = entt::null;
     }
 
@@ -306,10 +311,17 @@ void EditorLayer::draw_inspector()
                             const char *pathData =
                                 static_cast<const char *>(payload->Data);
 
-                            std::filesystem::path texturePath(pathData);
+                            std::filesystem::path texturePath(pathData ? pathData : "");
 
-                            const std::string extension =
-                                texturePath.extension().string();
+                            std::string extension = texturePath.extension().string();
+                            std::transform(
+                                extension.begin(),
+                                extension.end(),
+                                extension.begin(),
+                                [](unsigned char character)
+                                {
+                                    return static_cast<char>(std::tolower(character));
+                                });
 
                             const bool isTexture =
                                 extension == ".png" ||
@@ -327,7 +339,6 @@ void EditorLayer::draw_inspector()
                                 {
                                     sprite.texture = texture->GetAssetID();
                                     currentTexture = texture;
-
                                     scene->Save();
                                 }
                                 else
