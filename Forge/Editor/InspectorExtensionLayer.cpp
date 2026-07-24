@@ -50,16 +50,6 @@ namespace
         return _value;
     }
 
-    bool is_texture_path(const std::filesystem::path& _path)
-    {
-        const std::string extension = to_lower(_path.extension().string());
-        return extension == ".png" ||
-               extension == ".jpg" ||
-               extension == ".jpeg" ||
-               extension == ".bmp" ||
-               extension == ".tga";
-    }
-
     bool is_python_path(const std::filesystem::path& _path)
     {
         return to_lower(_path.extension().string()) == ".py";
@@ -96,6 +86,10 @@ void InspectorExtensionLayer::OnImGuiRender()
     if (!scene)
         return;
 
+    const bool playMode =
+        m_EditorLayer->GetSceneState() == EditorLayer::SceneState::Play;
+    scene->SetScriptExecutionEnabled(playMode);
+
     const entt::entity entity = m_EditorLayer->GetSelectedEntity();
     if (entity == entt::null || !scene->Registry().valid(entity))
         return;
@@ -126,7 +120,7 @@ void InspectorExtensionLayer::OnImGuiRender()
     }
 
     draw_add_component_menu(scene, entity);
-    draw_asset_drop_target(scene, entity);
+    draw_inspector_script_drop_target(scene, entity);
 
     ImGui::End();
 }
@@ -159,14 +153,7 @@ void InspectorExtensionLayer::draw_script_component(
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("Enabled");
-        ImGui::TableSetColumnIndex(1);
-        changed |= ImGui::Checkbox("##ScriptEnabled", &_script.enabled);
-
-        ImGui::TableNextRow();
-        ImGui::TableSetColumnIndex(0);
-        ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("Module");
+        ImGui::TextUnformatted("Script");
         ImGui::TableSetColumnIndex(1);
         ImGui::SetNextItemWidth(-1.0f);
 
@@ -234,6 +221,13 @@ void InspectorExtensionLayer::draw_script_component(
             ImGui::EndCombo();
         }
         ImGui::EndDisabled();
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Enabled");
+        ImGui::TableSetColumnIndex(1);
+        changed |= ImGui::Checkbox("##ScriptEnabled", &_script.enabled);
 
         if (!_script.fields.empty())
         {
@@ -333,58 +327,55 @@ void InspectorExtensionLayer::draw_add_component_menu(
     ImGui::EndPopup();
 }
 
-void InspectorExtensionLayer::draw_asset_drop_target(
+void InspectorExtensionLayer::draw_inspector_script_drop_target(
     Ref<Scene> _scene,
     entt::entity _entity)
 {
-    ImGui::Spacing();
-
-    const float width = ImGui::GetContentRegionAvail().x;
-    ImGui::Button(
-        "Drop texture or Python script here",
-        ImVec2(width, 34.0f));
-
-    if (!ImGui::BeginDragDropTarget())
+    const ImGuiPayload* activePayload = ImGui::GetDragDropPayload();
+    if (!activePayload || !activePayload->IsDataType("ANV_ASSET_PATH"))
         return;
 
-    if (const ImGuiPayload* payload =
-            ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
+    const char* activePathData =
+        static_cast<const char*>(activePayload->Data);
+    if (!activePathData || !is_python_path(std::filesystem::path(activePathData)))
+        return;
+
+    const ImVec2 previousCursor = ImGui::GetCursorScreenPos();
+    const ImVec2 windowPosition = ImGui::GetWindowPos();
+    const ImVec2 contentMin = ImGui::GetWindowContentRegionMin();
+    const ImVec2 contentMax = ImGui::GetWindowContentRegionMax();
+
+    const ImVec2 targetPosition(
+        windowPosition.x + contentMin.x,
+        windowPosition.y + contentMin.y);
+    const ImVec2 targetSize(
+        contentMax.x - contentMin.x,
+        contentMax.y - contentMin.y);
+
+    ImGui::SetCursorScreenPos(targetPosition);
+    ImGui::InvisibleButton("##InspectorPythonDropTarget", targetSize);
+
+    if (ImGui::BeginDragDropTarget())
     {
-        const char* pathData = static_cast<const char*>(payload->Data);
-        if (pathData)
-            handle_dropped_path(_scene, _entity, std::filesystem::path(pathData));
+        if (const ImGuiPayload* payload =
+                ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
+        {
+            const char* pathData = static_cast<const char*>(payload->Data);
+            if (pathData)
+                assign_script(_scene, _entity, std::filesystem::path(pathData));
+        }
+
+        ImGui::EndDragDropTarget();
     }
 
-    ImGui::EndDragDropTarget();
+    ImGui::SetCursorScreenPos(previousCursor);
 }
 
-void InspectorExtensionLayer::handle_dropped_path(
+void InspectorExtensionLayer::assign_script(
     Ref<Scene> _scene,
     entt::entity _entity,
     const std::filesystem::path& _path)
 {
-    if (is_texture_path(_path))
-    {
-        auto assetManager = App::GetInstance()->GetAssetManager();
-        if (!assetManager)
-            return;
-
-        Ref<Texture> texture = assetManager->GetOrCreateTexture(_path);
-        if (!texture || !texture->IsGPUReady())
-        {
-            ANV_LOG_ERROR(
-                "Failed to assign texture to SpriteRenderer: %s",
-                _path.string().c_str());
-            return;
-        }
-
-        auto& sprite =
-            _scene->AddComponent<Component::SpriteRenderer>(_entity);
-        sprite.texture = texture->GetAssetID();
-        _scene->Save();
-        return;
-    }
-
     if (!is_python_path(_path))
         return;
 
