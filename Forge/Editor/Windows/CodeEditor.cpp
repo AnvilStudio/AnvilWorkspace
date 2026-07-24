@@ -167,6 +167,19 @@ void CodeEditorPanel::Close()
 
 bool CodeEditorPanel::OpenInActiveEditor(const std::filesystem::path& _path)
 {
+    const std::string extension = to_lower(_path.extension().string());
+    if (extension == ".ascn")
+    {
+        auto sceneManager = anv::App::GetInstance()->GetSceneManager();
+        if (!sceneManager)
+            return false;
+
+        const bool opened = static_cast<bool>(sceneManager->OpenScene(_path, true));
+        if (opened && s_ActiveEditor && s_ActiveEditor->m_OpenPath == _path)
+            s_ActiveEditor->Close();
+        return opened;
+    }
+
     return s_ActiveEditor && s_ActiveEditor->OpenFile(_path);
 }
 
