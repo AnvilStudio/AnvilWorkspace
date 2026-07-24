@@ -8,50 +8,51 @@
 
 struct Windows
 {
-	bool showAssetRegistry = true;
-	bool showStats = true;
-	bool showDevNotes = true;
-	bool showConsole = true;
+    bool showAssetRegistry = true;
+    bool showStats = true;
+    bool showDevNotes = true;
+    bool showConsole = true;
 };
 
 class EditorLayer : public anv::Layer
 {
 public:
+    enum class SceneState
+    {
+        Edit,
+        Play,
+        Pause
+    };
 
-	enum class SceneState
-	{
-		Edit,
-		Play,
-		Pause
-	};
+    EditorLayer();
 
-	EditorLayer();
+    void OnAttach() override;
+    void OnDetach() override;
+    void OnUpdate(float dt) override;
+    void OnImGuiRender() override;
 
-	void OnAttach() override;
-	void OnDetach() override;
-	void OnUpdate(float dt) override;
-	void OnImGuiRender() override;
+    entt::entity GetSelectedEntity() const { return m_SelectedEntity; }
 
 private:
-	void begin_dock_space();
-	void draw_menu_bar();
-	void draw_scene_hierarchy();
-	void draw_inspector();
-	void draw_add_component_menu(
-		anv::Ref<anv::Scene> scene,
-		entt::entity entity);
-	void draw_stats();
+    void begin_dock_space();
+    void draw_menu_bar();
+    void draw_scene_hierarchy();
+    void draw_inspector();
+    void draw_add_component_menu(
+        anv::Ref<anv::Scene> scene,
+        entt::entity entity);
+    void draw_stats();
 
-	entt::entity m_SelectedEntity = entt::null;
-	entt::entity m_EntityToDelete = entt::null;
+    entt::entity m_SelectedEntity = entt::null;
+    entt::entity m_EntityToDelete = entt::null;
 
-	SceneState m_SceneState = SceneState::Edit;
+    SceneState m_SceneState = SceneState::Edit;
 
-	Viewport m_Viewport;
-	DevNotesPanel m_DevNotes;
-	FileBrowser m_FileBrowser;
-	AssetRegistryPanel m_AssetRegistryPanel;
-	anv::ConsolePanel m_Console;
+    Viewport m_Viewport;
+    DevNotesPanel m_DevNotes;
+    FileBrowser m_FileBrowser;
+    AssetRegistryPanel m_AssetRegistryPanel;
+    anv::ConsolePanel m_Console;
 
-	Windows m_Windows{false};
+    Windows m_Windows{false};
 };
