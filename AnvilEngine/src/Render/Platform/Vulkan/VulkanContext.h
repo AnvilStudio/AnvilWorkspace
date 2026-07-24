@@ -51,10 +51,16 @@ namespace anv {
         }
         void                      IdleDevice();
         void                      WaitIdle() override;
-        // Returned as a VkSwapchain because
-        // We're in the abstract class.
-        Ref<VulkanSwapchain>    
-        GetSwapchain() { return m_Swapchain; }
+
+        /**
+         * @brief Returns the context swapchain as its Vulkan implementation.
+         * @return The Vulkan swapchain, or a null Ref if the stored swapchain is
+         *         not a VulkanSwapchain.
+         */
+        Ref<VulkanSwapchain> GetSwapchain()
+        {
+            return m_Swapchain.Cast<VulkanSwapchain>();
+        }
 
     private:
         void vkc_instance(); // instance creation
