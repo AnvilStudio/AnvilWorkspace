@@ -6,20 +6,21 @@
 
 namespace anv
 {
-	class SceneLayer : public Layer
-	{
-	public:
-		SceneLayer(_shared<SceneManager> _manager);
+    class SceneLayer : public Layer
+    {
+    public:
+        SceneLayer(_shared<SceneManager> _manager);
 
-		virtual void OnAttach()  override;
-		virtual void OnDetach() override;
-		virtual void OnRender() override;
-		virtual void OnUpdate(float dt) override;
-		/*virtual void OnImGuiRender() {}*/
+        void OnAttach() override;
+        void OnDetach() override;
+        void OnRender() override;
+        void OnUpdate(float _dt) override;
 
-	private:
-		_shared<SceneManager> m_ScnMgr;
-		Ref<Scene> m_Active;
-	};
+    private:
+        void refresh_active_scene();
+
+    private:
+        _shared<SceneManager> m_ScnMgr;
+        Ref<Scene> m_Active;
+    };
 }
-
