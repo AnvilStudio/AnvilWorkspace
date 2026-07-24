@@ -218,12 +218,24 @@ namespace anv
         Save();
     }
 
+    void Scene::SetScriptExecutionEnabled(bool _enabled)
+    {
+        if (m_ScriptExecutionEnabled == _enabled)
+            return;
+
+        m_ScriptExecutionEnabled = _enabled;
+
+        if (!m_ScriptExecutionEnabled)
+            PythonScriptEngine::ShutdownScene(*this);
+    }
+
     void Scene::OnUpdate(float _deltaTime)
     {
         if (m_CameraController)
             m_CameraController->Update(_deltaTime);
 
-        PythonScriptEngine::UpdateScene(*this, _deltaTime);
+        if (m_ScriptExecutionEnabled)
+            PythonScriptEngine::UpdateScene(*this, _deltaTime);
     }
 
     void Scene::Render()
