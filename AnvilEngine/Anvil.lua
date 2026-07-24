@@ -75,12 +75,41 @@ project "AnvilEngine"
         filter "system:macosx"
             architecture "arm64"
 
-            defines
-            {
-                "PLATFORM_APPLE",
-                "PLATFORM_MACOS",
-                --"ANV_RENDER_API_METAL"
-            }
+            local pythonIncludes = os.outputof("python3-config --includes")
+            local pythonLinkFlags = os.outputof("python3-config --embed --ldflags")
+
+            if pythonIncludes ~= nil and pythonIncludes ~= "" and
+               pythonLinkFlags ~= nil and pythonLinkFlags ~= "" then
+                defines
+                {
+                    "PLATFORM_APPLE",
+                    "PLATFORM_MACOS",
+                    "ANV_ENABLE_PYTHON"
+                }
+
+                buildoptions
+                {
+                    "-fobjc-arc",
+                    pythonIncludes
+                }
+
+                linkoptions
+                {
+                    pythonLinkFlags
+                }
+            else
+                print("Warning: python3-config was not found; Python scripting will be disabled.")
+                defines
+                {
+                    "PLATFORM_APPLE",
+                    "PLATFORM_MACOS"
+                }
+
+                buildoptions
+                {
+                    "-fobjc-arc"
+                }
+            end
 
             files
             {
@@ -108,11 +137,6 @@ project "AnvilEngine"
                 "IOKit.framework",
                 "CoreVideo.framework",
                 "CoreFoundation.framework"
-            }
-
-            buildoptions
-            {
-                "-fobjc-arc"
             }
 
 
