@@ -1,6 +1,7 @@
 #include "Anvil.h"
 #include "Entry.h"
 #include "Editor/EditorLayer.h"
+#include "Editor/ScriptInspectorLayer.h"
 
 #include <filesystem>
 
@@ -22,7 +23,10 @@ public:
                 : std::filesystem::path(m_Settings.projectDir);
 
         anv::PythonScriptEngine::Initialize(projectDirectory);
-        App::PushOverlay(new EditorLayer());
+
+        auto* editorLayer = new EditorLayer();
+        App::PushOverlay(editorLayer);
+        App::PushOverlay(new ScriptInspectorLayer(editorLayer));
     }
 
     inline void OnUpdate() override
