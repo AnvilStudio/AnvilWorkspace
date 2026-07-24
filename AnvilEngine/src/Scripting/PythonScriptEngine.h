@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <string>
+#include <string_view>
 
 #include "../vendor/entt/single_include/entt/entt.hpp"
 
