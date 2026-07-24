@@ -6,6 +6,9 @@
 #include "Windows/AssetRegistry.h"
 #include "Windows/ConsolePanel.h"
 
+#include <algorithm>
+#include <cctype>
+
 struct Windows
 {
     bool showAssetRegistry = true;
