@@ -29,6 +29,7 @@ namespace anv
         std::string GetPath() { return m_Path; }
         _shared<Camera2D> GetMainCamera() { return m_MainCamera; }
         entt::registry& Registry() { return m_Registry; }
+        const entt::registry& Registry() const { return m_Registry; }
 
         void SetCameraInputEnabled(bool enabled)
         {
@@ -57,6 +58,12 @@ namespace anv
         }
 
         template<typename comp>
+        const comp& GetComponent(entt::entity _entity) const
+        {
+            return m_Registry.get<comp>(_entity);
+        }
+
+        template<typename comp>
         void RemoveComponent(entt::entity _entity)
         {
             if (!m_Registry.valid(_entity))
@@ -69,7 +76,7 @@ namespace anv
         }
 
         template<typename comp>
-        bool HasComponent(entt::entity _entity)
+        bool HasComponent(entt::entity _entity) const
         {
             if (!m_Registry.valid(_entity))
                 return false;
@@ -110,4 +117,4 @@ namespace anv
         if (s == "3D" || s == "CTX_3D") { out = SceneContext::CTX_3D; return true; }
         return false;
     }
-}
+} // namespace anv
