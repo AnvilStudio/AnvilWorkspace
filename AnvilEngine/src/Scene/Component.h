@@ -2,6 +2,7 @@
 #include "../Core/Reference.h"
 #include "../Core/Uuid.h"
 #include "../Render/Camera.h"
+#include "../Scripting/ScriptTypes.h"
 #include "../Util/Serialize/Serializer.h"
 #include "../vendor/entt/single_include/entt/entt.hpp"
 #include <glm/glm.hpp>
@@ -60,8 +61,6 @@ namespace anv
         });
     }
 
-    // ========================
-
     namespace Component
     {
         struct Tag
@@ -95,10 +94,7 @@ namespace anv
             glm::vec2 scale{1.0f};
             float rotation = 0.f;
 
-            Transform2d()
-            {
-
-            }
+            Transform2d() = default;
 
             Transform2d(glm::vec2 _pos, float _rot, glm::vec2 _scale)
                 : position(_pos), rotation(_rot), scale(_scale)
@@ -109,10 +105,8 @@ namespace anv
             {
                 _ser.Field("PositionX", position.x);
                 _ser.Field("PositionY", position.y);
-
                 _ser.Field("ScaleX", scale.x);
                 _ser.Field("ScaleY", scale.y);
-
                 _ser.Field("Rotation", rotation);
             }
 
@@ -120,10 +114,8 @@ namespace anv
             {
                 _ser.Field("PositionX", position.x);
                 _ser.Field("PositionY", position.y);
-
                 _ser.Field("ScaleX", scale.x);
                 _ser.Field("ScaleY", scale.y);
-
                 _ser.Field("Rotation", rotation);
             }
         };
@@ -131,7 +123,7 @@ namespace anv
         struct SpriteRenderer
         {
             uuid::AssetUUID texture{};
-            glm::vec4 color{ 1, 1, 1, 1 };
+            glm::vec4 color{1, 1, 1, 1};
             int drawLayer = 0;
 
             void Serialize(Serializer& _ser)
@@ -152,6 +144,52 @@ namespace anv
                 _ser.Field("ColorB", color.z);
                 _ser.Field("ColorA", color.w);
                 _ser.Field("DrawLayer", drawLayer);
+            }
+        };
+
+        /**
+         * @brief Attaches a Python Script subclass to an entity.
+         *
+         * modulePath is relative to the project's Scripts directory. className
+         * identifies the class derived from anvil.Script. Reflected annotation
+         * values are stored in fields and restored when the scene is loaded or
+         * the module is hot reloaded.
+         */
+        struct Script
+        {
+            std::string modulePath;
+            std::string className;
+            bool enabled = true;
+            ScriptFieldMap fields;
+
+            void Serialize(Serializer& _ser)
+            {
+                _ser.Field("Module", modulePath);
+                _ser.Field("Class", className);
+                _ser.Field("Enabled", enabled);
+
+                for (auto& [name, field] : fields)
+                {
+                    _ser.ObjectKeyed("Fields", name, [&]()
+                    {
+                        field.Serialize(_ser);
+                    });
+                }
+            }
+
+            void Deserialize(Serializer& _ser)
+            {
+                _ser.FieldOr<std::string>("Module", modulePath, "");
+                _ser.FieldOr<std::string>("Class", className, "");
+                _ser.FieldOr<bool>("Enabled", enabled, true);
+                fields.clear();
+
+                _ser.ForEachTable("Fields", [&](const std::string& name)
+                {
+                    ScriptField field;
+                    field.Deserialize(_ser);
+                    fields.emplace(name, std::move(field));
+                });
             }
         };
 
