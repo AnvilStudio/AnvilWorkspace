@@ -3,6 +3,8 @@
 #include <Anvil.h>
 #include "CodeEditor.h"
 
+#include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <functional>
 #include <string>
@@ -65,6 +67,39 @@ private:
     std::vector<Entry> m_Entries;
     OpenFileCallback m_OpenFileCallback = [](const std::filesystem::path& _path)
     {
+        std::string extension = _path.extension().string();
+        std::transform(
+            extension.begin(),
+            extension.end(),
+            extension.begin(),
+            [](unsigned char _character)
+            {
+                return static_cast<char>(std::tolower(_character));
+            });
+
+        if (extension == ".ascn")
+        {
+            auto* app = anv::App::GetInstance();
+            auto* sceneManager = app ? app->GetSceneManager() : nullptr;
+            if (!sceneManager)
+            {
+                ANV_LOG_ERROR("Unable to open scene '%s': scene manager is unavailable.", _path.string().c_str());
+                return;
+            }
+
+            std::error_code error;
+            const bool isEmpty = std::filesystem::exists(_path, error) &&
+                !error &&
+                std::filesystem::file_size(_path, error) == 0;
+
+            if (isEmpty)
+                sceneManager->CreateScene(_path);
+            else
+                sceneManager->OpenScene(_path);
+
+            return;
+        }
+
         CodeEditorPanel::OpenInActiveEditor(_path);
     };
 
