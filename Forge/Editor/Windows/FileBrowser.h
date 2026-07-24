@@ -80,7 +80,7 @@ private:
         if (extension == ".ascn")
         {
             auto* app = anv::App::GetInstance();
-            auto* sceneManager = app ? app->GetSceneManager() : nullptr;
+            auto sceneManager = app ? app->GetSceneManager() : nullptr;
             if (!sceneManager)
             {
                 ANV_LOG_ERROR("Unable to open scene '%s': scene manager is unavailable.", _path.string().c_str());
