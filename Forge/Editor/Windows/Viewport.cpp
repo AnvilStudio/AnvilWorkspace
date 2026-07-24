@@ -82,7 +82,7 @@ void Viewport::Draw()
                 ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
             {
                 const auto* pathData = static_cast<const char*>(payload->Data);
-                const std::filesystem::path assetPath(pathData);
+                const std::filesystem::path assetPath(pathData ? pathData : "");
 
                 if (scene && IsTextureFile(assetPath))
                 {
@@ -96,6 +96,7 @@ void Viewport::Draw()
                         auto& sprite =
                             scene->AddComponent<anv::Component::SpriteRenderer>(entity);
                         sprite.texture = texture->GetAssetID();
+                        scene->Save();
                     }
                 }
             }
