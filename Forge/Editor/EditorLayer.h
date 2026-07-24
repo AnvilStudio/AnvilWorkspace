@@ -36,6 +36,7 @@ public:
 
     entt::entity GetSelectedEntity() const { return m_SelectedEntity; }
     SceneState GetSceneState() const { return m_SceneState; }
+    void ClearSelection() { m_SelectedEntity = entt::null; }
 
 private:
     void begin_dock_space();
