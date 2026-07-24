@@ -38,7 +38,7 @@ void PlaySessionLayer::OnDetach()
 
 void PlaySessionLayer::begin_play_session()
 {
-    auto* sceneManager = App::GetInstance()->GetSceneManager();
+    auto sceneManager = App::GetInstance()->GetSceneManager();
     Ref<Scene> scene = sceneManager ? sceneManager->GetActive() : nullptr;
     if (!scene)
         return;
@@ -86,7 +86,7 @@ void PlaySessionLayer::begin_play_session()
 
 void PlaySessionLayer::end_play_session()
 {
-    auto* sceneManager = App::GetInstance()->GetSceneManager();
+    auto sceneManager = App::GetInstance()->GetSceneManager();
     Ref<Scene> scene = sceneManager ? sceneManager->GetActive() : nullptr;
 
     if (scene)
