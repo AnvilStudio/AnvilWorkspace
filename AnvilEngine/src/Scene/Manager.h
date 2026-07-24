@@ -25,6 +25,20 @@ namespace anv
         void SetActive(uuid::AssetUUID _sceneUUID);
 
         /**
+         * @brief Opens an existing scene asset and makes it active.
+         *
+         * A scene already present in the registry is reused. The previous active
+         * scene is saved before switching. When _createIfMissing is true, an empty
+         * scene asset is created when the target file does not yet contain data.
+         */
+        Ref<Scene> OpenScene(
+            const std::filesystem::path& _path,
+            bool _createIfMissing = false);
+
+        /** @brief Creates a new scene asset at _path and makes it active. */
+        Ref<Scene> CreateScene(const std::filesystem::path& _path);
+
+        /**
          * @brief Replaces the active in-memory scene with a freshly loaded copy.
          *
          * The current scene path is preserved. Runtime script instances are shut
