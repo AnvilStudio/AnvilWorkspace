@@ -13,7 +13,7 @@ struct Windows
 {
     bool showAssetRegistry = true;
     bool showStats = true;
-    bool showCodeEditor = true;
+    bool showDevNotes = true;
     bool showConsole = true;
 };
 
@@ -54,7 +54,7 @@ private:
     SceneState m_SceneState = SceneState::Edit;
 
     Viewport m_Viewport;
-    CodeEditorPanel m_CodeEditor;
+    CodeEditorPanel m_DevNotes;
     FileBrowser m_FileBrowser;
     AssetRegistryPanel m_AssetRegistryPanel;
     anv::ConsolePanel m_Console;
