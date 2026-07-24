@@ -10,5 +10,6 @@
 #include "../src/Asset/AssetTypes/Texture.h"
 #include "../src/Scene/Component.h"
 #include "../src/Scene/Scene.h"
+#include "../src/Scripting/PythonScriptEngine.h"
 #include "../vendor/imgui/misc/cpp/imgui_stdlib.h"
 #include "../src/Util/AnvLog/AnvLog.h"
