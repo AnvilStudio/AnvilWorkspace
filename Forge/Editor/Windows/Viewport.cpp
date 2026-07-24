@@ -1,19 +1,20 @@
 #include "Viewport.h"
+
 #include <algorithm>
 #include <cctype>
 
 namespace
 {
-    bool IsTextureFile(const std::filesystem::path& path)
+    bool IsTextureFile(const std::filesystem::path& _path)
     {
-        std::string extension = path.extension().string();
+        std::string extension = _path.extension().string();
         std::transform(
             extension.begin(),
             extension.end(),
             extension.begin(),
-            [](unsigned char character)
+            [](unsigned char _character)
             {
-                return static_cast<char>(std::tolower(character));
+                return static_cast<char>(std::tolower(_character));
             });
 
         return extension == ".png" ||
@@ -32,7 +33,9 @@ Viewport::Viewport()
         300,
         175);
 
-    m_Camera = anv::App::GetInstance()->GetSceneManager()->GetActive()->GetMainCamera();
+    auto sceneManager = anv::App::GetInstance()->GetSceneManager();
+    auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
+    m_Camera = scene ? scene->GetMainCamera() : nullptr;
 }
 
 void Viewport::Draw()
@@ -40,9 +43,21 @@ void Viewport::Draw()
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::Begin("Viewport");
 
-    auto scene = anv::App::GetInstance()->GetSceneManager()->GetActive();
+    auto sceneManager = anv::App::GetInstance()->GetSceneManager();
+    auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
+
     if (scene)
     {
+        auto activeCamera = scene->GetMainCamera();
+        if (activeCamera != m_Camera)
+        {
+            m_Camera = activeCamera;
+
+            const ImVec2 currentSize = ImGui::GetContentRegionAvail();
+            if (m_Camera && currentSize.x > 0.0f && currentSize.y > 0.0f)
+                m_Camera->SetAspectRatio(currentSize.x / currentSize.y);
+        }
+
         scene->SetCameraInputEnabled(ImGui::IsWindowFocused(
             ImGuiFocusedFlags_RootAndChildWindows));
     }
@@ -68,7 +83,9 @@ void Viewport::Draw()
         m_ViewportTarget->Resize(targetWidth, targetHeight);
         m_LastTargetWidth = targetWidth;
         m_LastTargetHeight = targetHeight;
-        m_Camera->SetAspectRatio(viewportSize.x / viewportSize.y);
+
+        if (m_Camera)
+            m_Camera->SetAspectRatio(viewportSize.x / viewportSize.y);
     }
 
     if (validSize && m_ViewportTarget)
