@@ -3,6 +3,32 @@
 #include "Core/App.h"
 #include "SceneData.h"
 
+#include <system_error>
+
+namespace
+{
+    std::filesystem::path NormalizeScenePath(const std::filesystem::path& _path)
+    {
+        if (_path.empty())
+            return {};
+
+        std::filesystem::path path = _path;
+        const std::string pathString = path.string();
+        if (!pathString.empty() && pathString.front() == '@')
+            path = anv::App::GetInstance()->GetFS().ResolveKey(pathString);
+
+        std::error_code error;
+        std::filesystem::path normalized =
+            std::filesystem::weakly_canonical(path, error);
+        if (!error)
+            return normalized;
+
+        error.clear();
+        normalized = std::filesystem::absolute(path, error);
+        return error ? path : normalized;
+    }
+}
+
 namespace anv
 {
     SceneManager::SceneManager()
@@ -38,21 +64,15 @@ namespace anv
 
     Ref<Scene> SceneManager::Register(std::string _path)
     {
-        auto& fs = App::GetInstance()->GetFS();
-
-        std::filesystem::path newPath;
-        if (_path[0] == '@')
+        const std::filesystem::path newPath = NormalizeScenePath(_path);
+        if (newPath.empty())
         {
-            newPath = fs.ResolveKey(_path);
-        }
-        else
-        {
-            ANV_LOG_WARN("Scene path %s did not match with any file system mounts!", _path.c_str());
-            newPath = std::filesystem::path(_path);
+            ANV_LOG_ERROR("Cannot register a scene with an empty path.");
+            return nullptr;
         }
 
         Ref<Scene> scene = Ref<Scene>::Create(newPath);
-        m_Registry.emplace(scene->m_UUID, scene);
+        m_Registry[scene->m_UUID] = scene;
 
         // If no active scene, set it.
         if (m_Active.uuid.empty())
@@ -63,7 +83,10 @@ namespace anv
 
     void SceneManager::Register(Ref<Scene> _scene)
     {
-        m_Registry.emplace(_scene->GetUUID(), _scene);
+        if (!_scene)
+            return;
+
+        m_Registry[_scene->GetUUID()] = _scene;
     }
 
     void SceneManager::SetActive(uuid::AssetUUID _sceneUUID)
@@ -73,6 +96,107 @@ namespace anv
             "Scene must be registered with the scene manager in order to be set as the active scene")
 
         m_Active = _sceneUUID;
+    }
+
+    Ref<Scene> SceneManager::OpenScene(
+        const std::filesystem::path& _path,
+        bool _createIfMissing)
+    {
+        const std::filesystem::path scenePath = NormalizeScenePath(_path);
+        if (scenePath.empty())
+        {
+            ANV_LOG_ERROR("Cannot open a scene with an empty path.");
+            return nullptr;
+        }
+
+        if (scenePath.extension() != ".ascn")
+        {
+            ANV_LOG_ERROR("Scene '%s' does not use the .ascn extension.", scenePath.string().c_str());
+            return nullptr;
+        }
+
+        std::error_code error;
+        const bool exists = std::filesystem::exists(scenePath, error);
+        if (error)
+        {
+            ANV_LOG_ERROR("Unable to inspect scene '%s': %s", scenePath.string().c_str(), error.message().c_str());
+            return nullptr;
+        }
+
+        if (!exists && !_createIfMissing)
+        {
+            ANV_LOG_ERROR("Scene '%s' does not exist.", scenePath.string().c_str());
+            return nullptr;
+        }
+
+        for (auto& [id, registeredScene] : m_Registry)
+        {
+            if (!registeredScene)
+                continue;
+
+            if (NormalizeScenePath(registeredScene->GetPath()) == scenePath)
+            {
+                Ref<Scene> current = GetActive();
+                if (current && current != registeredScene)
+                {
+                    current->SetScriptExecutionEnabled(false);
+                    current->Save();
+                }
+
+                m_Active = id;
+                ANV_LOG_INFO("Activated scene '%s'.", scenePath.string().c_str());
+                return registeredScene;
+            }
+        }
+
+        Ref<Scene> current = GetActive();
+        if (current)
+        {
+            current->SetScriptExecutionEnabled(false);
+            current->Save();
+        }
+
+        if (!exists)
+        {
+            std::filesystem::create_directories(scenePath.parent_path(), error);
+            if (error)
+            {
+                ANV_LOG_ERROR("Unable to create scene directory '%s': %s", scenePath.parent_path().string().c_str(), error.message().c_str());
+                return nullptr;
+            }
+        }
+
+        Ref<Scene> scene = Ref<Scene>::Create(scenePath);
+        if (!scene)
+            return nullptr;
+
+        m_Registry[scene->GetUUID()] = scene;
+        m_Active = scene->GetUUID();
+
+        error.clear();
+        const bool emptyFile = exists && std::filesystem::file_size(scenePath, error) == 0;
+        if (!exists || (!error && emptyFile))
+            scene->Save();
+
+        ANV_LOG_INFO("Opened scene '%s'.", scenePath.string().c_str());
+        return scene;
+    }
+
+    Ref<Scene> SceneManager::CreateScene(const std::filesystem::path& _path)
+    {
+        const std::filesystem::path scenePath = NormalizeScenePath(_path);
+        if (scenePath.empty())
+            return nullptr;
+
+        std::error_code error;
+        if (std::filesystem::exists(scenePath, error) &&
+            std::filesystem::file_size(scenePath, error) > 0)
+        {
+            ANV_LOG_ERROR("Cannot create scene '%s' because it already exists.", scenePath.string().c_str());
+            return nullptr;
+        }
+
+        return OpenScene(scenePath, true);
     }
 
     Ref<Scene> SceneManager::ReloadActive()
