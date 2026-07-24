@@ -2,6 +2,7 @@
 #include "Entry.h"
 #include "Editor/EditorLayer.h"
 #include "Editor/InspectorExtensionLayer.h"
+#include "Editor/PlaySessionLayer.h"
 
 #include <filesystem>
 
@@ -30,6 +31,9 @@ public:
         // Registered after EditorLayer so the Files panel creates its current
         // drag/drop payload before the Inspector accepts it.
         App::PushOverlay(new InspectorExtensionLayer(editorLayer));
+
+        // Tracks Edit/Play transitions and restores the edit scene on Stop.
+        App::PushOverlay(new PlaySessionLayer(editorLayer));
     }
 
     inline void OnUpdate() override
