@@ -1,46 +1,45 @@
 #include "Anvil.h"
 #include "Entry.h"
 #include "Editor/EditorLayer.h"
-#include "Util/Time/Time.h"
 
 #include <filesystem>
 
 class Forge : public anv::App
 {
 public:
+    Forge(int arg_c, char* arg_v[])
+        : App(arg_c, arg_v)
+    {
+    }
 
-	Forge(int arg_c, char* arg_v[])
-		: App(arg_c, arg_v)
-	{
-	}
+    inline void OnSetup() override
+    {
+        ANV_LOG_INFO("hello from forge!");
 
-	inline void OnSetup() override
-	{
-		ANV_LOG_INFO("hello from forge!");
+        const std::filesystem::path projectDirectory =
+            m_Settings.projectDir.empty()
+                ? std::filesystem::path(m_Settings.projectPath).parent_path()
+                : std::filesystem::path(m_Settings.projectDir);
 
-		const std::filesystem::path projectDirectory =
-			m_Settings.projectDir.empty()
-				? std::filesystem::path(m_Settings.projectPath).parent_path()
-				: std::filesystem::path(m_Settings.projectDir);
+        anv::PythonScriptEngine::Initialize(projectDirectory);
+        App::PushOverlay(new EditorLayer());
+    }
 
-		anv::PythonScriptEngine::Initialize(projectDirectory);
-		App::PushOverlay(new EditorLayer());
-	}
+    inline void OnUpdate() override
+    {
+        // Entity scripts are updated by Scene::OnUpdate so each scene controls
+        // the lifecycle and timing of its own script instances.
+    }
 
-	inline void OnUpdate() override
-	{
-		anv::PythonScriptEngine::Update(anv::Time::DeltaTime());
-	}
+    inline void OnDestroy() override
+    {
+        anv::PythonScriptEngine::Shutdown();
+    }
 
-	inline void OnDestroy() override
-	{
-		anv::PythonScriptEngine::Shutdown();
-	}
-
-	friend class EditorLayer;
+    friend class EditorLayer;
 };
 
 anv::App* CreateApp(int arg_c, char* arg_v[])
 {
-	return new Forge(arg_c, arg_v);
+    return new Forge(arg_c, arg_v);
 }
