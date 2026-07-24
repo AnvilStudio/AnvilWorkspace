@@ -50,16 +50,13 @@ namespace anv
      *
      * Ref owns one intrusive reference to its object. Copying a Ref increments
      * the object's counter, moving transfers ownership, and destruction releases
-     * the reference. The object deletes itself when the final Ref is released.
+     * the reference. The object is deleted when the final Ref is released.
      *
      * @tparam T RefCounter-derived object type.
      */
     template<typename T>
     class Ref
     {
-        static_assert(std::is_base_of_v<RefCounter, T>,
-                      "Ref<T> requires T to derive from RefCounter");
-
     public:
         Ref() = default;
         Ref(std::nullptr_t) {}
@@ -71,6 +68,8 @@ namespace anv
         Ref(T* _instance)
             : m_Instance(_instance)
         {
+            static_assert(std::is_base_of_v<RefCounter, T>,
+                          "Ref<T> requires T to derive from RefCounter");
             inc_ref();
         }
 
@@ -102,6 +101,19 @@ namespace anv
             static_assert(std::is_convertible_v<T2*, T*>,
                           "Ref conversion requires compatible pointer types");
             _other.m_Instance = nullptr;
+        }
+
+        /**
+         * @brief Creates a non-retaining alias to an existing Ref.
+         *
+         * @warning This helper intentionally does not increment the object's
+         * reference count. The returned Ref must never outlive an owning Ref.
+         */
+        static Ref CopyWithoutIncrement(const Ref& _other)
+        {
+            Ref result;
+            result.m_Instance = _other.m_Instance;
+            return result;
         }
 
         ~Ref()
@@ -162,7 +174,7 @@ namespace anv
             return *this;
         }
 
-        explicit operator bool() const { return m_Instance != nullptr; }
+        operator bool() const { return m_Instance != nullptr; }
 
         T* operator->() { return m_Instance; }
         const T* operator->() const { return m_Instance; }
