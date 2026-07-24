@@ -38,6 +38,8 @@ namespace anv
                 m_CameraController->SetInputEnabled(enabled);
         }
 
+        void SetScriptExecutionEnabled(bool _enabled);
+        bool IsScriptExecutionEnabled() const { return m_ScriptExecutionEnabled; }
 
         entt::entity CreateEntity (std::string _tag);
         entt::entity RegisterEntity(std::string _tag, uuid::EntityUUID _uuid);
@@ -89,6 +91,7 @@ namespace anv
 
     protected:
         bool m_HasShutdown = false;
+        bool m_ScriptExecutionEnabled = false;
         std::string m_Name;
         SceneContext     m_Context;
         uuid::AssetUUID m_UUID;
