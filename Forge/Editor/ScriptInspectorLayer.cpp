@@ -1,5 +1,6 @@
 #include "ScriptInspectorLayer.h"
 
+#include "EditorHelpers.h"
 #include "EditorLayer.h"
 
 #include <algorithm>
@@ -35,6 +36,20 @@ namespace
         return std::string(first, last);
     }
 
+    std::string to_lower(std::string _value)
+    {
+        std::transform(
+            _value.begin(),
+            _value.end(),
+            _value.begin(),
+            [](unsigned char _character)
+            {
+                return static_cast<char>(std::tolower(_character));
+            });
+
+        return _value;
+    }
+
     bool input_string(const char* _label, std::string& _value)
     {
         char buffer[512]{};
@@ -45,6 +60,74 @@ namespace
 
         _value = buffer;
         return true;
+    }
+
+    bool is_texture_path(const std::filesystem::path& _path)
+    {
+        const std::string extension = to_lower(_path.extension().string());
+        return extension == ".png" ||
+               extension == ".jpg" ||
+               extension == ".jpeg" ||
+               extension == ".bmp" ||
+               extension == ".tga";
+    }
+
+    void draw_inspector_texture_drop_target(
+        const Ref<Scene>& _scene,
+        entt::entity _entity)
+    {
+        if (!_scene->HasComponent<Component::SpriteRenderer>(_entity))
+            return;
+
+        const ImGuiPayload* activePayload = ImGui::GetDragDropPayload();
+        if (!activePayload || !activePayload->IsDataType("ANV_ASSET_PATH"))
+            return;
+
+        const ImVec2 previousCursor = ImGui::GetCursorScreenPos();
+        const ImVec2 windowPosition = ImGui::GetWindowPos();
+        const ImVec2 windowSize = ImGui::GetWindowSize();
+
+        ImGui::SetCursorScreenPos(windowPosition);
+        ImGui::InvisibleButton(
+            "##InspectorTextureDropTarget",
+            windowSize,
+            ImGuiButtonFlags_AllowOverlap);
+
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload* payload =
+                    ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
+            {
+                const char* pathData = static_cast<const char*>(payload->Data);
+                const std::filesystem::path texturePath(pathData ? pathData : "");
+
+                if (is_texture_path(texturePath))
+                {
+                    auto assetManager = App::GetInstance()->GetAssetManager();
+                    Ref<Texture> texture = assetManager
+                        ? assetManager->GetOrCreateTexture(texturePath)
+                        : nullptr;
+
+                    if (texture && texture->IsGPUReady())
+                    {
+                        auto& sprite =
+                            _scene->GetComponent<Component::SpriteRenderer>(_entity);
+                        sprite.texture = texture->GetAssetID();
+                        _scene->Save();
+                    }
+                    else
+                    {
+                        ANV_LOG_ERROR(
+                            "Failed to assign texture to SpriteRenderer: %s",
+                            texturePath.string().c_str());
+                    }
+                }
+            }
+
+            ImGui::EndDragDropTarget();
+        }
+
+        ImGui::SetCursorScreenPos(previousCursor);
     }
 }
 
@@ -70,15 +153,30 @@ void ScriptInspectorLayer::OnImGuiRender()
         return;
 
     ImGui::Begin("Inspector");
-    ImGui::Separator();
-
-    draw_add_component_menu(scene, entity);
 
     if (scene->HasComponent<Component::Script>(entity))
     {
-        auto& script = scene->GetComponent<Component::Script>(entity);
-        draw_script_component(scene, entity, script);
+        const std::string modulePath =
+            scene->GetComponent<Component::Script>(entity).modulePath;
+
+        draw_component<Component::Script>(
+            "Python Script",
+            entity,
+            scene,
+            [&](Component::Script& _script)
+            {
+                draw_script_component(scene, entity, _script);
+            });
+
+        if (!scene->HasComponent<Component::Script>(entity))
+        {
+            PythonScriptEngine::RequestReload(modulePath);
+            scene->Save();
+        }
     }
+
+    draw_add_component_menu(scene, entity);
+    draw_inspector_texture_drop_target(scene, entity);
 
     ImGui::End();
 }
@@ -127,69 +225,52 @@ void ScriptInspectorLayer::draw_script_component(
     entt::entity _entity,
     Component::Script& _script)
 {
-    if (!ImGui::CollapsingHeader(
-            "Python Script",
-            ImGuiTreeNodeFlags_DefaultOpen))
-    {
-        return;
-    }
-
+    (void)_entity;
     bool changed = false;
 
-    if (ImGui::Checkbox("Enabled", &_script.enabled))
-        changed = true;
-
-    ImGui::SameLine();
-    if (ImGui::Button("Reload") && !_script.modulePath.empty())
-        PythonScriptEngine::RequestReload(_script.modulePath);
-
-    ImGui::SameLine();
-    if (ImGui::Button("Refresh Scripts"))
-        refresh_script_modules(_scene);
-
-    if (m_Modules.empty())
-        refresh_script_modules(_scene);
-
-    const char* modulePreview = _script.modulePath.empty()
-        ? "Select a Python module"
-        : _script.modulePath.c_str();
-
-    if (ImGui::BeginCombo("Module", modulePreview))
+    if (ImGui::BeginTable(
+            "PythonScriptProps",
+            2,
+            ImGuiTableFlags_SizingStretchProp))
     {
-        for (const ScriptModuleInfo& module : m_Modules)
+        ImGui::TableSetupColumn(
+            "Label",
+            ImGuiTableColumnFlags_WidthFixed,
+            90.0f);
+        ImGui::TableSetupColumn(
+            "Value",
+            ImGuiTableColumnFlags_WidthStretch);
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Enabled");
+        ImGui::TableSetColumnIndex(1);
+        changed |= ImGui::Checkbox("##ScriptEnabled", &_script.enabled);
+
+        if (m_Modules.empty())
+            refresh_script_modules(_scene);
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Module");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::SetNextItemWidth(-1.0f);
+
+        const char* modulePreview = _script.modulePath.empty()
+            ? "Select a Python module"
+            : _script.modulePath.c_str();
+
+        if (ImGui::BeginCombo("##ScriptModule", modulePreview))
         {
-            const bool selected = module.relativePath == _script.modulePath;
-            if (ImGui::Selectable(module.relativePath.c_str(), selected))
+            for (const ScriptModuleInfo& module : m_Modules)
             {
-                _script.modulePath = module.relativePath;
-                _script.className.clear();
-                _script.fields.clear();
-                changed = true;
-            }
-
-            if (selected)
-                ImGui::SetItemDefaultFocus();
-        }
-
-        ImGui::EndCombo();
-    }
-
-    const ScriptModuleInfo* selectedModule = find_module(_script.modulePath);
-    const char* classPreview = _script.className.empty()
-        ? "Select an anvil.Script class"
-        : _script.className.c_str();
-
-    ImGui::BeginDisabled(selectedModule == nullptr);
-    if (ImGui::BeginCombo("Class", classPreview))
-    {
-        if (selectedModule)
-        {
-            for (const std::string& className : selectedModule->classes)
-            {
-                const bool selected = className == _script.className;
-                if (ImGui::Selectable(className.c_str(), selected))
+                const bool selected = module.relativePath == _script.modulePath;
+                if (ImGui::Selectable(module.relativePath.c_str(), selected))
                 {
-                    _script.className = className;
+                    _script.modulePath = module.relativePath;
+                    _script.className.clear();
                     _script.fields.clear();
                     changed = true;
                 }
@@ -197,59 +278,105 @@ void ScriptInspectorLayer::draw_script_component(
                 if (selected)
                     ImGui::SetItemDefaultFocus();
             }
+
+            ImGui::EndCombo();
         }
 
-        ImGui::EndCombo();
-    }
-    ImGui::EndDisabled();
+        const ScriptModuleInfo* selectedModule = find_module(_script.modulePath);
 
-    if (selectedModule && selectedModule->classes.empty())
-        ImGui::TextDisabled("No classes deriving from anvil.Script were found.");
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Class");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::SetNextItemWidth(-1.0f);
 
-    if (!_script.fields.empty())
-    {
-        ImGui::SeparatorText("Fields");
+        const char* classPreview = _script.className.empty()
+            ? "Select an anvil.Script class"
+            : _script.className.c_str();
 
-        std::vector<std::string> fieldNames;
-        fieldNames.reserve(_script.fields.size());
-
-        for (const auto& [name, field] : _script.fields)
+        ImGui::BeginDisabled(selectedModule == nullptr);
+        if (ImGui::BeginCombo("##ScriptClass", classPreview))
         {
-            (void)field;
-            fieldNames.push_back(name);
+            if (selectedModule)
+            {
+                for (const std::string& className : selectedModule->classes)
+                {
+                    const bool selected = className == _script.className;
+                    if (ImGui::Selectable(className.c_str(), selected))
+                    {
+                        _script.className = className;
+                        _script.fields.clear();
+                        changed = true;
+                    }
+
+                    if (selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+            }
+
+            ImGui::EndCombo();
         }
+        ImGui::EndDisabled();
 
-        std::sort(fieldNames.begin(), fieldNames.end());
-
-        for (const std::string& name : fieldNames)
+        if (!_script.fields.empty())
         {
-            ImGui::PushID(name.c_str());
-            changed |= draw_script_field(name, _script.fields.at(name));
-            ImGui::PopID();
+            std::vector<std::string> fieldNames;
+            fieldNames.reserve(_script.fields.size());
+
+            for (const auto& [name, field] : _script.fields)
+            {
+                (void)field;
+                fieldNames.push_back(name);
+            }
+
+            std::sort(fieldNames.begin(), fieldNames.end());
+
+            for (const std::string& name : fieldNames)
+            {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextUnformatted(name.c_str());
+                ImGui::TableSetColumnIndex(1);
+                ImGui::SetNextItemWidth(-1.0f);
+
+                ImGui::PushID(name.c_str());
+                changed |= draw_script_field("##Value", _script.fields.at(name));
+                ImGui::PopID();
+            }
         }
+
+        ImGui::EndTable();
     }
-    else if (!_script.modulePath.empty() && !_script.className.empty())
+
+    if (!_script.modulePath.empty() &&
+        find_module(_script.modulePath) &&
+        find_module(_script.modulePath)->classes.empty())
     {
         ImGui::TextDisabled(
-            "Fields appear after the script instance is created during scene update.");
+            "No classes deriving from anvil.Script were found.");
     }
+
+    if (_script.fields.empty() &&
+        !_script.modulePath.empty() &&
+        !_script.className.empty())
+    {
+        ImGui::TextDisabled(
+            "Fields appear after the script instance is created.");
+    }
+
+    if (ImGui::Button("Reload"))
+        PythonScriptEngine::RequestReload(_script.modulePath);
+
+    ImGui::SameLine();
+    if (ImGui::Button("Refresh Scripts"))
+        refresh_script_modules(_scene);
 
     if (changed)
     {
         _scene->Save();
-
-        if (!_script.modulePath.empty())
-            PythonScriptEngine::RequestReload(_script.modulePath);
-    }
-
-    ImGui::Separator();
-    if (ImGui::Button("Remove Python Script"))
-    {
-        if (!_script.modulePath.empty())
-            PythonScriptEngine::RequestReload(_script.modulePath);
-
-        _scene->RemoveComponent<Component::Script>(_entity);
-        _scene->Save();
+        PythonScriptEngine::RequestReload(_script.modulePath);
     }
 }
 
@@ -455,7 +582,7 @@ bool ScriptInspectorLayer::draw_script_field(
             return input_string(_name.c_str(), _field.value);
 
         default:
-            ImGui::TextDisabled("%s: unsupported field type", _name.c_str());
+            ImGui::TextDisabled("Unsupported field type");
             return false;
     }
 }
