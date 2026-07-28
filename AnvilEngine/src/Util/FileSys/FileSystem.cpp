@@ -4,19 +4,25 @@
 #include <fstream>
 #include <Util/UMacros.h>
 
+#ifdef PLATFORM_APPLE
+#include <mach-o/dyld.h>
+#endif
+
 namespace anv
 {
 
     anv::FileSystem::FileSystem(std::string _rootDir)
-        : m_RootDir(std::move(_rootDir))
-        , m_WorkDir(m_RootDir)
+        : m_RootDir(std::move(_rootDir)), m_WorkDir(m_RootDir)
     {
+        s_ExecDir = GetExecDir();
+        
         std::error_code ec;
         std::filesystem::create_directories(m_RootDir, ec);
 
         // Normalize root/work best-effort
         m_RootDir = std::filesystem::weakly_canonical(m_RootDir, ec);
-        if (ec) m_RootDir = m_RootDir.lexically_normal();
+        if (ec)
+            m_RootDir = m_RootDir.lexically_normal();
         m_WorkDir = m_RootDir;
 
         // Start delete worker
@@ -33,7 +39,7 @@ namespace anv
         PumpDeletes();
     }
 
-    bool anv::FileSystem::SetRoot(const std::string& _newRoot)
+    bool anv::FileSystem::SetRoot(const std::string &_newRoot)
     {
         std::filesystem::path p(_newRoot);
         if (p.is_relative())
@@ -41,13 +47,17 @@ namespace anv
 
         std::error_code ec;
         std::filesystem::create_directories(p, ec);
-        if (ec) return false;
+        if (ec)
+            return false;
 
         auto canon = std::filesystem::weakly_canonical(p, ec);
-        if (ec) canon = p.lexically_normal();
+        if (ec)
+            canon = p.lexically_normal();
 
-        if (!std::filesystem::exists(canon, ec) || ec) return false;
-        if (!std::filesystem::is_directory(canon, ec) || ec) return false;
+        if (!std::filesystem::exists(canon, ec) || ec)
+            return false;
+        if (!std::filesystem::is_directory(canon, ec) || ec)
+            return false;
 
         // Clear state that is tied to the old root
         {
@@ -65,6 +75,35 @@ namespace anv
         m_WorkDir = m_RootDir;
         return true;
     }
+
+#ifdef PLATFORM_APPLE
+    std::filesystem::path FileSystem::GetExecDir()
+    {
+        uint32_t size = 0;
+        _NSGetExecutablePath(nullptr, &size);
+
+        std::vector<char> buffer(size);
+
+        if (_NSGetExecutablePath(buffer.data(), &size) != 0)
+        {
+            ANV_LOG_ERROR("Failed to retrieve MacOS Exec path!")
+            return {};
+        }
+
+        std::error_code ec;
+        auto executable = std::filesystem::canonical(buffer.data(), ec);
+
+        if (ec)
+            return std::filesystem::path(buffer.data()).parent_path();
+
+        return executable.parent_path();
+    }
+#else
+    std::filesystem::path FileSystem::GetExecDir()
+    {
+        ANV_LOG_FATAL("Failed to retrieve exec path, Platform unknown");
+    }
+#endif
 
     std::string FileSystem::GetCwd() const
     {
@@ -86,13 +125,14 @@ namespace anv
         return true;
     }
 
-    bool anv::FileSystem::IsWithinRoot_(const std::filesystem::path& _abs) const
+    bool anv::FileSystem::IsWithinRoot_(const std::filesystem::path &_abs) const
     {
         std::error_code ec;
 
         // Compare via path-relative computation (more robust than string prefix)
         auto rel = std::filesystem::relative(_abs, m_RootDir, ec);
-        if (ec) return false;
+        if (ec)
+            return false;
 
         // If relative() yields something that starts with "..", it escaped the root
         auto it = rel.begin();
@@ -106,7 +146,7 @@ namespace anv
         return true;
     }
 
-    std::filesystem::path FileSystem::ResolveKey(const std::string& _key)
+    std::filesystem::path FileSystem::ResolveKey(const std::string &_key)
     {
         if (_key.empty())
             return {};
@@ -149,7 +189,7 @@ namespace anv
         return resolved;
     }
 
-    bool anv::FileSystem::ResolveSandboxed_(const std::string& _relOrAbs, std::filesystem::path& _outAbs) const
+    bool anv::FileSystem::ResolveSandboxed_(const std::string &_relOrAbs, std::filesystem::path &_outAbs) const
     {
         std::filesystem::path p(_relOrAbs);
 
@@ -160,7 +200,8 @@ namespace anv
         std::error_code ec;
         // weakly_canonical works even if parts don't exist, which is what we want for create ops
         auto canon = std::filesystem::weakly_canonical(p, ec);
-        if (ec) canon = p.lexically_normal();
+        if (ec)
+            canon = p.lexically_normal();
 
         // Enforce sandbox
         if (!IsWithinRoot_(canon))
@@ -170,21 +211,23 @@ namespace anv
         return true;
     }
 
-    bool anv::FileSystem::SwitchDir(const std::string& _dirRelOrAbs)
+    bool anv::FileSystem::SwitchDir(const std::string &_dirRelOrAbs)
     {
         std::filesystem::path abs;
         if (!ResolveSandboxed_(_dirRelOrAbs, abs))
             return false;
 
         std::error_code ec;
-        if (!std::filesystem::exists(abs, ec) || ec) return false;
-        if (!std::filesystem::is_directory(abs, ec) || ec) return false;
+        if (!std::filesystem::exists(abs, ec) || ec)
+            return false;
+        if (!std::filesystem::is_directory(abs, ec) || ec)
+            return false;
 
         m_WorkDir = abs;
         return true;
     }
 
-    bool anv::FileSystem::CreateDir(const std::string& _mkdirRelOrAbs)
+    bool anv::FileSystem::CreateDir(const std::string &_mkdirRelOrAbs)
     {
         std::filesystem::path abs;
         if (!ResolveSandboxed_(_mkdirRelOrAbs, abs))
@@ -201,7 +244,7 @@ namespace anv
         return ok || std::filesystem::exists(abs);
     }
 
-    bool anv::FileSystem::DeleteDir(const std::string& _dltRelOrAbs)
+    bool anv::FileSystem::DeleteDir(const std::string &_dltRelOrAbs)
     {
         std::filesystem::path abs;
         if (!ResolveSandboxed_(_dltRelOrAbs, abs))
@@ -217,7 +260,7 @@ namespace anv
         return removed > 0;
     }
 
-    Ref<File> anv::FileSystem::CreateFile(const std::string& _mkfileRelOrAbs)
+    Ref<File> anv::FileSystem::CreateFile(const std::string &_mkfileRelOrAbs)
     {
         std::filesystem::path abs;
         if (!ResolveSandboxed_(_mkfileRelOrAbs, abs))
@@ -254,7 +297,7 @@ namespace anv
         return f;
     }
 
-    bool anv::FileSystem::DeleteFile(Ref<File>& _dltfile)
+    bool anv::FileSystem::DeleteFile(Ref<File> &_dltfile)
     {
         if (!_dltfile)
             return false;
@@ -277,7 +320,7 @@ namespace anv
         return std::filesystem::path();
     }
 
-    void anv::FileSystem::MountKey(const std::string& _key, const std::string& _dirRelOrAbs)
+    void anv::FileSystem::MountKey(const std::string &_key, const std::string &_dirRelOrAbs)
     {
         if (_key.empty() || _dirRelOrAbs.empty())
         {
@@ -288,13 +331,13 @@ namespace anv
         // 1) Resolve @Key paths into a real path; otherwise just treat as a path
         std::filesystem::path resolved =
             (_dirRelOrAbs[0] == '@')
-            ? ResolveKey(_dirRelOrAbs)
-            : std::filesystem::path(_dirRelOrAbs);
+                ? ResolveKey(_dirRelOrAbs)
+                : std::filesystem::path(_dirRelOrAbs);
 
         if (resolved.empty())
         {
             ANV_LOG_WARN("MountKey: failed to resolve path for key='%s' input='%s'",
-                _key.c_str(), _dirRelOrAbs.c_str());
+                         _key.c_str(), _dirRelOrAbs.c_str());
             return;
         }
 
@@ -310,7 +353,7 @@ namespace anv
             if (!ResolveSandboxed_(resolved.string(), abs))
             {
                 ANV_LOG_WARN("MountKey blocked by sandbox: key='%s' path='%s'",
-                    _key.c_str(), resolved.string().c_str());
+                             _key.c_str(), resolved.string().c_str());
                 return;
             }
         }
@@ -349,7 +392,7 @@ namespace anv
         m_KeyMap[cleanKey] = abs.string();
     }
 
-    std::filesystem::path anv::FileSystem::GetKeyVal(const std::string& _key)
+    std::filesystem::path anv::FileSystem::GetKeyVal(const std::string &_key)
     {
         auto it = m_KeyMap.find(_key);
         if (it == m_KeyMap.end())
@@ -357,8 +400,7 @@ namespace anv
         return it->second;
     }
 
-
-    bool anv::FileSystem::MoveToKey(const std::string& _key)
+    bool anv::FileSystem::MoveToKey(const std::string &_key)
     {
         const std::filesystem::path resolved = ResolveKey(_key);
 
@@ -370,10 +412,13 @@ namespace anv
 
         // Normalize the final directory (optional but recommended)
         abs = std::filesystem::weakly_canonical(abs, ec);
-        if (ec) return false;
+        if (ec)
+            return false;
 
-        if (!std::filesystem::exists(abs, ec) || ec) return false;
-        if (!std::filesystem::is_directory(abs, ec) || ec) return false;
+        if (!std::filesystem::exists(abs, ec) || ec)
+            return false;
+        if (!std::filesystem::is_directory(abs, ec) || ec)
+            return false;
 
         m_WorkDir = abs;
         return true;
@@ -388,13 +433,13 @@ namespace anv
         // TODO: Fix all the ".string()"s
         std::filesystem::path resolved =
             (_dirRelOrAbs.string()[0] == '@')
-            ? ResolveKey(_dirRelOrAbs.string())
-            : std::filesystem::path(_dirRelOrAbs);
+                ? ResolveKey(_dirRelOrAbs.string())
+                : std::filesystem::path(_dirRelOrAbs);
 
         if (resolved.empty())
         {
             ANV_LOG_WARN("MountKey: failed to resolve path for key='%s' input='%s'",
-                resolved.c_str(), _dirRelOrAbs.c_str());
+                         resolved.c_str(), _dirRelOrAbs.c_str());
             return;
         }
 
@@ -422,8 +467,8 @@ namespace anv
 
         // Recursive scan, yielding only regular files
         for (auto it = std::filesystem::recursive_directory_iterator(absDir, ec);
-            it != std::filesystem::recursive_directory_iterator();
-            it.increment(ec))
+             it != std::filesystem::recursive_directory_iterator();
+             it.increment(ec))
         {
             if (ec)
             {
@@ -446,7 +491,7 @@ namespace anv
         }
     }
 
-    void anv::FileSystem::EnqueueDelete_(const Ref<File>& _file)
+    void anv::FileSystem::EnqueueDelete_(const Ref<File> &_file)
     {
         {
             std::scoped_lock lk(m_DeleteMutex);
@@ -463,7 +508,7 @@ namespace anv
             local.swap(m_DeleteQueue);
         }
 
-        for (auto& f : local)
+        for (auto &f : local)
         {
             if (!f || !f->IsDeleteRequested())
                 continue;
@@ -494,9 +539,8 @@ namespace anv
 
             {
                 std::unique_lock lk(m_DeleteMutex);
-                m_DeleteCv.wait(lk, [&] {
-                    return m_StopWorker.load(std::memory_order_acquire) || !m_DeleteQueue.empty();
-                    });
+                m_DeleteCv.wait(lk, [&]
+                                { return m_StopWorker.load(std::memory_order_acquire) || !m_DeleteQueue.empty(); });
 
                 if (m_StopWorker.load(std::memory_order_acquire))
                     break;
