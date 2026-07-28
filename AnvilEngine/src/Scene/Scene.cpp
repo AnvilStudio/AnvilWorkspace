@@ -229,7 +229,7 @@ namespace anv
 
         m_HasShutdown = true;
         PythonScriptEngine::ShutdownScene(*this);
-        Save();
+        //Save();
     }
 
     void Scene::SetScriptExecutionEnabled(bool _enabled)

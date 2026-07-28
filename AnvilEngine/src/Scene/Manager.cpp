@@ -7,7 +7,7 @@
 
 namespace
 {
-    std::filesystem::path NormalizeScenePath(const std::filesystem::path& _path)
+    std::filesystem::path NormalizeScenePath(const std::filesystem::path &_path)
     {
         if (_path.empty())
             return {};
@@ -31,10 +31,8 @@ namespace
 
 namespace anv
 {
-    SceneManager::SceneManager()
-    {
-        ANV_LOG_INFO("Initializing Scene Manager")
-    }
+    SceneManager::SceneManager(){
+        ANV_LOG_INFO("Initializing Scene Manager")}
 
     SceneManager::~SceneManager()
     {
@@ -99,7 +97,7 @@ namespace anv
     }
 
     Ref<Scene> SceneManager::OpenScene(
-        const std::filesystem::path& _path,
+        const std::filesystem::path &_path,
         bool _createIfMissing)
     {
         const std::filesystem::path scenePath = NormalizeScenePath(_path);
@@ -129,7 +127,7 @@ namespace anv
             return nullptr;
         }
 
-        for (auto& [id, registeredScene] : m_Registry)
+        for (auto &[id, registeredScene] : m_Registry)
         {
             if (!registeredScene)
                 continue;
@@ -182,7 +180,7 @@ namespace anv
         return scene;
     }
 
-    Ref<Scene> SceneManager::CreateScene(const std::filesystem::path& _path)
+    Ref<Scene> SceneManager::CreateScene(const std::filesystem::path &_path)
     {
         const std::filesystem::path scenePath = NormalizeScenePath(_path);
         if (scenePath.empty())
@@ -205,25 +203,46 @@ namespace anv
         if (!current)
             return nullptr;
 
-        const std::filesystem::path scenePath = current->GetPath();
+        const std::filesystem::path scenePath =
+            NormalizeScenePath(current->GetPath());
+
         if (scenePath.empty())
         {
-            ANV_LOG_ERROR("Cannot reload the active scene because it has no file path.");
+            ANV_LOG_ERROR(
+                "Cannot reload the active scene because it has no file path.");
+
             return nullptr;
         }
 
         current->SetScriptExecutionEnabled(false);
 
-        const uuid::AssetUUID previousID = m_Active;
-        Ref<Scene> reloaded = Ref<Scene>::Create(scenePath);
+        Ref<Scene> reloaded =
+            Ref<Scene>::Create(scenePath);
+
         if (!reloaded)
+        {
+            ANV_LOG_ERROR(
+                "Failed to reload scene from '%s'.",
+                scenePath.string().c_str());
+
             return nullptr;
+        }
 
+        const uuid::AssetUUID previousID = m_Active;
+        const uuid::AssetUUID reloadedID = reloaded->GetUUID();
+
+        /*
+         * The scene's serialized UUID will usually equal previousID,
+         * but do not rely on that implicitly.
+         */
         m_Registry.erase(previousID);
-        m_Registry[reloaded->GetUUID()] = reloaded;
-        m_Active = reloaded->GetUUID();
+        m_Registry.insert_or_assign(reloadedID, reloaded);
+        m_Active = reloadedID;
 
-        ANV_LOG_INFO("Reloaded active scene from '%s'.", scenePath.string().c_str());
+        ANV_LOG_INFO(
+            "Reloaded active scene from '%s'.",
+            scenePath.string().c_str());
+
         return reloaded;
     }
 
@@ -234,7 +253,7 @@ namespace anv
 
         m_HasShutdown = true;
 
-        for (auto& [uuid, scene] : m_Registry)
+        for (auto &[uuid, scene] : m_Registry)
         {
             if (scene)
                 scene->Shutdown();
