@@ -30,6 +30,12 @@ project "Forge"
         "AnvilEngine"
     }
 
+    postbuildcommands
+    {
+        '{MKDIR} "%{cfg.targetdir}/Anvil"',
+        '{COPYDIR} "%{wks.location}/AnvilEngine/Resources" "%{cfg.targetdir}/Anvil"'
+    }
+
 filter "system:macosx"
     architecture "arm64"
 
