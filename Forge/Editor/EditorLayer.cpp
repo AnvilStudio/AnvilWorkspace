@@ -505,6 +505,13 @@ void EditorLayer::draw_menu_bar()
 
             ImGui::Separator();
 
+            if (ImGui::MenuItem("Reload Scene"))
+            {
+                App::GetInstance()->GetSceneManager()->ReloadActive();
+            }
+
+            ImGui::Separator();
+
             if (ImGui::MenuItem("Exit"))
             {
                 App::GetInstance()->Close();
