@@ -122,6 +122,7 @@ project "AnvilEngine"
                 "./vendor/imgui/backends/imgui_impl_metal.h",
                 "./vendor/imgui/backends/imgui_impl_metal.mm"
             }
+            
             removefiles
             {
                 "./src/Render/Platform/Vulkan/**"
