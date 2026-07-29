@@ -1,8 +1,11 @@
 #pragma once
 
-#include "../src/Core/App.h"
+
 #include "../vendor/imgui/imgui.h"
 #include "../vendor/glm/glm/glm.hpp"
+#include "../vendor/ImGuizmo/src/ImGuizmo.h"
+
+#include "../src/Core/App.h"
 #include "../src/Render/Renderer.h"
 #include "../src/Render/RenderTarget.h"
 #include "../src/Render/Camera.h"

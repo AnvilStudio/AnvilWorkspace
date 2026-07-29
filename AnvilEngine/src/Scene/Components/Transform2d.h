@@ -3,6 +3,7 @@
 #include "../../Util/Serialize/Serializer.h"
 
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace anv::Component
 {
@@ -27,7 +28,42 @@ namespace anv::Component
         {
         }
 
-        void Serialize(Serializer& _serializer)
+        glm::mat4 GetTransform() const
+        {
+            glm::mat4 transform{1.0f};
+
+            transform = glm::translate(
+                transform,
+                glm::vec3(position, 0.0f));
+
+            transform = glm::rotate(
+                transform,
+                glm::radians(rotation),
+                glm::vec3(0.0f, 0.0f, 1.0f));
+
+            transform = glm::scale(
+                transform,
+                glm::vec3(scale, 1.0f));
+
+            return transform;
+        }
+
+        void SetFromMatrix(const glm::mat4 &matrix)
+        {
+            // Translation
+            position.x = matrix[3][0];
+            position.y = matrix[3][1];
+
+            // Scale
+            scale.x = glm::length(glm::vec2(matrix[0]));
+            scale.y = glm::length(glm::vec2(matrix[1]));
+
+            // Rotation (about Z)
+            rotation = glm::degrees(
+                std::atan2(matrix[0][1], matrix[0][0]));
+        }
+
+        void Serialize(Serializer &_serializer)
         {
             _serializer.Field("PositionX", position.x);
             _serializer.Field("PositionY", position.y);
@@ -36,7 +72,7 @@ namespace anv::Component
             _serializer.Field("Rotation", rotation);
         }
 
-        void Deserialize(Serializer& _serializer)
+        void Deserialize(Serializer &_serializer)
         {
             _serializer.Field("PositionX", position.x);
             _serializer.Field("PositionY", position.y);

@@ -32,6 +32,11 @@ namespace anv
         Component::Transform2d& GetTransform() { return m_Transform; }
         float GetAspectRatio() { return m_AspectRatio; }
         float GetZoom() { return m_ZoomLevel; }
+        glm::mat4 GetView() {return m_CameraUBO.View;};
+        glm::mat4 GetProjection() { return m_CameraUBO.Projection; }
+
+        // will always return true for a 2d camera
+        bool IsOrtho() {return true;}
 
         void SetTransform(Component::Transform2d _transform) { m_Transform = _transform; }
         void SetZoom(float _zoom);

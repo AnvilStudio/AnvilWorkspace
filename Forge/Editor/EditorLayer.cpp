@@ -5,12 +5,14 @@
 using namespace anv;
 
 EditorLayer::SceneState EditorLayer::m_SceneState = SceneState::Edit;
+EditorLayer* EditorLayer::m_This = nullptr;
 
 EditorLayer::EditorLayer()
     : anv::Layer("Editor Layer"),
       m_DevNotes(anv::App::GetInstance()->GetFS().GetKeyVal("Assets") / "Notes.toml"),
       m_FileBrowser(anv::App::GetInstance()->GetFS().GetKeyVal("Assets"))
 {
+    m_This = this;
 }
 
 void EditorLayer::OnAttach()

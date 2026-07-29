@@ -37,6 +37,7 @@ public:
 
     entt::entity GetSelectedEntity() const { return m_SelectedEntity; }
     static SceneState GetSceneState() { return m_SceneState; }
+    static EditorLayer* GetInstance() {return m_This;}
     void ClearSelection() { m_SelectedEntity = entt::null; }
 
 private:
@@ -60,6 +61,8 @@ private:
     AssetRegistryPanel m_AssetRegistryPanel;
     GameViewport m_GameViewport;
     anv::ConsolePanel m_Console;
-    
+
+    static EditorLayer* m_This;
+
     Windows m_Windows{false};
 };

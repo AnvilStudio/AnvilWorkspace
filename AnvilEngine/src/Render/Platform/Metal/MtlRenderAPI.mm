@@ -14,8 +14,11 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_metal.h>
 
+#import <ImGuizmo.h>
+
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
+
 
 namespace anv
 {
@@ -320,6 +323,7 @@ namespace anv
         ImGui_ImplMetal_NewFrame(renderPass);
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+        ImGuizmo::BeginFrame();
     }
 
     void MetalRenderAPI::BeginScene(Ref<RenderTarget> renderTarget)

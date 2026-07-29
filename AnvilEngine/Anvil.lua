@@ -28,7 +28,8 @@ project "AnvilEngine"
             "./vendor/imgui/imgui_draw.cpp",
             "./vendor/imgui/imgui_tables.cpp",
             "./vendor/imgui/imgui_widgets.cpp",
-            "./vendor/imgui/misc/cpp/imgui_stdlib.cpp"
+            "./vendor/imgui/misc/cpp/imgui_stdlib.cpp",
+            "./vendor/ImGuizmo/src/ImGuizmo.cpp"
         }
 
         includedirs
@@ -40,6 +41,7 @@ project "AnvilEngine"
             "./vendor/tomlplusplus/include",
             "./vendor/entt/single_include",
             "./vendor/imgui/",
+            "./vendor/ImGuizmo/src",
             --"%{VULKAN_SDK}"
         }
 
@@ -122,7 +124,7 @@ project "AnvilEngine"
                 "./vendor/imgui/backends/imgui_impl_metal.h",
                 "./vendor/imgui/backends/imgui_impl_metal.mm"
             }
-            
+
             removefiles
             {
                 "./src/Render/Platform/Vulkan/**"
