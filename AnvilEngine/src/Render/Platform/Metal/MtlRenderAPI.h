@@ -17,7 +17,7 @@ namespace anv
         void OnShutdown() override;
         void BeginScene() override;
         void BeginScene(Ref<RenderTarget> renderTarget) override;
-        void DrawScene(Ref<RenderTarget> renderTarget) override;
+        void DrawScene(Ref<RenderTarget> renderTarget, _shared<Camera2D> camera) override;
 
         void DrawQuad(
             const glm::vec2& position,
@@ -34,7 +34,7 @@ namespace anv
         void create_sprite_pipeline();
         void initialize_imgui();
         void shutdown_imgui();
-        void encode_quads(void* encoder);
+        void encode_quads(void* encoder, _shared<Camera2D> camera);
 
     private:
         _shared<MetalContext> m_MetalContext = nullptr;

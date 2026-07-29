@@ -194,7 +194,7 @@ namespace anv
         return m_Stats;
     }
 
-    void MetalRenderAPI::encode_quads(void* encoderHandle)
+    void MetalRenderAPI::encode_quads(void* encoderHandle, _shared<Camera2D> camera)
     {
         id<MTLRenderCommandEncoder> encoder =
             (__bridge id<MTLRenderCommandEncoder>)encoderHandle;
@@ -217,7 +217,7 @@ namespace anv
         for (const QuadSubmission& quad : m_QuadQueue)
         {
             MetalSpriteUniforms uniforms{};
-            uniforms.ViewProjection = m_Camera->GetCameraUBO().ViewProjection;
+            uniforms.ViewProjection = camera->GetCameraUBO().ViewProjection;
             uniforms.Model =
                 glm::translate(glm::mat4(1.0f), glm::vec3(quad.Position, 0.0f)) *
                 glm::rotate(glm::mat4(1.0f), glm::radians(quad.Rotation), glm::vec3(0.0f, 0.0f, 1.0f)) *
@@ -246,7 +246,7 @@ namespace anv
         id<MTLCommandBuffer> commandBuffer = (__bridge id<MTLCommandBuffer>)m_CurrentCommandBuffer;
         id<MTLRenderCommandEncoder> encoder = (__bridge id<MTLRenderCommandEncoder>)m_CurrentEncoder;
 
-        encode_quads(m_CurrentEncoder);
+        encode_quads(m_CurrentEncoder, m_Camera);
         ImGui_ImplMetal_RenderDrawData(ImGui::GetDrawData(), commandBuffer, encoder);
         [encoder endEncoding];
         [commandBuffer presentDrawable:drawable];
@@ -327,9 +327,9 @@ namespace anv
         m_CurrentTarget = renderTarget;
     }
 
-    void MetalRenderAPI::DrawScene(Ref<RenderTarget> renderTarget)
+    void MetalRenderAPI::DrawScene(Ref<RenderTarget> renderTarget, _shared<Camera2D> camera)
     {
-        if (!renderTarget || !m_MetalContext || !m_SpritePipeline || !m_Camera)
+        if (!renderTarget || !m_MetalContext || !m_SpritePipeline || !camera)
             return;
 
         Ref<MetalRenderTarget> target = renderTarget.As<MetalRenderTarget>();
@@ -351,7 +351,7 @@ namespace anv
 
         MTLViewport viewport{0.0, 0.0, static_cast<double>(targetTexture.width), static_cast<double>(targetTexture.height), 0.0, 1.0};
         [encoder setViewport:viewport];
-        encode_quads((__bridge void*)encoder);
+        encode_quads((__bridge void*)encoder, camera);
         [encoder endEncoding];
         [commandBuffer commit];
         m_Stats.DrawCalls = static_cast<uint32_t>(m_QuadQueue.size());

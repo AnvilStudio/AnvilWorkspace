@@ -30,7 +30,7 @@ namespace anv
 
 		virtual void BeginScene(Ref<RenderTarget> _renderTarget) override;
 		virtual void BeginScene() override;
-		virtual void DrawScene(Ref<RenderTarget> _renderTarget);
+		virtual void DrawScene(Ref<RenderTarget> _renderTarget, Ref<Camera2D> camera);
 		virtual void DrawQuad(
 			const glm::vec2& position,
 			float rotation, 

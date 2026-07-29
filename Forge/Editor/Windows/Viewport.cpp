@@ -1,5 +1,5 @@
 #include "Viewport.h"
-
+#include "../EditorLayer.h"
 #include <algorithm>
 #include <cctype>
 
@@ -26,6 +26,8 @@ namespace
 }
 
 Viewport::Viewport()
+    : m_Controller(anv::App::GetInstance()->GetInputSystem(),
+     m_EditorCamera)
 {
     m_ViewportTarget = anv::RenderTarget::Create(
         anv::App::GetInstance()->GetMainWindow()->GetContext(),
@@ -33,9 +35,9 @@ Viewport::Viewport()
         300,
         175);
 
-    auto sceneManager = anv::App::GetInstance()->GetSceneManager();
-    auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
-    m_Camera = scene ? scene->GetMainCamera() : nullptr;
+    m_EditorCamera = std::make_shared<anv::Camera2D>();
+
+    anv::Renderer2D::SetCamera(m_EditorCamera);
 }
 
 void Viewport::Draw()
@@ -48,18 +50,18 @@ void Viewport::Draw()
 
     if (scene)
     {
-        auto activeCamera = scene->GetMainCamera();
-        if (activeCamera != m_Camera)
+
+        const ImVec2 currentSize = ImGui::GetContentRegionAvail();
+        if (m_EditorCamera && currentSize.x > 0.0f && currentSize.y > 0.0f)
+            m_EditorCamera->SetAspectRatio(currentSize.x / currentSize.y);
+        
+
+        if (EditorLayer::GetSceneState() == EditorLayer::SceneState::Edit)
         {
-            m_Camera = activeCamera;
-
-            const ImVec2 currentSize = ImGui::GetContentRegionAvail();
-            if (m_Camera && currentSize.x > 0.0f && currentSize.y > 0.0f)
-                m_Camera->SetAspectRatio(currentSize.x / currentSize.y);
+            m_Controller.SetInputEnabled(ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows));
+        } else {
+            m_Controller.SetInputEnabled(false);
         }
-
-        scene->SetCameraInputEnabled(ImGui::IsWindowFocused(
-            ImGuiFocusedFlags_RootAndChildWindows));
     }
 
     ImVec2 viewportSize = ImGui::GetContentRegionAvail();
@@ -84,15 +86,16 @@ void Viewport::Draw()
         m_LastTargetWidth = targetWidth;
         m_LastTargetHeight = targetHeight;
 
-        if (m_Camera)
-            m_Camera->SetAspectRatio(viewportSize.x / viewportSize.y);
+        if (m_EditorCamera)
+            m_EditorCamera->SetAspectRatio(viewportSize.x / viewportSize.y);
     }
 
     if (validSize && m_ViewportTarget)
     {
-        anv::Renderer2D::DrawScene(m_ViewportTarget);
+        anv::Renderer2D::DrawScene(m_ViewportTarget, m_EditorCamera);
         ImGui::Image(m_ViewportTarget->GetImGuiTextureID(), viewportSize);
 
+        // Scene Drag/Drop
         if (ImGui::BeginDragDropTarget())
         {
             if (const ImGuiPayload* payload =

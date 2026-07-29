@@ -203,7 +203,7 @@ namespace anv {
 		BeginScene(m_SwapchainTarget);
 	}
 
-	void VulkanRenderAPI::DrawScene(Ref<RenderTarget> _renderTarget)
+	void VulkanRenderAPI::DrawScene(Ref<RenderTarget> _renderTarget, Ref<Camera2D> camera)
 	{
 		auto pipeline = m_PipelineLibrary.Get("Sprite", _renderTarget);
 		m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext& frame) mutable

@@ -27,9 +27,9 @@ namespace anv
         m_RenderAPI->BeginScene();
     }
 
-    void Renderer2D::DrawScene(Ref<RenderTarget> renderTarget)
+    void Renderer2D::DrawScene(Ref<RenderTarget> renderTarget, _shared<Camera2D> camera)
     {
-        m_RenderAPI->DrawScene(renderTarget);
+        m_RenderAPI->DrawScene(renderTarget, camera);
     }
 
     void Renderer2D::EndScene()

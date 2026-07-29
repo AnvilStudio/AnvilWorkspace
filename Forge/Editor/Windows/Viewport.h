@@ -9,7 +9,8 @@ public:
 
 private:
     anv::Ref<anv::RenderTarget> m_ViewportTarget;
-    anv::_shared<anv::Camera2D> m_Camera;
+    anv::_shared<anv::Camera2D> m_EditorCamera;
+    anv::CameraController       m_Controller;
 
     uint32_t m_LastTargetWidth = 0;
     uint32_t m_LastTargetHeight = 0;

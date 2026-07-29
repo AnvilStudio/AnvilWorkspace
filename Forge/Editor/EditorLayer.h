@@ -5,6 +5,7 @@
 #include "Windows/Viewport.h"
 #include "Windows/AssetRegistry.h"
 #include "Windows/ConsolePanel.h"
+#include "Windows/GameViewport.h"
 
 #include <algorithm>
 #include <cctype>
@@ -13,7 +14,7 @@ struct Windows
 {
     bool showAssetRegistry = true;
     bool showStats = true;
-    bool showDevNotes = true;
+    bool showCodeEditor = true;
     bool showConsole = true;
 };
 
@@ -35,7 +36,7 @@ public:
     void OnImGuiRender() override;
 
     entt::entity GetSelectedEntity() const { return m_SelectedEntity; }
-    SceneState GetSceneState() const { return m_SceneState; }
+    static SceneState GetSceneState() { return m_SceneState; }
     void ClearSelection() { m_SelectedEntity = entt::null; }
 
 private:
@@ -51,12 +52,13 @@ private:
     entt::entity m_SelectedEntity = entt::null;
     entt::entity m_EntityToDelete = entt::null;
 
-    SceneState m_SceneState = SceneState::Edit;
+    static SceneState m_SceneState;
 
     Viewport m_Viewport;
     CodeEditorPanel m_DevNotes;
     FileBrowser m_FileBrowser;
     AssetRegistryPanel m_AssetRegistryPanel;
+    GameViewport m_GameViewport;
     anv::ConsolePanel m_Console;
 
     Windows m_Windows{false};

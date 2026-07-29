@@ -1,19 +1,24 @@
 import anvil
 
-
 class PlayerController(anvil.Script):
     speed: float = 5.0
-    player_name: str = "Player"
-    log_lifecycle: bool = True
 
-    def on_create(self):
-        if self.log_lifecycle:
-            anvil.log(f"Created {self.player_name} ({self.entity_id})")
+    def on_update(self, delta_time):
+        position = self.position
 
-    def on_update(self, delta_time: float):
-        x, y = self.position
-        self.position = (x + self.speed * delta_time, y)
+        if anvil.input.is_key_pressed(anvil.Key.A):
+            position.x -= self.speed * delta_time
 
-    def on_destroy(self):
-        if self.log_lifecycle:
-            anvil.log(f"Destroyed {self.player_name} ({self.entity_id})")
+        if anvil.input.is_key_pressed(anvil.Key.D):
+            position.x += self.speed * delta_time
+
+        if anvil.input.is_key_pressed(anvil.Key.W):
+            position.y += self.speed * delta_time
+
+        if anvil.input.is_key_pressed(anvil.Key.S):
+            position.y -= self.speed * delta_time
+
+        if anvil.input.is_key_pressed(anvil.Key.SPACE):
+            anvil.log("SPACE key is pressed")
+
+        self.position = position

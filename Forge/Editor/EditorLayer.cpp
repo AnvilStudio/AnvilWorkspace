@@ -4,6 +4,8 @@
 
 using namespace anv;
 
+EditorLayer::SceneState EditorLayer::m_SceneState = SceneState::Edit;
+
 EditorLayer::EditorLayer()
     : anv::Layer("Editor Layer"),
       m_DevNotes(anv::App::GetInstance()->GetFS().GetKeyVal("Assets") / "Notes.toml"),
@@ -122,9 +124,10 @@ void EditorLayer::OnImGuiRender()
 
     draw_inspector();
     draw_stats();
-    m_DevNotes.OnImGuiRender(&m_Windows.showDevNotes);
+    m_DevNotes.OnImGuiRender(&m_Windows.showCodeEditor);
     m_AssetRegistryPanel.Draw(&m_Windows.showAssetRegistry);
     m_Console.Draw(&m_Windows.showConsole);
+    m_GameViewport.Draw();
     m_Viewport.Draw(); // viewport drawn last so its auto focused on startup
 }
 
@@ -530,7 +533,7 @@ void EditorLayer::draw_menu_bar()
             ImGui::MenuItem(
                 "Dev Notes",
                 nullptr,
-                &m_Windows.showDevNotes);
+                &m_Windows.showCodeEditor);
 
             ImGui::MenuItem(
                 "Stats",

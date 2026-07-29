@@ -210,14 +210,55 @@ namespace anv
             Py_RETURN_NONE;
         }
 
+        ////////////
+        /// INPUT
+        ////////////
+
+        PyObject *python_is_key_pressed(PyObject *, PyObject *_args)
+        {
+            int key = 0;
+
+            if (!PyArg_ParseTuple(_args, "i", &key))
+                return nullptr;
+
+            App *app = App::GetInstance();
+            if (!app)
+            {
+                PyErr_SetString(
+                    PyExc_RuntimeError,
+                    "The Anvil application instance is unavailable.");
+
+                return nullptr;
+            }
+
+            auto inputSystem = app->GetInputSystem();
+            if (!inputSystem)
+            {
+                PyErr_SetString(
+                    PyExc_RuntimeError,
+                    "The Anvil input system is unavailable.");
+
+                return nullptr;
+            }
+
+            return PyBool_FromLong(
+                inputSystem->IsKeyPressed(key) ? 1 : 0);
+        }
+
         PyMethodDef s_AnvilMethods[] = {
+            // logging
             {"log", python_log, METH_VARARGS, "Write an informational message to the Anvil log."},
             {"warn", python_warn, METH_VARARGS, "Write a warning to the Anvil log."},
             {"error", python_error, METH_VARARGS, "Write an error to the Anvil log."},
+
+            // transform
             {"_get_position", python_get_position, METH_VARARGS, nullptr},
             {"_set_position", python_set_position, METH_VARARGS, nullptr},
             {"_get_rotation", python_get_rotation, METH_VARARGS, nullptr},
             {"_set_rotation", python_set_rotation, METH_VARARGS, nullptr},
+
+            // input
+            {"_is_key_pressed", python_is_key_pressed, METH_VARARGS, nullptr},
             {nullptr, nullptr, 0, nullptr}};
 
         PyModuleDef s_AnvilNativeModule = {
