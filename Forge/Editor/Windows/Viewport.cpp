@@ -26,8 +26,6 @@ namespace
 }
 
 Viewport::Viewport()
-    : m_Controller(anv::App::GetInstance()->GetInputSystem(),
-     m_EditorCamera)
 {
     m_ViewportTarget = anv::RenderTarget::Create(
         anv::App::GetInstance()->GetMainWindow()->GetContext(),
@@ -37,7 +35,7 @@ Viewport::Viewport()
 
     m_EditorCamera = std::make_shared<anv::Camera2D>();
 
-    anv::Renderer2D::SetCamera(m_EditorCamera);
+    m_Controller.SetCamera(m_EditorCamera);
 }
 
 void Viewport::Draw()
@@ -50,18 +48,16 @@ void Viewport::Draw()
 
     if (scene)
     {
-
         const ImVec2 currentSize = ImGui::GetContentRegionAvail();
         if (m_EditorCamera && currentSize.x > 0.0f && currentSize.y > 0.0f)
             m_EditorCamera->SetAspectRatio(currentSize.x / currentSize.y);
         
 
-        if (EditorLayer::GetSceneState() == EditorLayer::SceneState::Edit)
-        {
-            m_Controller.SetInputEnabled(ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows));
-        } else {
-            m_Controller.SetInputEnabled(false);
-        }
+
+        m_Controller.SetInputEnabled(ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows));
+
+
+        m_Controller.Update(anv::Time::DeltaTime());
     }
 
     ImVec2 viewportSize = ImGui::GetContentRegionAvail();

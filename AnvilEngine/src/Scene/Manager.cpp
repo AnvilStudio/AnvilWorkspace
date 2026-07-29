@@ -177,6 +177,7 @@ namespace anv
             scene->Save();
 
         ANV_LOG_INFO("Opened scene '%s'.", scenePath.string().c_str());
+        Renderer2D::SetCamera(scene->GetMainCamera());
         return scene;
     }
 

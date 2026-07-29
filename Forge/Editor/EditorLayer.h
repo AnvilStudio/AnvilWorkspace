@@ -60,6 +60,6 @@ private:
     AssetRegistryPanel m_AssetRegistryPanel;
     GameViewport m_GameViewport;
     anv::ConsolePanel m_Console;
-
+    
     Windows m_Windows{false};
 };

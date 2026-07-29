@@ -1,18 +1,27 @@
 #include "CameraController.h"
-
+#include <Core/App.h>
 #include <algorithm>
 
 namespace anv
 {
-    CameraController::CameraController(_shared<InputSystem>_is, _shared<Camera2D> _cam)
+    CameraController::CameraController(_shared<InputSystem> _is, _shared<Camera2D> _cam)
         : m_InputSystem(_is), m_Camera(_cam)
     {
         if (m_Camera)
+        {
             m_ZoomLevel = m_Camera->GetZoom();
+            ANV_LOG_INFO("Camera Set");
+        }
+    }
+
+    CameraController::CameraController()
+    {
+        m_InputSystem = App::GetInstance()->GetInputSystem();
     }
 
     CameraController::~CameraController()
     {
+
     }
 
     void CameraController::Update(float dt)
@@ -52,8 +61,7 @@ namespace anv
             movement = glm::normalize(movement);
 
             m_Camera->Move(
-                movement * m_Speed * m_ZoomLevel * dt
-            );
+                movement * m_Speed * m_ZoomLevel * dt);
         }
 
         m_Camera->Update(dt);
@@ -72,4 +80,10 @@ namespace anv
 
         m_Camera->SetZoom(m_ZoomLevel);
     }
+
+	void CameraController::SetCamera(_shared<Camera2D> camera)
+    {
+        m_Camera = camera;
+    }
+
 }

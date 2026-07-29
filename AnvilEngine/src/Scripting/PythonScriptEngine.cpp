@@ -888,24 +888,123 @@ namespace anv
 #endif
     }
 
-    void PythonScriptEngine::log_python_exception(const char *_context)
+    void PythonScriptEngine::log_python_exception(
+        const char *_context)
     {
 #ifdef ANV_ENABLE_PYTHON
         if (!PyErr_Occurred())
+        {
+            ANV_LOG_ERROR(
+                "Python operation failed while %s, "
+                "but no Python exception was available.",
+                _context);
+
             return;
+        }
 
-        PyObject *tracebackModule = PyImport_ImportModule("traceback");
-        PyObject *formatted = tracebackModule
-                                  ? PyObject_CallMethod(tracebackModule, "format_exc", nullptr)
+        PyObject *exceptionType = nullptr;
+        PyObject *exceptionValue = nullptr;
+        PyObject *exceptionTraceback = nullptr;
+
+        PyErr_Fetch(
+            &exceptionType,
+            &exceptionValue,
+            &exceptionTraceback);
+
+        PyErr_NormalizeException(
+            &exceptionType,
+            &exceptionValue,
+            &exceptionTraceback);
+
+        PyObject *tracebackModule =
+            PyImport_ImportModule("traceback");
+
+        PyObject *formattedList = nullptr;
+        PyObject *formattedString = nullptr;
+
+        if (tracebackModule)
+        {
+            PyObject *formatException =
+                PyObject_GetAttrString(
+                    tracebackModule,
+                    "format_exception");
+
+            if (formatException &&
+                PyCallable_Check(formatException))
+            {
+                formattedList = PyObject_CallFunctionObjArgs(
+                    formatException,
+                    exceptionType
+                        ? exceptionType
+                        : Py_None,
+                    exceptionValue
+                        ? exceptionValue
+                        : Py_None,
+                    exceptionTraceback
+                        ? exceptionTraceback
+                        : Py_None,
+                    nullptr);
+            }
+
+            Py_XDECREF(formatException);
+        }
+
+        if (formattedList)
+        {
+            PyObject *separator =
+                PyUnicode_FromString("");
+
+            if (separator)
+            {
+                formattedString =
+                    PyUnicode_Join(
+                        separator,
+                        formattedList);
+
+                Py_DECREF(separator);
+            }
+        }
+
+        const char *message = formattedString
+                                  ? PyUnicode_AsUTF8(formattedString)
                                   : nullptr;
-        const char *message = formatted ? PyUnicode_AsUTF8(formatted) : nullptr;
 
-        ANV_LOG_ERROR("Python exception while %s:\n%s",
-                      _context,
-                      message ? message : "Unknown Python error");
+        if (message)
+        {
+            ANV_LOG_ERROR(
+                "Python exception while %s:\n%s",
+                _context,
+                message);
+        }
+        else
+        {
+            PyObject *valueString = exceptionValue
+                                        ? PyObject_Str(exceptionValue)
+                                        : nullptr;
 
-        Py_XDECREF(formatted);
+            const char *fallback = valueString
+                                       ? PyUnicode_AsUTF8(valueString)
+                                       : nullptr;
+
+            ANV_LOG_ERROR(
+                "Python exception while %s: %s",
+                _context,
+                fallback
+                    ? fallback
+                    : "Unable to format exception");
+
+            Py_XDECREF(valueString);
+        }
+
+        Py_XDECREF(formattedString);
+        Py_XDECREF(formattedList);
         Py_XDECREF(tracebackModule);
+
+        Py_XDECREF(exceptionType);
+        Py_XDECREF(exceptionValue);
+        Py_XDECREF(exceptionTraceback);
+
+        // Clear formatting errors, if traceback formatting failed.
         PyErr_Clear();
 #else
         (void)_context;

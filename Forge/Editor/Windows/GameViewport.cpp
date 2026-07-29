@@ -18,18 +18,29 @@ void GameViewport::Draw()
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::Begin("Game Viewport");
 
-    if (EditorLayer::GetSceneState() == EditorLayer::SceneState::Play)
-    {
-        ImGui::SetWindowFocus("Game Viewport");
-    }
-
     auto sceneManager = anv::App::GetInstance()->GetSceneManager();
     auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
     auto sceneCamera = scene->GetMainCamera();
 
+    if (EditorLayer::GetSceneState() == EditorLayer::SceneState::Play)
+    {
+        if (!m_OnPlayFocused)
+        {
+            ANV_LOG_INFO("On Play Focus")
+            m_OnPlayFocused = true;
+            ImGui::SetWindowFocus();
+        }
+        if (!m_InputEnabled)
+        {
+            m_InputEnabled = true;
+        }
+    } else {
+        m_OnPlayFocused = false;
+        m_InputEnabled = false;
+    }
+
     if (scene)
     {
-
         const ImVec2 currentSize = ImGui::GetContentRegionAvail();
         if (sceneCamera && currentSize.x > 0.0f && currentSize.y > 0.0f)
             sceneCamera->SetAspectRatio(currentSize.x / currentSize.y);

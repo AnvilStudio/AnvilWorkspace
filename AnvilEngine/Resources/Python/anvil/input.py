@@ -1,5 +1,5 @@
 import _anvil
-from  key import *
+from  .key import *
 
 class Input:
     @staticmethod

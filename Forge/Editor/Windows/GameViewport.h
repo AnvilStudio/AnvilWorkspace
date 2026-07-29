@@ -10,6 +10,9 @@ public:
 private:
     anv::Ref<anv::RenderTarget> m_GameViewportTarget;
 
+    bool m_OnPlayFocused = false;
+    bool m_InputEnabled = false;
+
     uint32_t m_LastTargetWidth = 0;
     uint32_t m_LastTargetHeight = 0;
 };

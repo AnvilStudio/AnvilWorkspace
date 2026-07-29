@@ -13,3 +13,4 @@
 #include "../src/Scripting/PythonScriptEngine.h"
 #include "../vendor/imgui/misc/cpp/imgui_stdlib.h"
 #include "../src/Util/AnvLog/AnvLog.h"
+#include "../src/Util/Time/Time.h"

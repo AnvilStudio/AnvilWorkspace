@@ -10,6 +10,7 @@ namespace anv
 	{
 	public:
 		CameraController(_shared<InputSystem>_is, _shared<Camera2D> _cam);
+		CameraController();
 		~CameraController();
 
 		void Update(float _deltaTime);
@@ -18,6 +19,8 @@ namespace anv
 
 		void SetInputEnabled(bool enabled) { m_InputEnabled = enabled; }
 		bool IsInputEnabled() const { return m_InputEnabled; }
+
+		void SetCamera(_shared<Camera2D> camera);
 
 	private:
 		_shared<InputSystem> m_InputSystem;
