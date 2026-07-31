@@ -64,6 +64,44 @@ void InspectorLayer::Draw(
                 }
             });
 
+        draw_component<Component::Camera2D>(
+            "Camera 2D",
+            selectedEntity,
+            scene,
+            [&](Component::Camera2D& cameraComponent)
+            {
+                if (!cameraComponent.camera)
+                    cameraComponent.camera = std::make_shared<anv::Camera2D>();
+
+                if (ImGui::BeginTable("Camera2DProps", 2, ImGuiTableFlags_SizingStretchProp))
+                {
+                    ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+                    ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+
+                    bool active = cameraComponent.isActive;
+                    ImGui::TableNextRow();
+                    if (property_bool("Is Active", &active))
+                    {
+                        if (active)
+                            scene->SetActiveCamera(selectedEntity);
+                        else
+                            cameraComponent.isActive = false;
+
+                        scene->Save();
+                    }
+
+                    float zoom = cameraComponent.camera->GetZoom();
+                    ImGui::TableNextRow();
+                    if (property_float("Zoom", &zoom))
+                    {
+                        cameraComponent.camera->SetZoom(std::max(0.01f, zoom));
+                        scene->Save();
+                    }
+
+                    ImGui::EndTable();
+                }
+            });
+
         draw_component<Component::SpriteRenderer>(
             "Sprite Renderer",
             selectedEntity,
@@ -281,6 +319,16 @@ void InspectorLayer::draw_add_component_menu(
 
     if (ImGui::BeginPopup("Popup"))
     {
+        if (!scene->HasComponent<Component::Camera2D>(entity) &&
+            ImGui::MenuItem("Camera 2D"))
+        {
+            scene->AddComponent<Component::Camera2D>(entity);
+            if (scene->GetActiveCameraEntity() == entt::null)
+                scene->SetActiveCamera(entity);
+            scene->Save();
+            ImGui::CloseCurrentPopup();
+        }
+
         if (!scene->HasComponent<Component::SpriteRenderer>(entity) &&
             ImGui::MenuItem("Sprite Renderer"))
         {
