@@ -11,6 +11,8 @@ private:
     void update_operation(bool update);
     void set_gizmo_bounds();
     void draw_gizmo();
+    void pick_entity(const anv::Ref<anv::Scene>& scene);
+
 private:
     anv::Ref<anv::RenderTarget> m_ViewportTarget;
     anv::_shared<anv::Camera2D> m_EditorCamera;
