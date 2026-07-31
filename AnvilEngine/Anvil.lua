@@ -29,7 +29,10 @@ project "AnvilEngine"
             "./vendor/imgui/imgui_tables.cpp",
             "./vendor/imgui/imgui_widgets.cpp",
             "./vendor/imgui/misc/cpp/imgui_stdlib.cpp",
-            "./vendor/ImGuizmo/src/ImGuizmo.cpp"
+
+            "./vendor/ImGuizmo/src/ImGuizmo.cpp",
+
+            "./vendor/ImGuiTextEdit/TextEditor.cpp"
         }
 
         includedirs
