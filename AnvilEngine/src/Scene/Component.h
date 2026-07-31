@@ -95,6 +95,8 @@ namespace anv
             uuid::AssetUUID texture{};
             glm::vec4 color{1.0f};
             int drawLayer = 0;
+            bool visibleInGame = true;
+            bool visibleInEditor = true;
 
             void Serialize(Serializer& ser)
             {
@@ -104,16 +106,20 @@ namespace anv
                 ser.Field("ColorB", color.z);
                 ser.Field("ColorA", color.w);
                 ser.Field("DrawLayer", drawLayer);
+                ser.Field("VisibleInGame", visibleInGame);
+                ser.Field("VisibleInEditor", visibleInEditor);
             }
 
             void Deserialize(Serializer& ser)
             {
-                ser.Field("TextureID", texture.uuid);
-                ser.Field("ColorR", color.x);
-                ser.Field("ColorG", color.y);
-                ser.Field("ColorB", color.z);
-                ser.Field("ColorA", color.w);
-                ser.Field("DrawLayer", drawLayer);
+                ser.FieldOr<std::string>("TextureID", texture.uuid, "");
+                ser.FieldOr<float>("ColorR", color.x, 1.0f);
+                ser.FieldOr<float>("ColorG", color.y, 1.0f);
+                ser.FieldOr<float>("ColorB", color.z, 1.0f);
+                ser.FieldOr<float>("ColorA", color.w, 1.0f);
+                ser.FieldOr<int>("DrawLayer", drawLayer, 0);
+                ser.FieldOr<bool>("VisibleInGame", visibleInGame, true);
+                ser.FieldOr<bool>("VisibleInEditor", visibleInEditor, true);
             }
         };
 
