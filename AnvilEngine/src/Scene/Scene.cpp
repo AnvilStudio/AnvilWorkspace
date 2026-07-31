@@ -35,8 +35,6 @@ namespace anv
 
     void Scene::Init()
     {
-        m_MainCamera = std::make_shared<Camera2D>();
-
         if (m_Path.empty())
             return;
 
@@ -66,21 +64,24 @@ namespace anv
                             SceneContextToString, SceneContextFromString);
         });
 
+        bool hasLegacyCamera = false;
+        Component::Transform2d legacyCameraTransform{};
+        float legacyCameraZoom = 1.0f;
+
         ser.ObjectIf("Camera", [&]()
         {
+            hasLegacyCamera = true;
+
             ser.Object("Transform", [&]()
             {
-                m_MainCamera->GetTransform().Deserialize(ser);
+                legacyCameraTransform.Deserialize(ser);
             });
 
             ser.Object("Settings", [&]()
             {
-                float aspectRatio = 16.0f / 9.0f;
-                float zoom = 1.0f;
-                ser.Field("AspectRatio", aspectRatio);
-                ser.Field("Zoom", zoom);
-                m_MainCamera->SetAspectRatio(aspectRatio);
-                m_MainCamera->SetZoom(zoom);
+                float unusedAspectRatio = 16.0f / 9.0f;
+                ser.FieldOr<float>("AspectRatio", unusedAspectRatio, 16.0f / 9.0f);
+                ser.FieldOr<float>("Zoom", legacyCameraZoom, 1.0f);
             });
         });
 
@@ -96,6 +97,7 @@ namespace anv
 
                     DeserializeIfPresent<Component::Tag>(m_Registry, entity, ser, "Tag");
                     DeserializeIfPresent<Component::Transform2d>(m_Registry, entity, ser, "Transform2d");
+                    DeserializeIfPresent<Component::Camera2D>(m_Registry, entity, ser, "Camera2D");
                     DeserializeIfPresent<Component::SpriteRenderer>(m_Registry, entity, ser, "SpriteRenderer");
                     DeserializeIfPresent<Component::Rigidbody2D>(m_Registry, entity, ser, "Rigidbody2D");
                     DeserializeIfPresent<Component::BoxCollider2D>(m_Registry, entity, ser, "BoxCollider2D");
@@ -105,6 +107,18 @@ namespace anv
         }
 
         ser.Close();
+
+        if (hasLegacyCamera && GetActiveCameraEntity() == entt::null)
+        {
+            const entt::entity cameraEntity = CreateEntity("Game Camera");
+            GetComponent<Component::Transform2d>(cameraEntity) = legacyCameraTransform;
+
+            auto& cameraComponent = AddComponent<Component::Camera2D>(cameraEntity);
+            cameraComponent.isActive = true;
+            cameraComponent.camera->SetZoom(legacyCameraZoom);
+
+            ANV_LOG_INFO("Migrated legacy scene camera to Game Camera entity.");
+        }
     }
 
     void Scene::Save()
@@ -124,23 +138,9 @@ namespace anv
                             SceneContextToString, SceneContextFromString);
         });
 
-        ser.Object("Camera", [&]()
-        {
-            ser.Object("Transform", [&]()
-            {
-                m_MainCamera->GetTransform().Serialize(ser);
-            });
-
-            ser.Object("Settings", [&]()
-            {
-                float aspectRatio = m_MainCamera->GetAspectRatio();
-                float zoom = m_MainCamera->GetZoom();
-                ser.Field("AspectRatio", aspectRatio);
-                ser.Field("Zoom", zoom);
-            });
-        });
-
+        ser.RemoveObject("Camera");
         ser.RemoveObject("Entities");
+
         auto view = m_Registry.view<uuid::EntityUUID, Component::Tag>();
         for (auto [entity, id, tag] : view.each())
         {
@@ -149,6 +149,7 @@ namespace anv
             {
                 SerializeIfPresent<Component::Tag>(m_Registry, entity, ser, "Tag");
                 SerializeIfPresent<Component::Transform2d>(m_Registry, entity, ser, "Transform2d");
+                SerializeIfPresent<Component::Camera2D>(m_Registry, entity, ser, "Camera2D");
                 SerializeIfPresent<Component::SpriteRenderer>(m_Registry, entity, ser, "SpriteRenderer");
                 SerializeIfPresent<Component::Rigidbody2D>(m_Registry, entity, ser, "Rigidbody2D");
                 SerializeIfPresent<Component::BoxCollider2D>(m_Registry, entity, ser, "BoxCollider2D");
@@ -157,6 +158,59 @@ namespace anv
         }
 
         ser.Close();
+    }
+
+    _shared<Camera2D> Scene::GetActiveCamera()
+    {
+        auto view = m_Registry.view<Component::Transform2d, Component::Camera2D>();
+
+        for (const auto entity : view)
+        {
+            auto& transform = view.get<Component::Transform2d>(entity);
+            auto& cameraComponent = view.get<Component::Camera2D>(entity);
+
+            if (!cameraComponent.isActive)
+                continue;
+
+            if (!cameraComponent.camera)
+                cameraComponent.camera = std::make_shared<Camera2D>();
+
+            cameraComponent.camera->SetTransform(transform);
+            cameraComponent.camera->Update(0.0f);
+            return cameraComponent.camera;
+        }
+
+        return nullptr;
+    }
+
+    entt::entity Scene::GetActiveCameraEntity() const
+    {
+        auto view = m_Registry.view<Component::Camera2D>();
+
+        for (const auto entity : view)
+        {
+            if (view.get<Component::Camera2D>(entity).isActive)
+                return entity;
+        }
+
+        return entt::null;
+    }
+
+    void Scene::SetActiveCamera(entt::entity entity)
+    {
+        if (entity == entt::null ||
+            !m_Registry.valid(entity) ||
+            !m_Registry.any_of<Component::Camera2D>(entity))
+        {
+            return;
+        }
+
+        auto view = m_Registry.view<Component::Camera2D>();
+        for (const auto cameraEntity : view)
+        {
+            view.get<Component::Camera2D>(cameraEntity).isActive =
+                cameraEntity == entity;
+        }
     }
 
     void Scene::Shutdown()
