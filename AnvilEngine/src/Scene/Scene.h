@@ -26,7 +26,9 @@ namespace anv
         std::string GetName() { return m_Name; }
         uuid::AssetUUID GetUUID() { return m_UUID; }
         std::string GetPath() { return m_Path; }
-        _shared<Camera2D> GetMainCamera() { return m_MainCamera; }
+        _shared<Camera2D> GetActiveCamera();
+        entt::entity GetActiveCameraEntity() const;
+        void SetActiveCamera(entt::entity entity);
         entt::registry& Registry() { return m_Registry; }
         const entt::registry& Registry() const { return m_Registry; }
 
@@ -93,7 +95,6 @@ namespace anv
         uuid::AssetUUID m_UUID;
         entt::registry m_Registry;
         std::string m_Path;
-        _shared<Camera2D> m_MainCamera = nullptr;
         _unique<Physics2D> m_Physics2D = nullptr;
 
         friend class SceneManager;
