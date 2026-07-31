@@ -1,142 +1,208 @@
 #include "SceneHierarchy.h"
 #include "../EditorLayer.h"
 
+#include <cstring>
+
 SceneHierarchy::SceneHierarchy(Ref<Scene> scene)
-    : m_ActiveScene(scene)
 {
+    // The active scene is resolved each frame so this panel follows scene changes.
+    (void)scene;
 }
 
 void SceneHierarchy::Draw()
 {
-
-    auto selected_entity = EditorLayer::GetInstance()->GetSelectedEntity();
-
     ImGui::Begin("Scene Hierarchy");
 
-    // EditorLayer
-    auto scene = App::GetInstance()->GetSceneManager()->GetActive();
+    auto scene = App::GetInstance()
+        ->GetSceneManager()
+        ->GetActive();
+
     if (!scene)
+    {
+        ImGui::TextDisabled("No active scene");
+        ImGui::End();
         return;
+    }
 
     ImGui::TextUnformatted(scene->GetName().c_str());
 
-    // Create Entity
     if (ImGui::BeginPopupContextWindow(
-        "SceneHierarchyContextMenu",
-        ImGuiPopupFlags_MouseButtonRight |
-        ImGuiPopupFlags_NoOpenOverItems))
-    {   
+            "SceneHierarchyContextMenu",
+            ImGuiPopupFlags_MouseButtonRight |
+                ImGuiPopupFlags_NoOpenOverItems))
+    {
         if (ImGui::MenuItem("Create Empty"))
         {
-            auto entity =
-                scene->CreateEntity("New Sprite");
+            const auto entity =
+                scene->CreateEntity("New Entity");
 
-            m_IsRenaming = true;
-            m_RenamedEntity = entity;
+            EditorLayer::GetInstance()
+                ->SetSelectedEntity(entity);
+
+            begin_rename(entity, "New Entity");
         }
 
         if (ImGui::MenuItem("Create Sprite"))
         {
-            auto entity =
+            const auto entity =
                 scene->CreateEntity("New Sprite");
 
             scene->AddComponent<Component::SpriteRenderer>(
-                entity);
+                entity
+            );
 
-            m_IsRenaming = true;
-            m_RenamedEntity = entity;
+            EditorLayer::GetInstance()
+                ->SetSelectedEntity(entity);
+
+            begin_rename(entity, "New Sprite");
         }
 
         ImGui::EndPopup();
     }
 
     ImGui::Separator();
+
+    const auto selectedEntity =
+        EditorLayer::GetInstance()->GetSelectedEntity();
+
     auto view =
         scene->Registry().view<Component::Tag>();
 
-    for (auto entity : view)
+    for (const auto entity : view)
     {
-        auto &tag =
+        auto& tag =
             view.get<Component::Tag>(entity);
 
-        bool selected =
-            selected_entity == entity;
+        const bool selected =
+            selectedEntity == entity;
 
-        std::string label =
-            tag.Get() +
-            "##" +
-            std::to_string(
-                static_cast<uint32_t>(entity));
+        ImGui::PushID(
+            static_cast<uint32_t>(entity)
+        );
 
-        handle_rename(entity, selected_entity, tag, label, selected);
+        handle_rename(entity, tag, selected);
 
         if (ImGui::BeginPopupContextItem())
         {
-            if (ImGui::MenuItem("Delete"))
-            {
-                m_EntityToDelete = entity;
-            }
-
             if (ImGui::MenuItem("Rename"))
             {
-                m_RenamedEntity = entity;
-                m_IsRenaming = true;
+                EditorLayer::GetInstance()
+                    ->SetSelectedEntity(entity);
 
-                tag.value = std::string(m_RenameBuffer.data());
+                begin_rename(entity, tag.Get());
             }
+
+            if (ImGui::MenuItem("Delete"))
+                m_EntityToDelete = entity;
 
             ImGui::EndPopup();
         }
+
+        ImGui::PopID();
     }
 
     if (m_EntityToDelete != entt::null)
     {
-        const entt::entity deletedEntity = m_EntityToDelete;
+        const entt::entity deletedEntity =
+            m_EntityToDelete;
+
         scene->DestroyEntity(deletedEntity);
         m_EntityToDelete = entt::null;
-        if (selected_entity == deletedEntity)
-            selected_entity = entt::null;
+
+        if (selectedEntity == deletedEntity)
+            EditorLayer::GetInstance()->ClearSelection();
+
+        if (m_RenamedEntity == deletedEntity)
+            cancel_rename();
     }
 
     ImGui::End();
 }
 
+void SceneHierarchy::begin_rename(
+    entt::entity entity,
+    const std::string& currentName
+)
+{
+    m_RenameBuffer.fill('\0');
+
+    std::strncpy(
+        m_RenameBuffer.data(),
+        currentName.c_str(),
+        m_RenameBuffer.size() - 1
+    );
+
+    m_RenameBuffer.back() = '\0';
+    m_RenamedEntity = entity;
+    m_IsRenaming = true;
+    m_FocusRenameInput = true;
+}
+
 void SceneHierarchy::handle_rename(
     entt::entity entity,
-    entt::entity& selected_entity,
-    Component::Tag &tag,
-    std::string label,
-    bool selected)
+    Component::Tag& tag,
+    bool selected
+)
 {
-    m_RenameBuffer.clear();
-    m_RenameBuffer.push_back('\0');
-
     if (m_IsRenaming && entity == m_RenamedEntity)
     {
-        ImGui::SetNextItemWidth(-1);
+        ImGui::SetNextItemWidth(-1.0f);
 
-        ImGui::InputText(
+        if (m_FocusRenameInput)
+        {
+            ImGui::SetKeyboardFocusHere();
+            m_FocusRenameInput = false;
+        }
+
+        const bool submitted = ImGui::InputText(
             "##Rename",
             m_RenameBuffer.data(),
-            sizeof(m_RenameBuffer.data()),
+            m_RenameBuffer.size(),
             ImGuiInputTextFlags_EnterReturnsTrue |
-                ImGuiInputTextFlags_AutoSelectAll);
+                ImGuiInputTextFlags_AutoSelectAll
+        );
+
+        if (submitted)
+        {
+            finish_rename(tag);
+            return;
+        }
+
+        if (ImGui::IsItemActive() &&
+            ImGui::IsKeyPressed(ImGuiKey_Escape))
+        {
+            cancel_rename();
+            return;
+        }
 
         if (ImGui::IsItemDeactivatedAfterEdit())
-        {
-            tag.value = m_RenameBuffer.data();
-            m_IsRenaming = false;
-        }
+            finish_rename(tag);
 
+        return;
     }
-    else
+
+    const std::string label =
+        tag.Get() + "##Entity";
+
+    if (ImGui::Selectable(label.c_str(), selected))
     {
-        if (ImGui::Selectable(
-                label.c_str(),
-                selected))
-        {
-            selected_entity = entity;
-            EditorLayer::GetInstance()->SetSelectedEntity(entity);
-        }
+        EditorLayer::GetInstance()
+            ->SetSelectedEntity(entity);
     }
+}
+
+void SceneHierarchy::finish_rename(Component::Tag& tag)
+{
+    if (m_RenameBuffer[0] != '\0')
+        tag.value = m_RenameBuffer.data();
+
+    cancel_rename();
+}
+
+void SceneHierarchy::cancel_rename()
+{
+    m_RenameBuffer.fill('\0');
+    m_RenamedEntity = entt::null;
+    m_IsRenaming = false;
+    m_FocusRenameInput = false;
 }
