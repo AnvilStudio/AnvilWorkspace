@@ -21,3 +21,6 @@
 [submodule "AnvilEngine/vendor/ImGuizmo"]
 	path = AnvilEngine/vendor/ImGuizmo
 	url = https://github.com/CedricGuillemet/ImGuizmo.git
+[submodule "AnvilEngine/vendor/ImGuiTextEdit"]
+	path = AnvilEngine/vendor/ImGuiTextEdit
+	url = https://github.com/BalazsJako/ImGuiColorTextEdit.git
