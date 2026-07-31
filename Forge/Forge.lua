@@ -27,7 +27,8 @@ project "Forge"
 
     links
     {
-        "AnvilEngine"
+        "AnvilEngine",
+        "Box2D"
     }
 
     postbuildcommands
@@ -50,7 +51,8 @@ filter "system:macosx"
     libdirs
     {
         "%{ROOTDIR}AnvilEngine/bin/" .. outdir .. "/AnvilEngine",
-        "%{ROOTDIR}AnvilEngine/vendor/GLFW/bin/" .. outdir .. "/GLFW"
+        "%{ROOTDIR}AnvilEngine/vendor/GLFW/bin/" .. outdir .. "/GLFW",
+        "%{ROOTDIR}AnvilEngine/vendor/Box2d/bin/" .. outdir .. "/Box2D",
     }
 
     links

@@ -88,7 +88,7 @@ workspace "AnvilWorkspace"
 
     group "Dependencies"
         include "AnvilEngine/vendor/GLFW/glfw.lua"
-        include "AnvilEngine/vendor/Box2D.lua"
+        include "AnvilEngine/vendor/Box2d/Box2D.lua"
     group ""
 
     group "Engine"
