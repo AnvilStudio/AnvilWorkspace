@@ -27,8 +27,13 @@ namespace anv
     {
         refresh_active_scene();
 
-        if (m_Active)
-            m_Active->Render();
+        if (!m_Active)
+            return;
+
+        if (auto camera = m_Active->GetActiveCamera())
+            Renderer2D::SetCamera(camera);
+
+        m_Active->Render();
     }
 
     void SceneLayer::OnUpdate(float _dt)
@@ -46,9 +51,5 @@ namespace anv
             return;
 
         m_Active = active;
-
-        auto camera = m_Active->GetMainCamera();
-        ANV_ASSERT(camera, "Main camera null!")
-        Renderer2D::SetCamera(camera);
     }
 }
