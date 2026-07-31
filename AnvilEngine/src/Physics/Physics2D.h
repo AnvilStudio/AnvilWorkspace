@@ -30,6 +30,7 @@ namespace anv
     private:
         void CreateBody(Scene& scene, entt::entity entity);
         void RemoveDestroyedBodies(Scene& scene);
+        void SynchronizeBodiesFromTransforms(Scene& scene);
         void SynchronizeTransforms(Scene& scene);
 
         static b2BodyType ToBox2DType(int type);
