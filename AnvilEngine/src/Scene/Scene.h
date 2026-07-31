@@ -29,6 +29,7 @@ namespace anv
         _shared<Camera2D> GetActiveCamera();
         entt::entity GetActiveCameraEntity() const;
         void SetActiveCamera(entt::entity entity);
+        void EnsureCameraEditorSprite(entt::entity entity);
         entt::registry& Registry() { return m_Registry; }
         const entt::registry& Registry() const { return m_Registry; }
 
