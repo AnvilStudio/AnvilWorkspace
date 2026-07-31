@@ -113,7 +113,9 @@ namespace anv
         bodyDef.linearDamping = std::max(0.0f, rigidbody.linearDamping);
         bodyDef.angularDamping = std::max(0.0f, rigidbody.angularDamping);
         bodyDef.gravityScale = rigidbody.gravityScale;
-        bodyDef.fixedRotation = rigidbody.fixedRotation;
+        bodyDef.motionLocks.linearX = false;
+        bodyDef.motionLocks.linearY = false;
+        bodyDef.motionLocks.angularZ = rigidbody.fixedRotation;
         bodyDef.isBullet = rigidbody.bullet;
         bodyDef.isEnabled = rigidbody.enabled;
 
