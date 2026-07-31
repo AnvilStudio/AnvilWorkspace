@@ -23,6 +23,11 @@ namespace anv
 
             return "Unknown";
         }
+
+        bool NearlyEqual(float left, float right, float epsilon = 0.0001f)
+        {
+            return std::abs(left - right) <= epsilon;
+        }
     }
 
     Physics2D::~Physics2D()
@@ -118,6 +123,10 @@ namespace anv
         }
 
         RemoveDestroyedBodies(scene);
+
+        // Scripts run before physics. Push any script-authored transform changes
+        // into Box2D before advancing the world so the body and collider move too.
+        SynchronizeBodiesFromTransforms(scene);
 
         m_Accumulator += std::clamp(deltaTime, 0.0f, 0.25f);
 
@@ -287,6 +296,42 @@ namespace anv
 
         for (const auto entity : staleEntities)
             DestroyBody(entity);
+    }
+
+    void Physics2D::SynchronizeBodiesFromTransforms(Scene& scene)
+    {
+        for (const auto& [entity, body] : m_Bodies)
+        {
+            if (!scene.Registry().valid(entity) ||
+                !scene.HasComponent<Component::Transform2d>(entity))
+            {
+                continue;
+            }
+
+            const auto& transform =
+                scene.GetComponent<Component::Transform2d>(entity);
+
+            const b2Vec2 bodyPosition = b2Body_GetPosition(body);
+            const float bodyRotation = glm::degrees(
+                b2Rot_GetAngle(b2Body_GetRotation(body)));
+
+            const bool positionChanged =
+                !NearlyEqual(transform.position.x, bodyPosition.x) ||
+                !NearlyEqual(transform.position.y, bodyPosition.y);
+
+            const bool rotationChanged =
+                !NearlyEqual(transform.rotation, bodyRotation);
+
+            if (!positionChanged && !rotationChanged)
+                continue;
+
+            b2Body_SetTransform(
+                body,
+                {transform.position.x, transform.position.y},
+                b2MakeRot(glm::radians(transform.rotation)));
+
+            b2Body_SetAwake(body, true);
+        }
     }
 
     void Physics2D::SynchronizeTransforms(Scene& scene)
