@@ -70,7 +70,7 @@ void GameViewport::Draw()
 
     if (scene)
     {
-        scene->SetCameraInputEnabled(m_InputEnabled);
+        //scene->SetCameraInputEnabled(m_InputEnabled);
 
         const ImVec2 currentSize = ImGui::GetContentRegionAvail();
         if (sceneCamera && currentSize.x > 0.0f && currentSize.y > 0.0f)

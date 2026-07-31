@@ -9,7 +9,7 @@
 using namespace anv;
 
 void InspectorLayer::Draw(
-    const Ref<Scene>& scene,
+    Ref<Scene>& scene,
     entt::entity selectedEntity)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 2));
@@ -264,7 +264,7 @@ void InspectorLayer::Draw(
             });
 
         ImGui::EndChild();
-        draw_add_component_menu(scene, selectedEntity);
+        //draw_add_component_menu(scene, selectedEntity);
         ImGui::PopID();
     }
     else
@@ -277,7 +277,7 @@ void InspectorLayer::Draw(
 }
 
 void InspectorLayer::draw_add_component_menu(
-    const Ref<Scene>& scene,
+    Ref<Scene>& scene,
     entt::entity entity)
 {
     if (!scene || entity == entt::null || !scene->Registry().valid(entity))

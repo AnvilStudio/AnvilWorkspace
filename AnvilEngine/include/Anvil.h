@@ -9,6 +9,7 @@
 #include "../src/Render/Renderer.h"
 #include "../src/Render/RenderTarget.h"
 #include "../src/Render/Camera.h"
+#include "../src/Render/CameraController.h"
 #include "../src/Asset/AssetManager.h"
 #include "../src/Asset/AssetTypes/Texture.h"
 #include "../src/Scene/Component.h"

@@ -57,8 +57,12 @@ void Viewport::Draw()
         if (m_EditorCamera && currentSize.x > 0.0f && currentSize.y > 0.0f)
             m_EditorCamera->SetAspectRatio(currentSize.x / currentSize.y);
 
-        m_Controller.SetInputEnabled(
-            ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows));
+        bool camInputEn = 
+        (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+         ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows));
+
+        m_Controller.SetInputEnabled(camInputEn);
+        
         m_Controller.Update(anv::Time::DeltaTime());
 
         update_operation(

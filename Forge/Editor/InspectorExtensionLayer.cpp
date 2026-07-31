@@ -23,12 +23,13 @@ namespace
             });
 
         const auto last = std::find_if_not(
-            _value.rbegin(),
-            _value.rend(),
-            [](unsigned char _character)
-            {
-                return std::isspace(_character) != 0;
-            }).base();
+                              _value.rbegin(),
+                              _value.rend(),
+                              [](unsigned char _character)
+                              {
+                                  return std::isspace(_character) != 0;
+                              })
+                              .base();
 
         if (first >= last)
             return {};
@@ -50,12 +51,12 @@ namespace
         return _value;
     }
 
-    bool is_python_path(const std::filesystem::path& _path)
+    bool is_python_path(const std::filesystem::path &_path)
     {
         return to_lower(_path.extension().string()) == ".py";
     }
 
-    bool input_string(const char* _label, std::string& _value)
+    bool input_string(const char *_label, std::string &_value)
     {
         char buffer[512]{};
         std::snprintf(buffer, sizeof(buffer), "%s", _value.c_str());
@@ -68,7 +69,7 @@ namespace
     }
 }
 
-InspectorExtensionLayer::InspectorExtensionLayer(EditorLayer* _editorLayer)
+InspectorExtensionLayer::InspectorExtensionLayer(EditorLayer *_editorLayer)
     : Layer("Inspector Extension Layer"),
       m_EditorLayer(_editorLayer)
 {
@@ -105,7 +106,7 @@ void InspectorExtensionLayer::OnImGuiRender()
             "Python Script",
             entity,
             scene,
-            [&](Component::Script& _script)
+            [&](Component::Script &_script)
             {
                 draw_script_component(scene, entity, _script);
             });
@@ -128,7 +129,7 @@ void InspectorExtensionLayer::OnImGuiRender()
 void InspectorExtensionLayer::draw_script_component(
     Ref<Scene> _scene,
     entt::entity _entity,
-    Component::Script& _script)
+    Component::Script &_script)
 {
     (void)_entity;
 
@@ -157,13 +158,13 @@ void InspectorExtensionLayer::draw_script_component(
         ImGui::TableSetColumnIndex(1);
         ImGui::SetNextItemWidth(-1.0f);
 
-        const char* modulePreview = _script.modulePath.empty()
-            ? "Select Python script"
-            : _script.modulePath.c_str();
+        const char *modulePreview = _script.modulePath.empty()
+                                        ? "Select Python script"
+                                        : _script.modulePath.c_str();
 
         if (ImGui::BeginCombo("##ScriptModule", modulePreview))
         {
-            for (const ScriptModuleInfo& module : m_Modules)
+            for (const ScriptModuleInfo &module : m_Modules)
             {
                 const bool selected = module.relativePath == _script.modulePath;
                 if (ImGui::Selectable(module.relativePath.c_str(), selected))
@@ -185,7 +186,7 @@ void InspectorExtensionLayer::draw_script_component(
             ImGui::EndCombo();
         }
 
-        const ScriptModuleInfo* selectedModule = find_module(_script.modulePath);
+        const ScriptModuleInfo *selectedModule = find_module(_script.modulePath);
 
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
@@ -194,16 +195,16 @@ void InspectorExtensionLayer::draw_script_component(
         ImGui::TableSetColumnIndex(1);
         ImGui::SetNextItemWidth(-1.0f);
 
-        const char* classPreview = _script.className.empty()
-            ? "Select anvil.Script class"
-            : _script.className.c_str();
+        const char *classPreview = _script.className.empty()
+                                       ? "Select anvil.Script class"
+                                       : _script.className.c_str();
 
         ImGui::BeginDisabled(selectedModule == nullptr);
         if (ImGui::BeginCombo("##ScriptClass", classPreview))
         {
             if (selectedModule)
             {
-                for (const std::string& className : selectedModule->classes)
+                for (const std::string &className : selectedModule->classes)
                 {
                     const bool selected = className == _script.className;
                     if (ImGui::Selectable(className.c_str(), selected))
@@ -234,7 +235,7 @@ void InspectorExtensionLayer::draw_script_component(
             std::vector<std::string> fieldNames;
             fieldNames.reserve(_script.fields.size());
 
-            for (const auto& [name, field] : _script.fields)
+            for (const auto &[name, field] : _script.fields)
             {
                 (void)field;
                 fieldNames.push_back(name);
@@ -242,7 +243,7 @@ void InspectorExtensionLayer::draw_script_component(
 
             std::sort(fieldNames.begin(), fieldNames.end());
 
-            for (const std::string& name : fieldNames)
+            for (const std::string &name : fieldNames)
             {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
@@ -260,7 +261,7 @@ void InspectorExtensionLayer::draw_script_component(
         ImGui::EndTable();
     }
 
-    const ScriptModuleInfo* selectedModule = find_module(_script.modulePath);
+    const ScriptModuleInfo *selectedModule = find_module(_script.modulePath);
     if (selectedModule && selectedModule->classes.empty())
     {
         ImGui::TextDisabled(
@@ -324,6 +325,20 @@ void InspectorExtensionLayer::draw_add_component_menu(
         ImGui::CloseCurrentPopup();
     }
 
+    if (!_scene->HasComponent<Component::Rigidbody2D>(_entity) &&
+        ImGui::MenuItem("Rigidbody 2D"))
+    {
+        _scene->AddComponent<Component::Rigidbody2D>(_entity);
+        ImGui::CloseCurrentPopup();
+    }
+
+    if (!_scene->HasComponent<Component::BoxCollider2D>(_entity) &&
+        ImGui::MenuItem("Box Collider 2D"))
+    {
+        _scene->AddComponent<Component::BoxCollider2D>(_entity);
+        ImGui::CloseCurrentPopup();
+    }
+
     ImGui::EndPopup();
 }
 
@@ -331,12 +346,12 @@ void InspectorExtensionLayer::draw_inspector_script_drop_target(
     Ref<Scene> _scene,
     entt::entity _entity)
 {
-    const ImGuiPayload* activePayload = ImGui::GetDragDropPayload();
+    const ImGuiPayload *activePayload = ImGui::GetDragDropPayload();
     if (!activePayload || !activePayload->IsDataType("ANV_ASSET_PATH"))
         return;
 
-    const char* activePathData =
-        static_cast<const char*>(activePayload->Data);
+    const char *activePathData =
+        static_cast<const char *>(activePayload->Data);
     if (!activePathData || !is_python_path(std::filesystem::path(activePathData)))
         return;
 
@@ -357,10 +372,10 @@ void InspectorExtensionLayer::draw_inspector_script_drop_target(
 
     if (ImGui::BeginDragDropTarget())
     {
-        if (const ImGuiPayload* payload =
+        if (const ImGuiPayload *payload =
                 ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
         {
-            const char* pathData = static_cast<const char*>(payload->Data);
+            const char *pathData = static_cast<const char *>(payload->Data);
             if (pathData)
                 assign_script(_scene, _entity, std::filesystem::path(pathData));
         }
@@ -374,7 +389,7 @@ void InspectorExtensionLayer::draw_inspector_script_drop_target(
 void InspectorExtensionLayer::assign_script(
     Ref<Scene> _scene,
     entt::entity _entity,
-    const std::filesystem::path& _path)
+    const std::filesystem::path &_path)
 {
     if (!is_python_path(_path))
         return;
@@ -393,12 +408,12 @@ void InspectorExtensionLayer::assign_script(
         return;
     }
 
-    auto& script = _scene->AddComponent<Component::Script>(_entity);
+    auto &script = _scene->AddComponent<Component::Script>(_entity);
     script.modulePath = relativePath.generic_string();
     script.className.clear();
     script.fields.clear();
 
-    if (const ScriptModuleInfo* module = find_module(script.modulePath))
+    if (const ScriptModuleInfo *module = find_module(script.modulePath))
     {
         if (module->classes.size() == 1)
             script.className = module->classes.front();
@@ -425,7 +440,7 @@ void InspectorExtensionLayer::refresh_script_modules()
         std::filesystem::directory_options::skip_permission_denied,
         error);
 
-    for (const auto& entry : iterator)
+    for (const auto &entry : iterator)
     {
         if (error)
         {
@@ -441,9 +456,10 @@ void InspectorExtensionLayer::refresh_script_modules()
 
         ScriptModuleInfo module;
         module.relativePath = std::filesystem::relative(
-            entry.path(),
-            m_ScriptsDirectory,
-            error).generic_string();
+                                  entry.path(),
+                                  m_ScriptsDirectory,
+                                  error)
+                                  .generic_string();
 
         if (error)
         {
@@ -458,7 +474,7 @@ void InspectorExtensionLayer::refresh_script_modules()
     std::sort(
         m_Modules.begin(),
         m_Modules.end(),
-        [](const ScriptModuleInfo& _left, const ScriptModuleInfo& _right)
+        [](const ScriptModuleInfo &_left, const ScriptModuleInfo &_right)
         {
             return _left.relativePath < _right.relativePath;
         });
@@ -487,13 +503,13 @@ std::filesystem::path InspectorExtensionLayer::get_scripts_directory() const
     return {};
 }
 
-const InspectorExtensionLayer::ScriptModuleInfo*
-InspectorExtensionLayer::find_module(const std::string& _relativePath) const
+const InspectorExtensionLayer::ScriptModuleInfo *
+InspectorExtensionLayer::find_module(const std::string &_relativePath) const
 {
     const auto iterator = std::find_if(
         m_Modules.begin(),
         m_Modules.end(),
-        [&](const ScriptModuleInfo& _module)
+        [&](const ScriptModuleInfo &_module)
         {
             return _module.relativePath == _relativePath;
         });
@@ -502,7 +518,7 @@ InspectorExtensionLayer::find_module(const std::string& _relativePath) const
 }
 
 std::vector<std::string> InspectorExtensionLayer::discover_script_classes(
-    const std::filesystem::path& _filePath)
+    const std::filesystem::path &_filePath)
 {
     std::ifstream stream(_filePath);
     if (!stream)
@@ -551,62 +567,62 @@ std::vector<std::string> InspectorExtensionLayer::discover_script_classes(
 }
 
 bool InspectorExtensionLayer::draw_script_field(
-    const std::string& _name,
-    ScriptField& _field)
+    const std::string &_name,
+    ScriptField &_field)
 {
     switch (_field.type)
     {
-        case ScriptFieldType::Bool:
-        {
-            bool value = _field.value == "true" || _field.value == "1";
-            if (!ImGui::Checkbox(_name.c_str(), &value))
-                return false;
-
-            _field.value = value ? "true" : "false";
-            return true;
-        }
-
-        case ScriptFieldType::Int:
-        {
-            int value = 0;
-            try
-            {
-                value = std::stoi(_field.value);
-            }
-            catch (...)
-            {
-            }
-
-            if (!ImGui::DragInt(_name.c_str(), &value, 1.0f))
-                return false;
-
-            _field.value = std::to_string(value);
-            return true;
-        }
-
-        case ScriptFieldType::Float:
-        {
-            float value = 0.0f;
-            try
-            {
-                value = std::stof(_field.value);
-            }
-            catch (...)
-            {
-            }
-
-            if (!ImGui::DragFloat(_name.c_str(), &value, 0.1f))
-                return false;
-
-            _field.value = std::to_string(value);
-            return true;
-        }
-
-        case ScriptFieldType::String:
-            return input_string(_name.c_str(), _field.value);
-
-        default:
-            ImGui::TextDisabled("Unsupported field type");
+    case ScriptFieldType::Bool:
+    {
+        bool value = _field.value == "true" || _field.value == "1";
+        if (!ImGui::Checkbox(_name.c_str(), &value))
             return false;
+
+        _field.value = value ? "true" : "false";
+        return true;
+    }
+
+    case ScriptFieldType::Int:
+    {
+        int value = 0;
+        try
+        {
+            value = std::stoi(_field.value);
+        }
+        catch (...)
+        {
+        }
+
+        if (!ImGui::DragInt(_name.c_str(), &value, 1.0f))
+            return false;
+
+        _field.value = std::to_string(value);
+        return true;
+    }
+
+    case ScriptFieldType::Float:
+    {
+        float value = 0.0f;
+        try
+        {
+            value = std::stof(_field.value);
+        }
+        catch (...)
+        {
+        }
+
+        if (!ImGui::DragFloat(_name.c_str(), &value, 0.1f))
+            return false;
+
+        _field.value = std::to_string(value);
+        return true;
+    }
+
+    case ScriptFieldType::String:
+        return input_string(_name.c_str(), _field.value);
+
+    default:
+        ImGui::TextDisabled("Unsupported field type");
+        return false;
     }
 }
