@@ -2,7 +2,6 @@
 
 #include "../vendor/entt/single_include/entt/entt.hpp"
 #include "../Render/Camera.h"
-#include "../Render/CameraController.h"
 #include "SceneData.h"
 
 namespace anv
@@ -30,12 +29,6 @@ namespace anv
         _shared<Camera2D> GetMainCamera() { return m_MainCamera; }
         entt::registry& Registry() { return m_Registry; }
         const entt::registry& Registry() const { return m_Registry; }
-
-        void SetCameraInputEnabled(bool enabled)
-        {
-            if (m_CameraController)
-                m_CameraController->SetInputEnabled(enabled);
-        }
 
         void SetScriptExecutionEnabled(bool enabled);
         bool IsScriptExecutionEnabled() const { return m_ScriptExecutionEnabled; }
@@ -101,7 +94,6 @@ namespace anv
         entt::registry m_Registry;
         std::string m_Path;
         _shared<Camera2D> m_MainCamera = nullptr;
-        _unique<CameraController> m_CameraController = nullptr;
         _unique<Physics2D> m_Physics2D = nullptr;
 
         friend class SceneManager;
