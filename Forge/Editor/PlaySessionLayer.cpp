@@ -9,22 +9,22 @@ using namespace anv;
 namespace
 {
     std::filesystem::path resolve_scene_path(
-        const std::filesystem::path& _scenePath)
+        const std::filesystem::path& scenePath)
     {
-        if (_scenePath.empty())
+        if (scenePath.empty())
             return {};
 
-        const std::string pathString = _scenePath.string();
+        const std::string pathString = scenePath.string();
         if (!pathString.empty() && pathString.front() == '@')
             return App::GetInstance()->GetFS().ResolveKey(pathString);
 
-        return _scenePath;
+        return scenePath;
     }
 }
 
-PlaySessionLayer::PlaySessionLayer(EditorLayer* _editorLayer)
+PlaySessionLayer::PlaySessionLayer(EditorLayer* editorLayer)
     : Layer("Play Session Layer"),
-      m_EditorLayer(_editorLayer)
+      m_EditorLayer(editorLayer)
 {
 }
 
@@ -115,8 +115,11 @@ void PlaySessionLayer::begin_play_session()
         return;
     }
 
+    scene->SetScriptExecutionEnabled(true);
+    scene->StartPhysics();
+
     ANV_LOG_INFO(
-        "Created Play snapshot for '%s'.",
+        "Created Play snapshot for '%s' and started scene runtime.",
         m_ResolvedScenePath.string().c_str());
 }
 
@@ -126,7 +129,10 @@ void PlaySessionLayer::end_play_session()
     Ref<Scene> scene = sceneManager ? sceneManager->GetActive() : nullptr;
 
     if (scene)
+    {
         scene->SetScriptExecutionEnabled(false);
+        scene->StopPhysics();
+    }
 
     if (m_SnapshotPath.empty() || m_ResolvedScenePath.empty())
     {
