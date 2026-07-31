@@ -27,13 +27,8 @@ namespace anv
     {
         refresh_active_scene();
 
-        if (!m_Active)
-            return;
-
-        if (auto camera = m_Active->GetActiveCamera())
-            Renderer2D::SetCamera(camera);
-
-        m_Active->Render();
+        if (m_Active)
+            m_Active->Render();
     }
 
     void SceneLayer::OnUpdate(float _dt)
@@ -47,9 +42,15 @@ namespace anv
     void SceneLayer::refresh_active_scene()
     {
         Ref<Scene> active = m_ScnMgr ? m_ScnMgr->GetActive() : nullptr;
-        if (!active || active == m_Active)
+        if (!active)
             return;
 
         m_Active = active;
+
+        // Renderer2D::BeginScene() also begins the ImGui frame. Keep a valid
+        // renderer camera even while a scene has no active Camera2D entity.
+        // The Game Viewport still renders only from Scene::GetActiveCamera().
+        _shared<Camera2D> camera = m_Active->GetActiveCamera();
+        Renderer2D::SetCamera(camera ? camera : m_FallbackCamera);
     }
 }
