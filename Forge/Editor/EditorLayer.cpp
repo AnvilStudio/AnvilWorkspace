@@ -1,7 +1,4 @@
-﻿#include "EditorLayer.h"
-#include "EditorHelpers.h"
-
-#include <algorithm>
+#include "EditorLayer.h"
 
 using namespace anv;
 
@@ -19,18 +16,15 @@ EditorLayer::EditorLayer()
 
 void EditorLayer::OnAttach()
 {
-    ImGuiIO &io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO();
 
-    auto &fs = App::GetInstance()->GetFS();
+    auto& fs = App::GetInstance()->GetFS();
     auto path = fs.GetKeyVal("Assets") / "Fonts/JetBrainsMono-Bold.ttf";
 
-    io.Fonts->AddFontFromFileTTF(
-        path.string().c_str(),
-        18.0f);
-
+    io.Fonts->AddFontFromFileTTF(path.string().c_str(), 18.0f);
     io.ConfigDpiScaleFonts = true;
 
-    ImGuiStyle &style = ImGui::GetStyle();
+    ImGuiStyle& style = ImGui::GetStyle();
 
     style.WindowRounding = 3.0f;
     style.ChildRounding = 3.0f;
@@ -44,11 +38,10 @@ void EditorLayer::OnAttach()
     style.CellPadding = ImVec2(6, 4);
     style.ItemSpacing = ImVec2(8, 6);
     style.ItemInnerSpacing = ImVec2(6, 4);
-
     style.ScrollbarSize = 13.0f;
     style.GrabMinSize = 10.0f;
 
-    ImVec4 *colors = style.Colors;
+    ImVec4* colors = style.Colors;
 
     colors[ImGuiCol_WindowBg] = ImVec4(0.118f, 0.118f, 0.118f, 1.0f);
     colors[ImGuiCol_ChildBg] = ImVec4(0.145f, 0.145f, 0.149f, 1.0f);
@@ -82,7 +75,7 @@ void EditorLayer::OnAttach()
     colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.208f, 0.478f, 0.741f, 1.0f);
 
     anv_log::AnvLog::SetCallback(
-        [this](const anv_log::LogRecord &record)
+        [this](const anv_log::LogRecord& record)
         {
             m_Console.AddLogRecord(record);
         });
@@ -99,9 +92,13 @@ void EditorLayer::OnImGuiRender()
 {
     begin_dock_space();
     draw_menu_bar();
+
+    auto sceneManager = App::GetInstance()->GetSceneManager();
+    auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
+
     m_SceneHierarchy.Draw();
     m_FileBrowser.Draw();
-    draw_inspector();
+    m_InspectorLayer.Draw(scene, m_SelectedEntity);
     draw_stats();
     m_DevNotes.OnImGuiRender(&m_Windows.showCodeEditor);
     m_AssetRegistryPanel.Draw(&m_Windows.showAssetRegistry);
@@ -115,296 +112,13 @@ void EditorLayer::OnDetach()
     anv_log::AnvLog::ClearCallback();
 }
 
-void EditorLayer::draw_inspector()
-{
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 2));
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 3));
-    ImGui::Begin("Inspector");
-
-    auto scene = App::GetInstance()->GetSceneManager()->GetActive();
-
-    if (scene &&
-        m_SelectedEntity != entt::null &&
-        scene->Registry().valid(m_SelectedEntity))
-    {
-        draw_component<Component::Tag>(
-            "Tag",
-            m_SelectedEntity,
-            scene,
-            [&](Component::Tag &tag)
-            {
-                char buffer[256]{};
-                std::strncpy(buffer, tag.Get().c_str(), sizeof(buffer) - 1);
-
-                if (ImGui::BeginTable("TagProps", 2, ImGuiTableFlags_SizingStretchProp))
-                {
-                    ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 90.0f);
-                    ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
-                    ImGui::TableNextRow();
-
-                    if (property_text("Name", buffer, sizeof(buffer)))
-                        tag.value = buffer;
-
-                    ImGui::EndTable();
-                }
-            });
-
-        draw_component<Component::Transform2d>(
-            "Transform2D",
-            m_SelectedEntity,
-            scene,
-            [&](Component::Transform2d &transform)
-            {
-                if (ImGui::BeginTable("Transform2DProps", 2, ImGuiTableFlags_SizingStretchProp))
-                {
-                    ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 90.0f);
-                    ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
-                    ImGui::TableNextRow();
-                    property_float2("Position", &transform.position.x);
-                    ImGui::TableNextRow();
-                    property_float("Rotation", &transform.rotation);
-                    ImGui::TableNextRow();
-                    property_float2("Scale", &transform.scale.x);
-                    ImGui::EndTable();
-                }
-            });
-
-        draw_component<Component::SpriteRenderer>(
-            "Sprite Renderer",
-            m_SelectedEntity,
-            scene,
-            [&](Component::SpriteRenderer &sprite)
-            {
-                auto assetManager = App::GetInstance()->GetAssetManager();
-                Ref<Texture> currentTexture = assetManager
-                    ? assetManager->GetAs<Texture>(sprite.texture)
-                    : nullptr;
-
-                if (ImGui::BeginTable("SpriteProps", 2, ImGuiTableFlags_SizingStretchProp))
-                {
-                    ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 90.0f);
-                    ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
-
-                    ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0);
-                    ImGui::TextUnformatted("Texture");
-                    ImGui::TableSetColumnIndex(1);
-
-                    const char *textureLabel = currentTexture
-                        ? currentTexture->GetName().c_str()
-                        : "None — drop texture here";
-
-                    ImGui::Button(textureLabel, ImVec2(-1.0f, 0.0f));
-
-                    if (ImGui::BeginDragDropTarget())
-                    {
-                        if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
-                        {
-                            const char *pathData = static_cast<const char *>(payload->Data);
-                            std::filesystem::path texturePath(pathData ? pathData : "");
-                            std::string extension = texturePath.extension().string();
-                            std::transform(
-                                extension.begin(),
-                                extension.end(),
-                                extension.begin(),
-                                [](unsigned char character)
-                                {
-                                    return static_cast<char>(std::tolower(character));
-                                });
-
-                            const bool isTexture =
-                                extension == ".png" ||
-                                extension == ".jpg" ||
-                                extension == ".jpeg" ||
-                                extension == ".bmp" ||
-                                extension == ".tga";
-
-                            if (isTexture && assetManager)
-                            {
-                                Ref<Texture> texture = assetManager->GetOrCreateTexture(texturePath);
-                                if (texture && texture->IsGPUReady())
-                                {
-                                    sprite.texture = texture->GetAssetID();
-                                    currentTexture = texture;
-                                    scene->Save();
-                                }
-                            }
-                        }
-
-                        ImGui::EndDragDropTarget();
-                    }
-
-                    if (currentTexture)
-                    {
-                        ImGui::TextDisabled(
-                            "%dx%d | %s",
-                            currentTexture->Width(),
-                            currentTexture->Height(),
-                            currentTexture->IsGPUReady() ? "GPU ready" : "GPU unavailable");
-
-                        if (ImGui::Button("Clear Texture"))
-                        {
-                            sprite.texture = {};
-                            currentTexture = nullptr;
-                            scene->Save();
-                        }
-                    }
-                    else if (!sprite.texture.uuid.empty())
-                    {
-                        ImGui::TextDisabled("Missing asset: %s", sprite.texture.uuid.c_str());
-                    }
-
-                    ImGui::TableNextRow();
-                    property_color4("Color", &sprite.color.x);
-                    ImGui::TableNextRow();
-                    property_int("Draw Layer", &sprite.drawLayer);
-                    ImGui::EndTable();
-                }
-            });
-
-        draw_component<Component::Rigidbody2D>(
-            "Rigidbody 2D",
-            m_SelectedEntity,
-            scene,
-            [&](Component::Rigidbody2D &rigidbody)
-            {
-                if (ImGui::BeginTable("Rigidbody2DProps", 2, ImGuiTableFlags_SizingStretchProp))
-                {
-                    ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 110.0f);
-                    ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
-
-                    ImGui::TableNextRow();
-                    property_label("Body Type");
-                    int bodyType = static_cast<int>(rigidbody.type);
-                    const char* bodyTypes[] = {"Static", "Kinematic", "Dynamic"};
-                    if (ImGui::Combo("##Body Type", &bodyType, bodyTypes, IM_ARRAYSIZE(bodyTypes)))
-                    {
-                        rigidbody.type = static_cast<Component::Rigidbody2DType>(bodyType);
-                    }
-
-                    ImGui::TableNextRow();
-                    if (property_float("Gravity Scale", &rigidbody.gravityScale))
-                        rigidbody.gravityScale = std::max(0.0f, rigidbody.gravityScale);
-
-                    ImGui::TableNextRow();
-                    if (property_float("Linear Damping", &rigidbody.linearDamping))
-                        rigidbody.linearDamping = std::max(0.0f, rigidbody.linearDamping);
-
-                    ImGui::TableNextRow();
-                    if (property_float("Angular Damping", &rigidbody.angularDamping))
-                        rigidbody.angularDamping = std::max(0.0f, rigidbody.angularDamping);
-
-                    ImGui::TableNextRow();
-                    property_bool("Fixed Rotation", &rigidbody.fixedRotation);
-
-                    ImGui::TableNextRow();
-                    property_bool("Bullet", &rigidbody.bullet);
-
-                    ImGui::TableNextRow();
-                    property_bool("Enabled", &rigidbody.enabled);
-
-                    ImGui::EndTable();
-                }
-            });
-
-        draw_component<Component::BoxCollider2D>(
-            "Box Collider 2D",
-            m_SelectedEntity,
-            scene,
-            [&](Component::BoxCollider2D &collider)
-            {
-                if (ImGui::BeginTable("BoxCollider2DProps", 2, ImGuiTableFlags_SizingStretchProp))
-                {
-                    ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 100.0f);
-                    ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
-
-                    ImGui::TableNextRow();
-                    if (property_float2("Size", &collider.size.x))
-                    {
-                        collider.size.x = std::max(0.001f, collider.size.x);
-                        collider.size.y = std::max(0.001f, collider.size.y);
-                    }
-
-                    ImGui::TableNextRow();
-                    property_float2("Offset", &collider.offset.x);
-
-                    ImGui::TableNextRow();
-                    if (property_float("Density", &collider.density))
-                        collider.density = std::max(0.0f, collider.density);
-
-                    ImGui::TableNextRow();
-                    if (property_float("Friction", &collider.friction))
-                        collider.friction = std::max(0.0f, collider.friction);
-
-                    ImGui::TableNextRow();
-                    if (property_float("Restitution", &collider.restitution))
-                        collider.restitution = std::clamp(collider.restitution, 0.0f, 1.0f);
-
-                    ImGui::TableNextRow();
-                    property_bool("Sensor", &collider.sensor);
-
-                    ImGui::EndTable();
-                }
-            });
-
-        draw_add_component_menu(scene, m_SelectedEntity);
-    }
-
-    ImGui::End();
-    ImGui::PopStyleVar(2);
-}
-
-void EditorLayer::draw_add_component_menu(
-    anv::Ref<anv::Scene> scene,
-    entt::entity entity)
-{
-    if (!scene || entity == entt::null || !scene->Registry().valid(entity))
-        return;
-
-    if (ImGui::Button("Add Component", ImVec2(-1.0f, 0.0f)))
-        ImGui::OpenPopup("AddComponentPopup");
-
-    if (ImGui::BeginPopup("AddComponentPopup"))
-    {
-        if (!scene->HasComponent<Component::SpriteRenderer>(entity) &&
-            ImGui::MenuItem("Sprite Renderer"))
-        {
-            scene->AddComponent<Component::SpriteRenderer>(entity);
-            ImGui::CloseCurrentPopup();
-        }
-
-        if (!scene->HasComponent<Component::Transform2d>(entity) &&
-            ImGui::MenuItem("Transform 2D"))
-        {
-            scene->AddComponent<Component::Transform2d>(entity);
-            ImGui::CloseCurrentPopup();
-        }
-
-        if (!scene->HasComponent<Component::Rigidbody2D>(entity) &&
-            ImGui::MenuItem("Rigidbody 2D"))
-        {
-            scene->AddComponent<Component::Rigidbody2D>(entity);
-            ImGui::CloseCurrentPopup();
-        }
-
-        if (!scene->HasComponent<Component::BoxCollider2D>(entity) &&
-            ImGui::MenuItem("Box Collider 2D"))
-        {
-            scene->AddComponent<Component::BoxCollider2D>(entity);
-            ImGui::CloseCurrentPopup();
-        }
-
-        ImGui::EndPopup();
-    }
-}
-
 void EditorLayer::draw_stats()
 {
     if (!m_Windows.showStats)
         return;
 
     ImGui::Begin("Stats");
-    auto &stats = App::GetInstance()->GetStats();
+    auto& stats = App::GetInstance()->GetStats();
     ImGui::Text("FPS: %u", stats.fps.GetFPS());
     ImGui::Text("Frame Time: %.3f ms", stats.frameTime);
     ImGui::End();
@@ -412,7 +126,7 @@ void EditorLayer::draw_stats()
 
 void EditorLayer::begin_dock_space()
 {
-    ImGuiViewport *viewport = ImGui::GetMainViewport();
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
 
     ImGui::SetNextWindowPos(viewport->WorkPos);
     ImGui::SetNextWindowSize(viewport->WorkSize);
@@ -434,7 +148,7 @@ void EditorLayer::begin_dock_space()
     ImGui::Begin("Dockspace", nullptr, flags);
     ImGui::PopStyleVar(3);
 
-    ImGuiID dockspaceID = ImGui::GetID("AnvilDockspace");
+    const ImGuiID dockspaceID = ImGui::GetID("AnvilDockspace");
     ImGui::DockSpace(
         dockspaceID,
         ImVec2(0.0f, 0.0f),
@@ -445,57 +159,58 @@ void EditorLayer::begin_dock_space()
 
 void EditorLayer::draw_menu_bar()
 {
-    if (ImGui::BeginMainMenuBar())
+    if (!ImGui::BeginMainMenuBar())
+        return;
+
+    if (ImGui::BeginMenu("File"))
     {
-        if (ImGui::BeginMenu("File"))
+        if (ImGui::MenuItem("Save Scene", "Ctrl+S"))
         {
-            if (ImGui::MenuItem("Save Scene", "Ctrl+S"))
-            {
-                auto scene = App::GetInstance()->GetSceneManager()->GetActive();
-                if (scene)
-                    scene->Save();
-            }
-
-            ImGui::Separator();
-
-            if (ImGui::MenuItem("Reload Scene"))
-                App::GetInstance()->GetSceneManager()->ReloadActive();
-
-            ImGui::Separator();
-
-            if (ImGui::MenuItem("Exit"))
-                App::GetInstance()->Close();
-
-            ImGui::EndMenu();
+            auto sceneManager = App::GetInstance()->GetSceneManager();
+            auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
+            if (scene)
+                scene->Save();
         }
 
-        if (ImGui::BeginMenu("Window"))
-        {
-            ImGui::MenuItem("Asset Registry", nullptr, &m_Windows.showAssetRegistry);
-            ImGui::MenuItem("Dev Notes", nullptr, &m_Windows.showCodeEditor);
-            ImGui::MenuItem("Stats", nullptr, &m_Windows.showStats);
-            ImGui::MenuItem("Console", nullptr, &m_Windows.showConsole);
-            ImGui::EndMenu();
-        }
+        ImGui::Separator();
 
-        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 80) * 0.5f);
+        if (ImGui::MenuItem("Reload Scene"))
+            App::GetInstance()->GetSceneManager()->ReloadActive();
 
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.18f, 0.45f, 0.22f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.22f, 0.55f, 0.27f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.35f, 0.18f, 1.0f));
+        ImGui::Separator();
 
-        if (m_SceneState == SceneState::Edit)
-        {
-            if (ImGui::Button("Play"))
-                m_SceneState = SceneState::Play;
-        }
-        else
-        {
-            if (ImGui::Button("Stop"))
-                m_SceneState = SceneState::Edit;
-        }
+        if (ImGui::MenuItem("Exit"))
+            App::GetInstance()->Close();
 
-        ImGui::PopStyleColor(3);
-        ImGui::EndMainMenuBar();
+        ImGui::EndMenu();
     }
+
+    if (ImGui::BeginMenu("Window"))
+    {
+        ImGui::MenuItem("Asset Registry", nullptr, &m_Windows.showAssetRegistry);
+        ImGui::MenuItem("Dev Notes", nullptr, &m_Windows.showCodeEditor);
+        ImGui::MenuItem("Stats", nullptr, &m_Windows.showStats);
+        ImGui::MenuItem("Console", nullptr, &m_Windows.showConsole);
+        ImGui::EndMenu();
+    }
+
+    ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 80.0f) * 0.5f);
+
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.18f, 0.45f, 0.22f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.22f, 0.55f, 0.27f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.35f, 0.18f, 1.0f));
+
+    if (m_SceneState == SceneState::Edit)
+    {
+        if (ImGui::Button("Play"))
+            m_SceneState = SceneState::Play;
+    }
+    else
+    {
+        if (ImGui::Button("Stop"))
+            m_SceneState = SceneState::Edit;
+    }
+
+    ImGui::PopStyleColor(3);
+    ImGui::EndMainMenuBar();
 }
