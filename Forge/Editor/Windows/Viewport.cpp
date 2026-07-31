@@ -7,6 +7,7 @@
 #include <cmath>
 #include <limits>
 
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 namespace
@@ -57,12 +58,12 @@ void Viewport::Draw()
         if (m_EditorCamera && currentSize.x > 0.0f && currentSize.y > 0.0f)
             m_EditorCamera->SetAspectRatio(currentSize.x / currentSize.y);
 
-        bool camInputEn = 
+        bool camInputEn =
         (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
          ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows));
 
         m_Controller.SetInputEnabled(camInputEn);
-        
+
         m_Controller.Update(anv::Time::DeltaTime());
 
         update_operation(
@@ -208,23 +209,17 @@ void Viewport::draw_selection_overlay(
     const auto& transform =
         scene->GetComponent<anv::Component::Transform2d>(entity);
 
-    const glm::mat4 model = transform.GetTransform();
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    if (!drawList)
+        return;
 
-    constexpr std::array<glm::vec4, 4> localCorners = {
-        glm::vec4{-0.5f, -0.5f, 0.0f, 1.0f},
-        glm::vec4{ 0.5f, -0.5f, 0.0f, 1.0f},
-        glm::vec4{ 0.5f,  0.5f, 0.0f, 1.0f},
-        glm::vec4{-0.5f,  0.5f, 0.0f, 1.0f}
-    };
-
-    std::array<ImVec2, 4> screenCorners{};
-
-    for (std::size_t index = 0; index < localCorners.size(); ++index)
-    {
-        const glm::vec4 worldCorner = model * localCorners[index];
-        if (!world_to_viewport(glm::vec3(worldCorner), screenCorners[index]))
-            return;
-    }
+    const ImU32 outlineColor = IM_COL32(255, 214, 10, 255);
+    const ImU32 activeCameraColor = IM_COL32(80, 220, 120, 255);
+    const ImU32 shadowColor = IM_COL32(0, 0, 0, 190);
+    const ImU32 iconFillColor = IM_COL32(45, 45, 50, 235);
+    constexpr float outlineThickness = 2.0f;
+    constexpr float shadowThickness = 4.0f;
+    constexpr float pivotRadius = 5.0f;
 
     ImVec2 pivot{};
     if (!world_to_viewport(
@@ -234,34 +229,181 @@ void Viewport::draw_selection_overlay(
         return;
     }
 
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
-    if (!drawList)
-        return;
-
-    const ImU32 outlineColor = IM_COL32(255, 214, 10, 255);
-    const ImU32 shadowColor = IM_COL32(0, 0, 0, 190);
-    constexpr float outlineThickness = 2.0f;
-    constexpr float shadowThickness = 4.0f;
-    constexpr float pivotRadius = 5.0f;
-
     drawList->PushClipRect(
         ImVec2(m_ViewportBounds[0].x, m_ViewportBounds[0].y),
         ImVec2(m_ViewportBounds[1].x, m_ViewportBounds[1].y),
         true);
 
-    drawList->AddPolyline(
-        screenCorners.data(),
-        static_cast<int>(screenCorners.size()),
-        shadowColor,
-        ImDrawFlags_Closed,
-        shadowThickness);
+    if (scene->HasComponent<anv::Component::Camera2D>(entity))
+    {
+        auto& cameraComponent =
+            scene->GetComponent<anv::Component::Camera2D>(entity);
 
-    drawList->AddPolyline(
-        screenCorners.data(),
-        static_cast<int>(screenCorners.size()),
-        outlineColor,
-        ImDrawFlags_Closed,
-        outlineThickness);
+        if (!cameraComponent.camera)
+            cameraComponent.camera = std::make_shared<anv::Camera2D>();
+
+        const float halfHeight =
+            std::max(0.1f, cameraComponent.camera->GetZoom());
+        const float halfWidth =
+            halfHeight * std::max(0.01f, cameraComponent.camera->GetAspectRatio());
+
+        const glm::mat4 cameraTransform =
+            glm::translate(
+                glm::mat4(1.0f),
+                glm::vec3(transform.position, 0.0f)) *
+            glm::rotate(
+                glm::mat4(1.0f),
+                glm::radians(transform.rotation),
+                glm::vec3(0.0f, 0.0f, 1.0f));
+
+        const std::array<glm::vec4, 4> localFrustumCorners = {
+            glm::vec4{-halfWidth, -halfHeight, 0.0f, 1.0f},
+            glm::vec4{ halfWidth, -halfHeight, 0.0f, 1.0f},
+            glm::vec4{ halfWidth,  halfHeight, 0.0f, 1.0f},
+            glm::vec4{-halfWidth,  halfHeight, 0.0f, 1.0f}
+        };
+
+        std::array<ImVec2, 4> frustumCorners{};
+        bool validFrustum = true;
+
+        for (std::size_t index = 0;
+             index < localFrustumCorners.size();
+             ++index)
+        {
+            const glm::vec4 worldCorner =
+                cameraTransform * localFrustumCorners[index];
+
+            if (!world_to_viewport(
+                    glm::vec3(worldCorner),
+                    frustumCorners[index]))
+            {
+                validFrustum = false;
+                break;
+            }
+        }
+
+        const ImU32 cameraColor = cameraComponent.isActive
+            ? activeCameraColor
+            : outlineColor;
+
+        if (validFrustum)
+        {
+            drawList->AddPolyline(
+                frustumCorners.data(),
+                static_cast<int>(frustumCorners.size()),
+                shadowColor,
+                ImDrawFlags_Closed,
+                shadowThickness);
+
+            drawList->AddPolyline(
+                frustumCorners.data(),
+                static_cast<int>(frustumCorners.size()),
+                cameraColor,
+                ImDrawFlags_Closed,
+                outlineThickness);
+
+            const ImVec2 topMid{
+                (frustumCorners[2].x + frustumCorners[3].x) * 0.5f,
+                (frustumCorners[2].y + frustumCorners[3].y) * 0.5f};
+
+            drawList->AddLine(
+                pivot,
+                topMid,
+                cameraColor,
+                1.0f);
+        }
+
+        // Editor-only camera icon. It stays a readable size regardless of zoom.
+        constexpr float iconHalfWidth = 10.0f;
+        constexpr float iconHalfHeight = 7.0f;
+        constexpr float lensLength = 7.0f;
+
+        const ImVec2 bodyMin{
+            pivot.x - iconHalfWidth,
+            pivot.y - iconHalfHeight};
+        const ImVec2 bodyMax{
+            pivot.x + iconHalfWidth,
+            pivot.y + iconHalfHeight};
+
+        drawList->AddRectFilled(
+            bodyMin,
+            bodyMax,
+            iconFillColor,
+            2.0f);
+        drawList->AddRect(
+            bodyMin,
+            bodyMax,
+            cameraColor,
+            2.0f,
+            0,
+            outlineThickness);
+
+        const std::array<ImVec2, 3> lens = {
+            ImVec2{bodyMax.x, pivot.y - 5.0f},
+            ImVec2{bodyMax.x + lensLength, pivot.y - 9.0f},
+            ImVec2{bodyMax.x + lensLength, pivot.y + 9.0f}
+        };
+
+        drawList->AddTriangleFilled(
+            lens[0],
+            lens[1],
+            lens[2],
+            iconFillColor);
+        drawList->AddPolyline(
+            lens.data(),
+            static_cast<int>(lens.size()),
+            cameraColor,
+            ImDrawFlags_Closed,
+            outlineThickness);
+
+        drawList->AddCircleFilled(
+            ImVec2{pivot.x - 3.0f, pivot.y},
+            2.5f,
+            cameraColor);
+    }
+    else
+    {
+        const glm::mat4 model = transform.GetTransform();
+
+        constexpr std::array<glm::vec4, 4> localCorners = {
+            glm::vec4{-0.5f, -0.5f, 0.0f, 1.0f},
+            glm::vec4{ 0.5f, -0.5f, 0.0f, 1.0f},
+            glm::vec4{ 0.5f,  0.5f, 0.0f, 1.0f},
+            glm::vec4{-0.5f,  0.5f, 0.0f, 1.0f}
+        };
+
+        std::array<ImVec2, 4> screenCorners{};
+        bool validOutline = true;
+
+        for (std::size_t index = 0; index < localCorners.size(); ++index)
+        {
+            const glm::vec4 worldCorner = model * localCorners[index];
+            if (!world_to_viewport(
+                    glm::vec3(worldCorner),
+                    screenCorners[index]))
+            {
+                validOutline = false;
+                break;
+            }
+        }
+
+        if (validOutline)
+        {
+            drawList->AddPolyline(
+                screenCorners.data(),
+                static_cast<int>(screenCorners.size()),
+                shadowColor,
+                ImDrawFlags_Closed,
+                shadowThickness);
+
+            drawList->AddPolyline(
+                screenCorners.data(),
+                static_cast<int>(screenCorners.size()),
+                outlineColor,
+                ImDrawFlags_Closed,
+                outlineThickness);
+        }
+    }
 
     drawList->AddLine(
         ImVec2(pivot.x - pivotRadius, pivot.y),
