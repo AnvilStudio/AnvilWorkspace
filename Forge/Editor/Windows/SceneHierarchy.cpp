@@ -34,6 +34,19 @@ void SceneHierarchy::Draw()
             begin_rename(entity, "New Entity");
         }
 
+        if (ImGui::MenuItem("Create Camera 2D"))
+        {
+            const auto entity = scene->CreateEntity("Game Camera");
+            scene->AddComponent<Component::Camera2D>(entity);
+
+            if (scene->GetActiveCameraEntity() == entt::null)
+                scene->SetActiveCamera(entity);
+
+            scene->Save();
+            EditorLayer::GetInstance()->SetSelectedEntity(entity);
+            begin_rename(entity, "Game Camera");
+        }
+
         if (ImGui::MenuItem("Create Sprite"))
         {
             const auto entity = scene->CreateEntity("New Sprite");
@@ -91,6 +104,23 @@ void SceneHierarchy::Draw()
             {
                 EditorLayer::GetInstance()->SetSelectedEntity(entity);
                 begin_rename(entity, tag.Get());
+            }
+
+            if (!scene->HasComponent<Component::Camera2D>(entity) &&
+                ImGui::MenuItem("Add Camera 2D"))
+            {
+                scene->AddComponent<Component::Camera2D>(entity);
+                if (scene->GetActiveCameraEntity() == entt::null)
+                    scene->SetActiveCamera(entity);
+                scene->Save();
+            }
+
+            if (scene->HasComponent<Component::Camera2D>(entity) &&
+                scene->GetActiveCameraEntity() != entity &&
+                ImGui::MenuItem("Set As Active Camera"))
+            {
+                scene->SetActiveCamera(entity);
+                scene->Save();
             }
 
             if (ImGui::BeginMenu("Physics"))
