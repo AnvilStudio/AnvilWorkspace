@@ -22,5 +22,6 @@ namespace anv
     private:
         _shared<SceneManager> m_ScnMgr;
         Ref<Scene> m_Active;
+        _shared<Camera2D> m_FallbackCamera = std::make_shared<Camera2D>();
     };
 }
