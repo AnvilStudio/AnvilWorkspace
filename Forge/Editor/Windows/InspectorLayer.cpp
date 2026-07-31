@@ -22,6 +22,13 @@ void InspectorLayer::Draw(
     {
         ImGui::PushID(static_cast<uint32_t>(selectedEntity));
 
+        const float footerHeight = ImGui::GetFrameHeightWithSpacing();
+        ImGui::BeginChild(
+            "ComponentList",
+            ImVec2(0.0f, -footerHeight),
+            false,
+            ImGuiWindowFlags_AlwaysVerticalScrollbar);
+
         draw_component<Component::Tag>(
             "Tag",
             selectedEntity,
@@ -256,6 +263,7 @@ void InspectorLayer::Draw(
                 }
             });
 
+        ImGui::EndChild();
         draw_add_component_menu(scene, selectedEntity);
         ImGui::PopID();
     }
