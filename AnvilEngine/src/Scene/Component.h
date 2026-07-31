@@ -106,7 +106,7 @@ namespace anv
                 case Rigidbody2DType::Kinematic: return "Kinematic";
                 case Rigidbody2DType::Dynamic: return "Dynamic";
             }
-            return "Static";
+            return "Dynamic";
         }
 
         inline bool Rigidbody2DTypeFromString(
@@ -121,7 +121,7 @@ namespace anv
 
         struct Rigidbody2D
         {
-            Rigidbody2DType type = Rigidbody2DType::Static;
+            Rigidbody2DType type = Rigidbody2DType::Dynamic;
             float gravityScale = 1.0f;
             float linearDamping = 0.0f;
             float angularDamping = 0.0f;
@@ -131,7 +131,7 @@ namespace anv
 
             void Serialize(Serializer& ser)
             {
-                ser.EnumFieldOr("Type", type, Rigidbody2DType::Static,
+                ser.EnumFieldOr("Type", type, Rigidbody2DType::Dynamic,
                     Rigidbody2DTypeToString, Rigidbody2DTypeFromString);
                 ser.Field("GravityScale", gravityScale);
                 ser.Field("LinearDamping", linearDamping);
@@ -143,7 +143,7 @@ namespace anv
 
             void Deserialize(Serializer& ser)
             {
-                ser.EnumFieldOr("Type", type, Rigidbody2DType::Static,
+                ser.EnumFieldOr("Type", type, Rigidbody2DType::Dynamic,
                     Rigidbody2DTypeToString, Rigidbody2DTypeFromString);
                 ser.FieldOr<float>("GravityScale", gravityScale, 1.0f);
                 ser.FieldOr<float>("LinearDamping", linearDamping, 0.0f);
