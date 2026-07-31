@@ -109,14 +109,6 @@ void EditorLayer::OnImGuiRender()
 
 void EditorLayer::OnDetach()
 {
-    auto sceneManager = App::GetInstance()->GetSceneManager();
-    auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
-    if (scene)
-    {
-        scene->SetScriptExecutionEnabled(false);
-        scene->StopPhysics();
-    }
-
     anv_log::AnvLog::ClearCallback();
 }
 
@@ -208,35 +200,15 @@ void EditorLayer::draw_menu_bar()
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.22f, 0.55f, 0.27f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.35f, 0.18f, 1.0f));
 
-    auto sceneManager = App::GetInstance()->GetSceneManager();
-    auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
-
     if (m_SceneState == SceneState::Edit)
     {
-        if (ImGui::Button("Play") && scene)
-        {
-            scene->Save();
-            scene->SetScriptExecutionEnabled(true);
-            scene->StartPhysics();
+        if (ImGui::Button("Play"))
             m_SceneState = SceneState::Play;
-        }
     }
     else
     {
         if (ImGui::Button("Stop"))
-        {
-            if (scene)
-            {
-                scene->SetScriptExecutionEnabled(false);
-                scene->StopPhysics();
-            }
-
-            ClearSelection();
             m_SceneState = SceneState::Edit;
-
-            if (sceneManager && scene && !scene->GetPath().empty())
-                sceneManager->ReloadActive();
-        }
     }
 
     ImGui::PopStyleColor(3);
