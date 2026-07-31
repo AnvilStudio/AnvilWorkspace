@@ -8,6 +8,8 @@
 #include <Scripting/PythonScriptEngine.h>
 #include <Util/Serialize/Serializer.h>
 
+#include <limits>
+
 namespace anv
 {
     Scene::Scene(std::string name)
@@ -119,12 +121,20 @@ namespace anv
 
             ANV_LOG_INFO("Migrated legacy scene camera to Game Camera entity.");
         }
+
+        auto cameraView = m_Registry.view<Component::Camera2D>();
+        for (const auto entity : cameraView)
+            EnsureCameraEditorSprite(entity);
     }
 
     void Scene::Save()
     {
         if (m_Path.empty())
             return;
+
+        auto cameraView = m_Registry.view<Component::Camera2D>();
+        for (const auto entity : cameraView)
+            EnsureCameraEditorSprite(entity);
 
         Serializer ser(m_Path, Serializer::Mode::SER_MODE_TOML,
                        Serializer::Direction::Write);
@@ -172,6 +182,8 @@ namespace anv
             if (!cameraComponent.isActive)
                 continue;
 
+            EnsureCameraEditorSprite(entity);
+
             if (!cameraComponent.camera)
                 cameraComponent.camera = std::make_shared<Camera2D>();
 
@@ -205,12 +217,62 @@ namespace anv
             return;
         }
 
+        EnsureCameraEditorSprite(entity);
+
         auto view = m_Registry.view<Component::Camera2D>();
         for (const auto cameraEntity : view)
         {
             view.get<Component::Camera2D>(cameraEntity).isActive =
                 cameraEntity == entity;
         }
+    }
+
+    void Scene::EnsureCameraEditorSprite(entt::entity entity)
+    {
+        if (entity == entt::null ||
+            !m_Registry.valid(entity) ||
+            !m_Registry.any_of<Component::Camera2D>(entity))
+        {
+            return;
+        }
+
+        auto& sprite = AddComponent<Component::SpriteRenderer>(entity);
+        sprite.visibleInGame = false;
+        sprite.visibleInEditor = true;
+        sprite.drawLayer = std::numeric_limits<int>::max();
+        sprite.color = glm::vec4(1.0f);
+
+        if (!sprite.texture.uuid.empty())
+            return;
+
+        auto assetManager = App::GetInstance()->GetAssetManager();
+        if (!assetManager)
+            return;
+
+        const std::filesystem::path iconPath =
+            App::GetInstance()->GetFS().GetKeyVal("Res") /
+            "icons" /
+            "camera_icon.png";
+
+        std::error_code error;
+        if (!std::filesystem::is_regular_file(iconPath, error))
+        {
+            ANV_LOG_WARN(
+                "Camera editor icon was not found at '%s'.",
+                iconPath.string().c_str());
+            return;
+        }
+
+        Ref<Texture> icon = assetManager->GetOrCreateTexture(iconPath);
+        if (!icon)
+        {
+            ANV_LOG_WARN(
+                "Failed to create camera editor icon texture from '%s'.",
+                iconPath.string().c_str());
+            return;
+        }
+
+        sprite.texture = icon->GetAssetID();
     }
 
     void Scene::Shutdown()
@@ -270,6 +332,9 @@ namespace anv
         view.each([&](auto, Component::Transform2d& transform,
                       Component::SpriteRenderer& sprite)
         {
+            if (!sprite.visibleInGame)
+                return;
+
             Ref<Texture> texture = assetManager
                 ? assetManager->GetAs<Texture>(sprite.texture)
                 : nullptr;
