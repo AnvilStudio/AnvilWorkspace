@@ -10,15 +10,15 @@ project "Box2D"
 
     files
     {
-        "Box2D/include/box2d/**.h",
-        "Box2D/src/**.h",
-        "Box2D/src/**.c"
+        "Box2d/include/box2d/**.h",
+        "Box2d/src/**.h",
+        "Box2d/src/**.c"
     }
 
     includedirs
     {
-        "Box2D/include",
-        "Box2D/src"
+        "Box2d/include",
+        "Box2d/src"
     }
 
     filter "system:windows"
