@@ -3,6 +3,7 @@
 #include "../Core/Reference.h"
 #include "../Core/Uuid.h"
 #include "Components/Transform2d.h"
+#include "../Render/Camera.h"
 #include "../Scripting/ScriptTypes.h"
 #include "../Util/Serialize/Serializer.h"
 #include "../vendor/entt/single_include/entt/entt.hpp"
@@ -62,6 +63,31 @@ namespace anv
         {
             uuid::EntityUUID uid;
             UID() : uid(uuid::uuid_GenEntID()) {}
+        };
+
+        struct Camera2D
+        {
+            _shared<anv::Camera2D> camera = std::make_shared<anv::Camera2D>();
+            bool isActive = false;
+
+            void Serialize(Serializer& ser)
+            {
+                float zoom = camera ? camera->GetZoom() : 1.0f;
+                ser.Field("IsActive", isActive);
+                ser.Field("Zoom", zoom);
+            }
+
+            void Deserialize(Serializer& ser)
+            {
+                float zoom = 1.0f;
+                ser.FieldOr<bool>("IsActive", isActive, false);
+                ser.FieldOr<float>("Zoom", zoom, 1.0f);
+
+                if (!camera)
+                    camera = std::make_shared<anv::Camera2D>();
+
+                camera->SetZoom(zoom);
+            }
         };
 
         struct SpriteRenderer
