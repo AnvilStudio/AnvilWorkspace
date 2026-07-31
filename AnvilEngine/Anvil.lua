@@ -34,7 +34,7 @@ project "AnvilEngine"
         "./vendor",
         "./vendor/glm",
         "./vendor/GLFW/include",
-        "./vendor/Box2D/include",
+        "./vendor/Box2d/include",
         "./vendor/tomlplusplus/include",
         "./vendor/entt/single_include",
         "./vendor/imgui/",
