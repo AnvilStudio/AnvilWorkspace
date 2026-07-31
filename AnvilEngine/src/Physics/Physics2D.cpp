@@ -10,6 +10,21 @@
 
 namespace anv
 {
+    namespace
+    {
+        const char* BodyTypeName(Component::Rigidbody2DType type)
+        {
+            switch (type)
+            {
+                case Component::Rigidbody2DType::Static: return "Static";
+                case Component::Rigidbody2DType::Kinematic: return "Kinematic";
+                case Component::Rigidbody2DType::Dynamic: return "Dynamic";
+            }
+
+            return "Unknown";
+        }
+    }
+
     Physics2D::~Physics2D()
     {
         Stop();
@@ -30,10 +45,30 @@ namespace anv
             Component::Transform2d,
             Component::Rigidbody2D>();
 
-        for (const auto entity : view)
-            CreateBody(scene, entity);
+        std::size_t dynamicBodyCount = 0;
 
-        ANV_LOG_INFO("Physics2D started with %zu bodies.", m_Bodies.size());
+        for (const auto entity : view)
+        {
+            const auto& rigidbody =
+                view.get<Component::Rigidbody2D>(entity);
+
+            if (rigidbody.type == Component::Rigidbody2DType::Dynamic)
+                ++dynamicBodyCount;
+
+            CreateBody(scene, entity);
+        }
+
+        ANV_LOG_INFO(
+            "Physics2D started with %zu bodies (%zu dynamic).",
+            m_Bodies.size(),
+            dynamicBodyCount);
+
+        if (dynamicBodyCount == 0)
+        {
+            ANV_LOG_WARN(
+                "Physics2D has no dynamic bodies. Static and kinematic bodies do not fall under gravity.");
+        }
+
         return true;
     }
 
@@ -116,14 +151,30 @@ namespace anv
         bodyDef.motionLocks.linearX = false;
         bodyDef.motionLocks.linearY = false;
         bodyDef.motionLocks.angularZ = rigidbody.fixedRotation;
+        bodyDef.enableSleep = true;
+        bodyDef.isAwake = true;
         bodyDef.isBullet = rigidbody.bullet;
         bodyDef.isEnabled = rigidbody.enabled;
 
         const b2BodyId body = b2CreateBody(m_World, &bodyDef);
         m_Bodies.emplace(entity, body);
 
+        ANV_LOG_INFO(
+            "Physics2D body created: entity=%u type=%s position=(%.3f, %.3f) gravityScale=%.3f enabled=%s",
+            static_cast<unsigned int>(entity),
+            BodyTypeName(rigidbody.type),
+            transform.position.x,
+            transform.position.y,
+            rigidbody.gravityScale,
+            rigidbody.enabled ? "true" : "false");
+
         if (!scene.HasComponent<Component::BoxCollider2D>(entity))
+        {
+            ANV_LOG_WARN(
+                "Physics2D entity %u has a Rigidbody2D but no BoxCollider2D.",
+                static_cast<unsigned int>(entity));
             return;
+        }
 
         const auto& collider =
             scene.GetComponent<Component::BoxCollider2D>(entity);
