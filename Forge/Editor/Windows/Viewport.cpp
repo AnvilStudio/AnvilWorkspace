@@ -1,8 +1,11 @@
 #include "Viewport.h"
 #include "../EditorLayer.h"
+
 #include <algorithm>
-#include <glm/gtc/type_ptr.hpp>
 #include <cctype>
+#include <limits>
+
+#include <glm/gtc/type_ptr.hpp>
 
 namespace
 {
@@ -90,11 +93,14 @@ void Viewport::Draw()
         anv::Renderer2D::DrawScene(m_ViewportTarget, m_EditorCamera);
         ImGui::Image(m_ViewportTarget->GetImGuiTextureID(), viewportSize);
 
-        ImGuizmo::SetOrthographic(true); // true if using an ortho camera
+        ImGuizmo::SetOrthographic(true);
         ImGuizmo::SetDrawlist();
 
         set_gizmo_bounds();
         draw_gizmo();
+
+        if (scene)
+            pick_entity(scene);
 
         // Scene Drag/Drop
         if (ImGui::BeginDragDropTarget())
@@ -130,6 +136,122 @@ void Viewport::Draw()
     ImGui::PopStyleVar();
 }
 
+void Viewport::pick_entity(
+    const anv::Ref<anv::Scene>& scene
+)
+{
+    if (!scene || !m_EditorCamera)
+        return;
+
+    if (EditorLayer::GetSceneState() !=
+        EditorLayer::SceneState::Edit)
+    {
+        return;
+    }
+
+    if (!m_ViewportHovered ||
+        !ImGui::IsMouseClicked(ImGuiMouseButton_Left) ||
+        ImGuizmo::IsOver() ||
+        ImGuizmo::IsUsing())
+    {
+        return;
+    }
+
+    const glm::vec2 mousePosition{
+        ImGui::GetMousePos().x,
+        ImGui::GetMousePos().y
+    };
+
+    const glm::vec2 localMouse =
+        mousePosition - m_ViewportBounds[0];
+
+    if (localMouse.x < 0.0f ||
+        localMouse.y < 0.0f ||
+        localMouse.x > m_ViewportSize.x ||
+        localMouse.y > m_ViewportSize.y ||
+        m_ViewportSize.x <= 0.0f ||
+        m_ViewportSize.y <= 0.0f)
+    {
+        return;
+    }
+
+    const glm::vec2 normalized{
+        localMouse.x / m_ViewportSize.x,
+        localMouse.y / m_ViewportSize.y
+    };
+
+    const glm::vec4 clipPosition{
+        normalized.x * 2.0f - 1.0f,
+        1.0f - normalized.y * 2.0f,
+        0.0f,
+        1.0f
+    };
+
+    const glm::mat4 inverseViewProjection =
+        glm::inverse(
+            m_EditorCamera->GetProjection() *
+            m_EditorCamera->GetView()
+        );
+
+    glm::vec4 worldPosition =
+        inverseViewProjection * clipPosition;
+
+    if (worldPosition.w != 0.0f)
+        worldPosition /= worldPosition.w;
+
+    entt::entity pickedEntity = entt::null;
+    int highestDrawLayer = std::numeric_limits<int>::min();
+
+    auto view = scene->Registry().view<
+        anv::Component::Transform2d,
+        anv::Component::SpriteRenderer>();
+
+    for (const auto entity : view)
+    {
+        const auto& transform =
+            view.get<anv::Component::Transform2d>(entity);
+
+        const auto& sprite =
+            view.get<anv::Component::SpriteRenderer>(entity);
+
+        const glm::mat4 inverseTransform =
+            glm::inverse(transform.GetTransform());
+
+        const glm::vec4 localPosition =
+            inverseTransform * glm::vec4(
+                worldPosition.x,
+                worldPosition.y,
+                0.0f,
+                1.0f
+            );
+
+        const bool insideQuad =
+            localPosition.x >= -0.5f &&
+            localPosition.x <= 0.5f &&
+            localPosition.y >= -0.5f &&
+            localPosition.y <= 0.5f;
+
+        if (!insideQuad)
+            continue;
+
+        if (sprite.drawLayer >= highestDrawLayer)
+        {
+            highestDrawLayer = sprite.drawLayer;
+            pickedEntity = entity;
+        }
+    }
+
+    if (pickedEntity == entt::null)
+    {
+        EditorLayer::GetInstance()->ClearSelection();
+        return;
+    }
+
+    EditorLayer::GetInstance()->SetSelectedEntity(
+        pickedEntity
+    );
+}
+
 void Viewport::update_operation(bool update)
 {
     if (!update)
@@ -145,7 +267,7 @@ void Viewport::update_operation(bool update)
     {
         m_Operation = ImGuizmo::OPERATION::ROTATE;
     }
-        if (is->IsKeyPressed(ANV_KEY_3))
+    if (is->IsKeyPressed(ANV_KEY_3))
     {
         m_Operation = ImGuizmo::OPERATION::SCALE;
     }
@@ -189,8 +311,14 @@ void Viewport::draw_gizmo()
     auto sceneManager = anv::App::GetInstance()->GetSceneManager();
     auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
 
+    if (!scene)
+        return;
+
     auto entity = EditorLayer::GetInstance()->GetSelectedEntity();
-    if (entity == entt::null)
+    if (entity == entt::null || !scene->Registry().valid(entity))
+        return;
+
+    if (!scene->HasComponent<anv::Component::Transform2d>(entity))
         return;
 
     auto &transform = scene->GetComponent<anv::Component::Transform2d>(entity);
@@ -203,8 +331,6 @@ void Viewport::draw_gizmo()
 
     const glm::mat4 &projection =
         m_EditorCamera->GetProjection();
-
-    set_gizmo_bounds();
 
     ImGuizmo::Manipulate(
         glm::value_ptr(view),
