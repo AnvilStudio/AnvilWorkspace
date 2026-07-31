@@ -3,9 +3,7 @@
 #include <Anvil.h>
 
 #include <array>
-#include <filesystem>
 #include <string>
-#include <vector>
 
 using namespace anv;
 
@@ -17,10 +15,6 @@ public:
     void Draw();
 
 private:
-    void draw_scene_picker(const Ref<Scene>& activeScene);
-    void refresh_scene_list();
-    bool open_scene(const std::filesystem::path& path);
-
     void begin_rename(
         entt::entity entity,
         const std::string& currentName
@@ -41,8 +35,6 @@ private:
 
     bool m_IsRenaming = false;
     bool m_FocusRenameInput = false;
-    bool m_SceneListInitialized = false;
 
     std::array<char, 256> m_RenameBuffer{};
-    std::vector<std::filesystem::path> m_ScenePaths;
 };
