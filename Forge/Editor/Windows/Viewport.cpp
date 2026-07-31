@@ -2,23 +2,25 @@
 #include "../EditorLayer.h"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
+#include <cmath>
 #include <limits>
 
 #include <glm/gtc/type_ptr.hpp>
 
 namespace
 {
-    bool IsTextureFile(const std::filesystem::path &_path)
+    bool IsTextureFile(const std::filesystem::path& path)
     {
-        std::string extension = _path.extension().string();
+        std::string extension = path.extension().string();
         std::transform(
             extension.begin(),
             extension.end(),
             extension.begin(),
-            [](unsigned char _character)
+            [](unsigned char character)
             {
-                return static_cast<char>(std::tolower(_character));
+                return static_cast<char>(std::tolower(character));
             });
 
         return extension == ".png" ||
@@ -38,7 +40,6 @@ Viewport::Viewport()
         175);
 
     m_EditorCamera = std::make_shared<anv::Camera2D>();
-
     m_Controller.SetCamera(m_EditorCamera);
 }
 
@@ -56,26 +57,30 @@ void Viewport::Draw()
         if (m_EditorCamera && currentSize.x > 0.0f && currentSize.y > 0.0f)
             m_EditorCamera->SetAspectRatio(currentSize.x / currentSize.y);
 
-        m_Controller.SetInputEnabled(ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows));
+        m_Controller.SetInputEnabled(
+            ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows));
         m_Controller.Update(anv::Time::DeltaTime());
 
-        update_operation(ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows));
+        update_operation(
+            ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows));
     }
 
-    ImVec2 viewportSize = ImGui::GetContentRegionAvail();
-    const bool validSize = viewportSize.x > 0 && viewportSize.y > 0;
-    ImVec2 framebufferScale = ImGui::GetIO().DisplayFramebufferScale;
+    const ImVec2 viewportSize = ImGui::GetContentRegionAvail();
+    const bool validSize = viewportSize.x > 0.0f && viewportSize.y > 0.0f;
+    const ImVec2 framebufferScale = ImGui::GetIO().DisplayFramebufferScale;
 
-    uint32_t targetWidth = validSize
-                            ? static_cast<uint32_t>(viewportSize.x * framebufferScale.x)
-                            : 0;
-    uint32_t targetHeight = validSize
-                            ? static_cast<uint32_t>(viewportSize.y * framebufferScale.y)
-                            : 0;
+    const uint32_t targetWidth = validSize
+        ? static_cast<uint32_t>(viewportSize.x * framebufferScale.x)
+        : 0;
+
+    const uint32_t targetHeight = validSize
+        ? static_cast<uint32_t>(viewportSize.y * framebufferScale.y)
+        : 0;
 
     const bool sizeChanged =
         validSize && targetWidth > 0 && targetHeight > 0 &&
-        (m_LastTargetWidth != targetWidth || m_LastTargetHeight != targetHeight);
+        (m_LastTargetWidth != targetWidth ||
+         m_LastTargetHeight != targetHeight);
 
     if (sizeChanged && m_ViewportTarget)
     {
@@ -93,35 +98,42 @@ void Viewport::Draw()
         anv::Renderer2D::DrawScene(m_ViewportTarget, m_EditorCamera);
         ImGui::Image(m_ViewportTarget->GetImGuiTextureID(), viewportSize);
 
+        set_gizmo_bounds();
+        draw_selection_overlay(scene);
+
         ImGuizmo::SetOrthographic(true);
         ImGuizmo::SetDrawlist();
-
-        set_gizmo_bounds();
         draw_gizmo();
 
         if (scene)
             pick_entity(scene);
 
-        // Scene Drag/Drop
         if (ImGui::BeginDragDropTarget())
         {
-            if (const ImGuiPayload *payload =
+            if (const ImGuiPayload* payload =
                     ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
             {
-                const auto *pathData = static_cast<const char *>(payload->Data);
-                const std::filesystem::path assetPath(pathData ? pathData : "");
+                const auto* pathData =
+                    static_cast<const char*>(payload->Data);
+                const std::filesystem::path assetPath(
+                    pathData ? pathData : "");
 
                 if (scene && IsTextureFile(assetPath))
                 {
-                    auto assetManager = anv::App::GetInstance()->GetAssetManager();
-                    auto texture = assetManager->GetOrCreateTexture(assetPath);
+                    auto assetManager =
+                        anv::App::GetInstance()->GetAssetManager();
+                    auto texture =
+                        assetManager->GetOrCreateTexture(assetPath);
 
                     if (texture && texture->IsGPUReady())
                     {
                         const entt::entity entity =
                             scene->CreateEntity(assetPath.stem().string());
-                        auto &sprite =
-                            scene->AddComponent<anv::Component::SpriteRenderer>(entity);
+
+                        auto& sprite =
+                            scene->AddComponent<
+                                anv::Component::SpriteRenderer>(entity);
+
                         sprite.texture = texture->GetAssetID();
                         scene->Save();
                     }
@@ -134,6 +146,144 @@ void Viewport::Draw()
 
     ImGui::End();
     ImGui::PopStyleVar();
+}
+
+bool Viewport::world_to_viewport(
+    const glm::vec3& worldPosition,
+    ImVec2& screenPosition
+) const
+{
+    if (!m_EditorCamera ||
+        m_ViewportSize.x <= 0.0f ||
+        m_ViewportSize.y <= 0.0f)
+    {
+        return false;
+    }
+
+    const glm::mat4 viewProjection =
+        m_EditorCamera->GetProjection() *
+        m_EditorCamera->GetView();
+
+    const glm::vec4 clipPosition =
+        viewProjection * glm::vec4(worldPosition, 1.0f);
+
+    if (std::abs(clipPosition.w) <= 0.00001f)
+        return false;
+
+    const glm::vec3 ndc =
+        glm::vec3(clipPosition) / clipPosition.w;
+
+    screenPosition.x =
+        m_ViewportBounds[0].x +
+        (ndc.x * 0.5f + 0.5f) * m_ViewportSize.x;
+
+    screenPosition.y =
+        m_ViewportBounds[0].y +
+        (1.0f - (ndc.y * 0.5f + 0.5f)) * m_ViewportSize.y;
+
+    return true;
+}
+
+void Viewport::draw_selection_overlay(
+    const anv::Ref<anv::Scene>& scene
+)
+{
+    if (!scene || !m_EditorCamera)
+        return;
+
+    const entt::entity entity =
+        EditorLayer::GetInstance()->GetSelectedEntity();
+
+    if (entity == entt::null ||
+        !scene->Registry().valid(entity) ||
+        !scene->HasComponent<anv::Component::Transform2d>(entity))
+    {
+        return;
+    }
+
+    const auto& transform =
+        scene->GetComponent<anv::Component::Transform2d>(entity);
+
+    const glm::mat4 model = transform.GetTransform();
+
+    constexpr std::array<glm::vec4, 4> localCorners = {
+        glm::vec4{-0.5f, -0.5f, 0.0f, 1.0f},
+        glm::vec4{ 0.5f, -0.5f, 0.0f, 1.0f},
+        glm::vec4{ 0.5f,  0.5f, 0.0f, 1.0f},
+        glm::vec4{-0.5f,  0.5f, 0.0f, 1.0f}
+    };
+
+    std::array<ImVec2, 4> screenCorners{};
+
+    for (std::size_t index = 0; index < localCorners.size(); ++index)
+    {
+        const glm::vec4 worldCorner = model * localCorners[index];
+        if (!world_to_viewport(glm::vec3(worldCorner), screenCorners[index]))
+            return;
+    }
+
+    ImVec2 pivot{};
+    if (!world_to_viewport(
+            glm::vec3(transform.position, 0.0f),
+            pivot))
+    {
+        return;
+    }
+
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    if (!drawList)
+        return;
+
+    const ImU32 outlineColor = IM_COL32(255, 214, 10, 255);
+    const ImU32 shadowColor = IM_COL32(0, 0, 0, 190);
+    constexpr float outlineThickness = 2.0f;
+    constexpr float shadowThickness = 4.0f;
+    constexpr float pivotRadius = 5.0f;
+
+    drawList->PushClipRect(
+        ImVec2(m_ViewportBounds[0].x, m_ViewportBounds[0].y),
+        ImVec2(m_ViewportBounds[1].x, m_ViewportBounds[1].y),
+        true);
+
+    drawList->AddPolyline(
+        screenCorners.data(),
+        static_cast<int>(screenCorners.size()),
+        shadowColor,
+        ImDrawFlags_Closed,
+        shadowThickness);
+
+    drawList->AddPolyline(
+        screenCorners.data(),
+        static_cast<int>(screenCorners.size()),
+        outlineColor,
+        ImDrawFlags_Closed,
+        outlineThickness);
+
+    drawList->AddLine(
+        ImVec2(pivot.x - pivotRadius, pivot.y),
+        ImVec2(pivot.x + pivotRadius, pivot.y),
+        shadowColor,
+        shadowThickness);
+
+    drawList->AddLine(
+        ImVec2(pivot.x, pivot.y - pivotRadius),
+        ImVec2(pivot.x, pivot.y + pivotRadius),
+        shadowColor,
+        shadowThickness);
+
+    drawList->AddLine(
+        ImVec2(pivot.x - pivotRadius, pivot.y),
+        ImVec2(pivot.x + pivotRadius, pivot.y),
+        outlineColor,
+        outlineThickness);
+
+    drawList->AddLine(
+        ImVec2(pivot.x, pivot.y - pivotRadius),
+        ImVec2(pivot.x, pivot.y + pivotRadius),
+        outlineColor,
+        outlineThickness);
+
+    drawList->PopClipRect();
 }
 
 void Viewport::pick_entity(
@@ -190,8 +340,7 @@ void Viewport::pick_entity(
     const glm::mat4 inverseViewProjection =
         glm::inverse(
             m_EditorCamera->GetProjection() *
-            m_EditorCamera->GetView()
-        );
+            m_EditorCamera->GetView());
 
     glm::vec4 worldPosition =
         inverseViewProjection * clipPosition;
@@ -222,8 +371,7 @@ void Viewport::pick_entity(
                 worldPosition.x,
                 worldPosition.y,
                 0.0f,
-                1.0f
-            );
+                1.0f);
 
         const bool insideQuad =
             localPosition.x >= -0.5f &&
@@ -247,9 +395,7 @@ void Viewport::pick_entity(
         return;
     }
 
-    EditorLayer::GetInstance()->SetSelectedEntity(
-        pickedEntity
-    );
+    EditorLayer::GetInstance()->SetSelectedEntity(pickedEntity);
 }
 
 void Viewport::update_operation(bool update)
@@ -257,47 +403,34 @@ void Viewport::update_operation(bool update)
     if (!update)
         return;
 
-    auto is = anv::App::GetInstance()->GetInputSystem();
+    auto inputSystem =
+        anv::App::GetInstance()->GetInputSystem();
 
-    if (is->IsKeyPressed(ANV_KEY_1))
-    {
+    if (inputSystem->IsKeyPressed(ANV_KEY_1))
         m_Operation = ImGuizmo::OPERATION::TRANSLATE;
-    }
-    if (is->IsKeyPressed(ANV_KEY_2))
-    {
+
+    if (inputSystem->IsKeyPressed(ANV_KEY_2))
         m_Operation = ImGuizmo::OPERATION::ROTATE;
-    }
-    if (is->IsKeyPressed(ANV_KEY_3))
-    {
+
+    if (inputSystem->IsKeyPressed(ANV_KEY_3))
         m_Operation = ImGuizmo::OPERATION::SCALE;
-    }
 }
 
 void Viewport::set_gizmo_bounds()
 {
     m_ViewportFocused = ImGui::IsWindowFocused();
-    m_ViewportHovered = ImGui::IsWindowHovered();
+    m_ViewportHovered = ImGui::IsItemHovered();
 
-    const ImVec2 viewportMinRegion =
-        ImGui::GetWindowContentRegionMin();
+    const ImVec2 itemMin = ImGui::GetItemRectMin();
+    const ImVec2 itemMax = ImGui::GetItemRectMax();
 
-    const ImVec2 viewportMaxRegion =
-        ImGui::GetWindowContentRegionMax();
-
-    const ImVec2 viewportOffset =
-        ImGui::GetWindowPos();
-
-    m_ViewportBounds[0] = {
-        viewportMinRegion.x + viewportOffset.x,
-        viewportMinRegion.y + viewportOffset.y};
-
-    m_ViewportBounds[1] = {
-        viewportMaxRegion.x + viewportOffset.x,
-        viewportMaxRegion.y + viewportOffset.y};
+    m_ViewportBounds[0] = {itemMin.x, itemMin.y};
+    m_ViewportBounds[1] = {itemMax.x, itemMax.y};
 
     m_ViewportSize = {
         m_ViewportBounds[1].x - m_ViewportBounds[0].x,
-        m_ViewportBounds[1].y - m_ViewportBounds[0].y};
+        m_ViewportBounds[1].y - m_ViewportBounds[0].y
+    };
 
     ImGuizmo::SetRect(
         m_ViewportBounds[0].x,
@@ -308,29 +441,30 @@ void Viewport::set_gizmo_bounds()
 
 void Viewport::draw_gizmo()
 {
-    auto sceneManager = anv::App::GetInstance()->GetSceneManager();
+    auto sceneManager =
+        anv::App::GetInstance()->GetSceneManager();
     auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
 
-    if (!scene)
+    if (!scene || !m_EditorCamera)
         return;
 
-    auto entity = EditorLayer::GetInstance()->GetSelectedEntity();
-    if (entity == entt::null || !scene->Registry().valid(entity))
+    const entt::entity entity =
+        EditorLayer::GetInstance()->GetSelectedEntity();
+
+    if (entity == entt::null ||
+        !scene->Registry().valid(entity) ||
+        !scene->HasComponent<anv::Component::Transform2d>(entity))
+    {
         return;
+    }
 
-    if (!scene->HasComponent<anv::Component::Transform2d>(entity))
-        return;
+    auto& transform =
+        scene->GetComponent<anv::Component::Transform2d>(entity);
 
-    auto &transform = scene->GetComponent<anv::Component::Transform2d>(entity);
+    glm::mat4 transformMatrix = transform.GetTransform();
 
-    glm::mat4 transformMatrix =
-        transform.GetTransform();
-
-    const glm::mat4 &view =
-        m_EditorCamera->GetView();
-
-    const glm::mat4 &projection =
-        m_EditorCamera->GetProjection();
+    const glm::mat4 view = m_EditorCamera->GetView();
+    const glm::mat4 projection = m_EditorCamera->GetProjection();
 
     ImGuizmo::Manipulate(
         glm::value_ptr(view),
@@ -340,7 +474,5 @@ void Viewport::draw_gizmo()
         glm::value_ptr(transformMatrix));
 
     if (ImGuizmo::IsUsing())
-    {
         transform.SetFromMatrix(transformMatrix);
-    }
 }
