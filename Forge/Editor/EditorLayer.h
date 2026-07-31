@@ -1,14 +1,15 @@
 #pragma once
+
 #include <Anvil.h>
-#include "Windows/CodeEditor.h"
-#include "Windows/FileBrowser.h"
-#include "Windows/Viewport.h"
+
 #include "Windows/AssetRegistry.h"
+#include "Windows/CodeEditor.h"
 #include "Windows/ConsolePanel.h"
+#include "Windows/FileBrowser.h"
 #include "Windows/GameViewport.h"
+#include "Windows/InspectorLayer.h"
 #include "Windows/SceneHierarchy.h"
-#include <algorithm>
-#include <cctype>
+#include "Windows/Viewport.h"
 
 struct Windows
 {
@@ -36,24 +37,22 @@ public:
     void OnImGuiRender() override;
 
     entt::entity GetSelectedEntity() const { return m_SelectedEntity; }
-    void SetSelectedEntity(entt::entity entity) {m_SelectedEntity = entity;}
-    static SceneState GetSceneState() { return m_SceneState; }
-    static EditorLayer* GetInstance() {return m_This;}
+    void SetSelectedEntity(entt::entity entity) { m_SelectedEntity = entity; }
     void ClearSelection() { m_SelectedEntity = entt::null; }
+
+    static SceneState GetSceneState() { return m_SceneState; }
+    static EditorLayer* GetInstance() { return m_This; }
 
 private:
     void begin_dock_space();
     void draw_menu_bar();
-    void draw_inspector();
-    void draw_add_component_menu(
-        anv::Ref<anv::Scene> scene,
-        entt::entity entity);
     void draw_stats();
 
+private:
     entt::entity m_SelectedEntity = entt::null;
-    entt::entity m_EntityToDelete = entt::null;
 
     static SceneState m_SceneState;
+    static EditorLayer* m_This;
 
     Viewport m_Viewport;
     CodeEditorPanel m_DevNotes;
@@ -61,9 +60,8 @@ private:
     AssetRegistryPanel m_AssetRegistryPanel;
     GameViewport m_GameViewport;
     SceneHierarchy m_SceneHierarchy;
+    InspectorLayer m_InspectorLayer;
     anv::ConsolePanel m_Console;
 
-    static EditorLayer* m_This;
-
-    Windows m_Windows{false};
+    Windows m_Windows{};
 };
