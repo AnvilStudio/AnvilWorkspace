@@ -17,7 +17,7 @@ void GameViewport::Draw()
 
     auto sceneManager = anv::App::GetInstance()->GetSceneManager();
     auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
-    auto sceneCamera = scene ? scene->GetMainCamera() : nullptr;
+    auto sceneCamera = scene ? scene->GetActiveCamera() : nullptr;
 
     if (EditorLayer::GetSceneState() == EditorLayer::SceneState::Play)
     {
@@ -32,13 +32,6 @@ void GameViewport::Draw()
     {
         m_OnPlayFocused = false;
         m_InputEnabled = false;
-    }
-
-    if (scene)
-    {
-        const ImVec2 currentSize = ImGui::GetContentRegionAvail();
-        if (sceneCamera && currentSize.x > 0.0f && currentSize.y > 0.0f)
-            sceneCamera->SetAspectRatio(currentSize.x / currentSize.y);
     }
 
     const ImVec2 viewportSize = ImGui::GetContentRegionAvail();
@@ -64,15 +57,27 @@ void GameViewport::Draw()
         m_GameViewportTarget->Resize(targetWidth, targetHeight);
         m_LastTargetWidth = targetWidth;
         m_LastTargetHeight = targetHeight;
+    }
 
-        if (sceneCamera)
-            sceneCamera->SetAspectRatio(viewportSize.x / viewportSize.y);
+    if (sceneCamera && validSize)
+    {
+        sceneCamera->SetAspectRatio(viewportSize.x / viewportSize.y);
+        sceneCamera->Update(0.0f);
     }
 
     if (validSize && m_GameViewportTarget && sceneCamera)
     {
         anv::Renderer2D::DrawScene(m_GameViewportTarget, sceneCamera);
         ImGui::Image(m_GameViewportTarget->GetImGuiTextureID(), viewportSize);
+    }
+    else if (validSize && !sceneCamera)
+    {
+        const char* message = "No active Camera2D in scene";
+        const ImVec2 textSize = ImGui::CalcTextSize(message);
+        ImGui::SetCursorPos(ImVec2(
+            (viewportSize.x - textSize.x) * 0.5f,
+            (viewportSize.y - textSize.y) * 0.5f));
+        ImGui::TextDisabled("%s", message);
     }
 
     ImGui::End();
