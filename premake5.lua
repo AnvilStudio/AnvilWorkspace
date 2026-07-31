@@ -19,9 +19,6 @@ local function get_macos_job_count()
     return 1
 end
 
--- Builds generated macOS projects using all available logical CPU cores.
--- Generate project files first with either `premake5 gmake2` or
--- `premake5 xcode4`, then run `premake5 build-macos`.
 newaction {
     trigger = "build-macos",
     description = "Build Anvil on macOS using parallel compilation",
@@ -38,13 +35,11 @@ newaction {
         elseif os.isdir("AnvilWorkspace.xcworkspace") then
             command = string.format(
                 "xcodebuild -workspace AnvilWorkspace.xcworkspace -scheme Forge -parallelizeTargets -jobs %d build",
-                jobs
-            )
+                jobs)
         elseif os.isdir("AnvilWorkspace.xcodeproj") then
             command = string.format(
                 "xcodebuild -project AnvilWorkspace.xcodeproj -scheme Forge -parallelizeTargets -jobs %d build",
-                jobs
-            )
+                jobs)
         else
             error("No generated Makefile or Xcode project was found. Generate one before building.")
         end
@@ -57,17 +52,14 @@ newaction {
     end
 }
 
--- cleaning gen project files
 newaction {
-    trigger     = "clean",
+    trigger = "clean",
     description = "Clean all generated project files and binaries",
-    execute     = function()
+    execute = function()
         print("Cleaning project files...")
         os.rmdir("bin")
         os.rmdir("bin-int")
         os.rmdir("build")
-
-        -- Remove generated project files
         os.remove("Makefile")
         os.remove("*.make")
         os.remove("*.sln")
@@ -79,35 +71,30 @@ newaction {
     end
 }
 
-
 workspace "AnvilWorkspace"
     architecture "x64"
     startproject "Forge"
 
-    configurations 
+    configurations
     {
-        "DebugG",    -- graphics debugging
+        "DebugG",
         "Debug",
         "Release"
     }
-
-    -- Paths and Environment Variables
 
     outdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
     ROOTDIR = os.getcwd() .. "/"
     print("Root Directory: ", ROOTDIR)
 
-    -- Dependencies
     group "Dependencies"
         include "AnvilEngine/vendor/GLFW/glfw.lua"
+        include "AnvilEngine/vendor/Box2D.lua"
     group ""
 
-    -- Engine
     group "Engine"
         include "AnvilEngine/Anvil.lua"
     group ""
 
-    -- Editor
     group "Editor"
         include "Forge/Forge.lua"
     group ""
@@ -116,12 +103,7 @@ workspace "AnvilWorkspace"
         VULKAN_SDK = os.getenv("VULKAN_SDK") .. "/include"
         VULKAN_LIB = os.getenv("VULKAN_SDK") .. "/Lib"
 
-    --filter "system:linux"
-        --VULKAN_SDK = os.getenv("VULKAN_SDK") or "/usr/include/vulkan"
-
     filter "system:macosx"
         architecture "arm64"
-        --VULKAN_SDK = "/usr/local/include/vulkan"
-        --VULKAN_LIB = "/usr/local/lib"
 
-    --print("Vulkan SDK: ", VULKAN_SDK)
+    filter {}
