@@ -10,42 +10,8 @@ GameViewport::GameViewport()
         175);
 }
 
-void GameViewport::synchronize_scene_runtime()
-{
-    auto sceneManager = anv::App::GetInstance()->GetSceneManager();
-    auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
-    if (!scene)
-        return;
-
-    const bool isPlaying =
-        EditorLayer::GetSceneState() == EditorLayer::SceneState::Play;
-
-    if (isPlaying == m_WasPlaying)
-        return;
-
-    if (isPlaying)
-    {
-        scene->Save();
-        scene->SetScriptExecutionEnabled(true);
-        scene->StartPhysics();
-        ANV_LOG_INFO("Scene runtime started.")
-    }
-    else
-    {
-        scene->SetScriptExecutionEnabled(false);
-        scene->StopPhysics();
-        EditorLayer::GetInstance()->ClearSelection();
-        sceneManager->ReloadActive();
-        ANV_LOG_INFO("Scene runtime stopped and edit scene restored.")
-    }
-
-    m_WasPlaying = isPlaying;
-}
-
 void GameViewport::Draw()
 {
-    synchronize_scene_runtime();
-
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::Begin("Game Viewport");
 
@@ -70,8 +36,6 @@ void GameViewport::Draw()
 
     if (scene)
     {
-        //scene->SetCameraInputEnabled(m_InputEnabled);
-
         const ImVec2 currentSize = ImGui::GetContentRegionAvail();
         if (sceneCamera && currentSize.x > 0.0f && currentSize.y > 0.0f)
             sceneCamera->SetAspectRatio(currentSize.x / currentSize.y);
