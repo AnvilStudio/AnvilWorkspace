@@ -1,6 +1,5 @@
 ﻿#include "EditorLayer.h"
 #include "EditorHelpers.h"
-// #include "Windows/Viewport.h"
 
 using namespace anv;
 
@@ -10,7 +9,8 @@ EditorLayer* EditorLayer::m_This = nullptr;
 EditorLayer::EditorLayer()
     : anv::Layer("Editor Layer"),
       m_DevNotes(anv::App::GetInstance()->GetFS().GetKeyVal("Assets") / "Notes.toml"),
-      m_FileBrowser(anv::App::GetInstance()->GetFS().GetKeyVal("Assets"))
+      m_FileBrowser(anv::App::GetInstance()->GetFS().GetKeyVal("Assets")),
+      m_SceneHierarchy(anv::App::GetInstance()->GetSceneManager()->GetActive())
 {
     m_This = this;
 }
@@ -118,7 +118,7 @@ void EditorLayer::OnImGuiRender()
 {
     begin_dock_space();
     draw_menu_bar();
-    draw_scene_hierarchy();
+    m_SceneHierarchy.Draw();
 
     // Draw the source panel before drop targets so a newly-started drag is
     // available to the Sprite Renderer slot and Viewport in the same frame.
@@ -136,71 +136,6 @@ void EditorLayer::OnImGuiRender()
 void EditorLayer::OnDetach()
 {
     anv_log::AnvLog::ClearCallback();
-}
-
-void EditorLayer::draw_scene_hierarchy()
-{
-    ImGui::Begin("Scene Hierarchy");
-
-    // EditorLayer
-    auto scene = App::GetInstance()->GetSceneManager()->GetActive();
-    if (!scene)
-        return;
-
-    if (ImGui::Button("Create Entity"))
-    {
-        auto entity =
-            scene->CreateEntity("New Entity");
-
-        scene->AddComponent<Component::SpriteRenderer>(
-            entity);
-    }
-    ImGui::Separator();
-    auto view =
-        scene->Registry().view<Component::Tag>();
-
-    for (auto entity : view)
-    {
-        auto &tag =
-            view.get<Component::Tag>(entity);
-
-        bool selected =
-            m_SelectedEntity == entity;
-
-        std::string label =
-            tag.Get() +
-            "##" +
-            std::to_string(
-                static_cast<uint32_t>(entity));
-
-        if (ImGui::Selectable(
-                label.c_str(),
-                selected))
-        {
-            m_SelectedEntity = entity;
-        }
-
-        if (ImGui::BeginPopupContextItem())
-        {
-            if (ImGui::MenuItem("Delete"))
-            {
-                m_EntityToDelete = entity;
-            }
-
-            ImGui::EndPopup();
-        }
-    }
-
-    if (m_EntityToDelete != entt::null)
-    {
-        const entt::entity deletedEntity = m_EntityToDelete;
-        scene->DestroyEntity(deletedEntity);
-        m_EntityToDelete = entt::null;
-        if (m_SelectedEntity == deletedEntity)
-            m_SelectedEntity = entt::null;
-    }
-
-    ImGui::End();
 }
 
 void EditorLayer::draw_inspector()

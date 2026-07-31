@@ -6,7 +6,7 @@
 #include "Windows/AssetRegistry.h"
 #include "Windows/ConsolePanel.h"
 #include "Windows/GameViewport.h"
-
+#include "Windows/SceneHierarchy.h"
 #include <algorithm>
 #include <cctype>
 
@@ -36,6 +36,7 @@ public:
     void OnImGuiRender() override;
 
     entt::entity GetSelectedEntity() const { return m_SelectedEntity; }
+    void SetSelectedEntity(entt::entity entity) {m_SelectedEntity = entity;}
     static SceneState GetSceneState() { return m_SceneState; }
     static EditorLayer* GetInstance() {return m_This;}
     void ClearSelection() { m_SelectedEntity = entt::null; }
@@ -43,7 +44,6 @@ public:
 private:
     void begin_dock_space();
     void draw_menu_bar();
-    void draw_scene_hierarchy();
     void draw_inspector();
     void draw_add_component_menu(
         anv::Ref<anv::Scene> scene,
@@ -60,6 +60,7 @@ private:
     FileBrowser m_FileBrowser;
     AssetRegistryPanel m_AssetRegistryPanel;
     GameViewport m_GameViewport;
+    SceneHierarchy m_SceneHierarchy;
     anv::ConsolePanel m_Console;
 
     static EditorLayer* m_This;
