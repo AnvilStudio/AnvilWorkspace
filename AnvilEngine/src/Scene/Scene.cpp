@@ -4,7 +4,6 @@
 #include <Asset/AssetTypes/Texture.h>
 #include <Core/App.h>
 #include <Physics/Physics2D.h>
-#include <Render/CameraController.h>
 #include <Render/Renderer.h>
 #include <Scripting/PythonScriptEngine.h>
 #include <Util/Serialize/Serializer.h>
@@ -37,9 +36,6 @@ namespace anv
     void Scene::Init()
     {
         m_MainCamera = std::make_shared<Camera2D>();
-        m_CameraController = std::make_unique<CameraController>(
-            App::GetInstance()->GetInputSystem(),
-            m_MainCamera);
 
         if (m_Path.empty())
             return;
@@ -205,9 +201,6 @@ namespace anv
 
     void Scene::OnUpdate(float deltaTime)
     {
-        if (m_CameraController)
-            m_CameraController->Update(deltaTime);
-
         if (m_ScriptExecutionEnabled)
             PythonScriptEngine::UpdateScene(*this, deltaTime);
 
