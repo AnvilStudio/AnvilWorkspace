@@ -24,3 +24,6 @@
 [submodule "AnvilEngine/vendor/ImGuiTextEdit"]
 	path = AnvilEngine/vendor/ImGuiTextEdit
 	url = https://github.com/BalazsJako/ImGuiColorTextEdit.git
+[submodule "AnvilEngine/vendor/Box2d"]
+	path = AnvilEngine/vendor/Box2d
+	url = https://github.com/Cj0x7c00/box2d.git
