@@ -4,19 +4,19 @@ from __future__ import annotations
 import json
 import os
 import platform
-import shlex
-import shutil
 import subprocess
 import sys
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
+from project_creator import create_project_from_template
 
 
 APP_NAME = "Forge Launcher"
-CONFIG_DIR = Path.cwd() / "ProjectCreator" / ".anvil"
+PROJECT_CREATOR_DIR = Path(__file__).resolve().parent
+CONFIG_DIR = PROJECT_CREATOR_DIR / ".anvil"
 CONFIG_PATH = CONFIG_DIR / "forge_launcher.json"
 
 
@@ -34,19 +34,12 @@ class Project:
 class LauncherConfig:
     forge_executable: str = ""
     projects_root: str = str(Path.home() / "AnvilProjects")
-    projects: list[dict] = None
+    projects: list[dict] | None = None
 
     def __post_init__(self) -> None:
         if self.projects is None:
             self.projects = []
 
-
-def write(path: Path, text: str):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
-
-def cpy_file(src: Path, dst: Path):
-    shutil.copy(src, dst)
 
 class ForgeLauncher(tk.Tk):
     def __init__(self) -> None:
@@ -57,8 +50,9 @@ class ForgeLauncher(tk.Tk):
         self.minsize(680, 420)
 
         self.config_data = self.load_config()
-        self.projects: list[Project] = [
-            Project(**project) for project in self.config_data.projects
+        self.projects = [
+            Project(**project)
+            for project in self.config_data.projects or []
         ]
 
         self.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -91,15 +85,17 @@ class ForgeLauncher(tk.Tk):
         header = ttk.Frame(outer)
         header.pack(fill=tk.X)
 
-        ttk.Label(header, text="Forge Launcher", style="Title.TLabel").pack(
-            side=tk.LEFT
-        )
+        ttk.Label(
+            header,
+            text="Forge Launcher",
+            style="Title.TLabel",
+        ).pack(side=tk.LEFT)
 
         ttk.Button(
             header,
             text="Settings",
             command=self.open_settings,
-        ).pack(side=tk.RIGHT) 
+        ).pack(side=tk.RIGHT)
 
         ttk.Label(
             outer,
@@ -120,7 +116,10 @@ class ForgeLauncher(tk.Tk):
             font=("TkDefaultFont", 11),
         )
         self.project_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.project_list.bind("<Double-Button-1>", lambda _event: self.launch_selected())
+        self.project_list.bind(
+            "<Double-Button-1>",
+            lambda _event: self.launch_selected(),
+        )
 
         scrollbar = ttk.Scrollbar(
             list_frame,
@@ -148,13 +147,6 @@ class ForgeLauncher(tk.Tk):
             width=20,
         ).pack(fill=tk.X, pady=5)
 
-        # ttk.Button(
-        #     actions,
-        #     text="Import Project",
-        #     command=self.import_project,
-        #     width=20,
-        # ).pack(fill=tk.X, pady=5)
-
         ttk.Button(
             actions,
             text="Open Project Folder",
@@ -179,14 +171,13 @@ class ForgeLauncher(tk.Tk):
         ).pack(fill=tk.X, pady=5)
 
         self.status_var = tk.StringVar(value="Ready")
-        status = ttk.Label(
+        ttk.Label(
             outer,
             textvariable=self.status_var,
             relief=tk.SUNKEN,
             anchor=tk.W,
             padding=(8, 4),
-        )
-        status.pack(fill=tk.X, pady=(14, 0))
+        ).pack(fill=tk.X, pady=(14, 0))
 
     def load_config(self) -> LauncherConfig:
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -213,9 +204,7 @@ class ForgeLauncher(tk.Tk):
 
     def save_config(self) -> None:
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-
         self.config_data.projects = [asdict(project) for project in self.projects]
-
         CONFIG_PATH.write_text(
             json.dumps(asdict(self.config_data), indent=2),
             encoding="utf-8",
@@ -223,7 +212,6 @@ class ForgeLauncher(tk.Tk):
 
     def refresh_project_list(self) -> None:
         selected_index = self.get_selected_index()
-
         self.project_list.delete(0, tk.END)
 
         for project in self.projects:
@@ -247,32 +235,19 @@ class ForgeLauncher(tk.Tk):
 
     def get_selected_project(self) -> Project | None:
         index = self.get_selected_index()
-
         if index is None:
             messagebox.showinfo(APP_NAME, "Select a project first.")
             return None
-
         return self.projects[index]
 
     def create_project(self) -> None:
-        name = simpledialog.askstring(
-            APP_NAME,
-            "Project name:",
-            parent=self,
-        )
-
+        name = simpledialog.askstring(APP_NAME, "Project name:", parent=self)
         if name is None:
-            return
-
-        name = name.strip()
-
-        if not name:
-            messagebox.showerror(APP_NAME, "Project name cannot be empty.")
             return
 
         safe_name = "".join(
             character
-            for character in name
+            for character in name.strip()
             if character.isalnum() or character in (" ", "-", "_")
         ).strip()
 
@@ -283,158 +258,38 @@ class ForgeLauncher(tk.Tk):
         projects_root = Path(
             self.config_data.projects_root
         ).expanduser().resolve()
-
         projects_root.mkdir(parents=True, exist_ok=True)
-
         project_path = projects_root / safe_name
 
-        if project_path.exists():
-            messagebox.showerror(
-                APP_NAME,
-                f"A folder already exists at:\n{project_path}",
-            )
-            return
-
         try:
-            self.create_project_structure(project_path, safe_name)
+            create_project_from_template(project_path, safe_name)
         except OSError as error:
-            messagebox.showerror(
-                APP_NAME,
-                f"Could not create project:\n{error}",
-            )
+            messagebox.showerror(APP_NAME, f"Could not create project:\n{error}")
             return
 
-        self.projects.append(
-            Project(
-                name=safe_name,
-                path=str(project_path),
-            )
-        )
-
+        self.projects.append(Project(name=safe_name, path=str(project_path)))
         self.save_config()
         self.refresh_project_list()
+
+        index = len(self.projects) - 1
         self.project_list.selection_clear(0, tk.END)
-        self.project_list.selection_set(len(self.projects) - 1)
-        self.project_list.activate(len(self.projects) - 1)
-
+        self.project_list.selection_set(index)
+        self.project_list.activate(index)
         self.status_var.set(f"Created {safe_name}")
-
-    def create_project_structure(
-        self,
-        project_path: Path,
-        project_name: str,
-    ) -> None:
-        project_dir = Path(project_path).resolve()
-        assets = project_dir / "Assets"
-        engine = assets / "com.anvstu.engine"
-
-        dirs = [
-            assets / "Scenes",
-            assets / "Fonts",
-            engine / "ShaderLib",
-            engine / "Settings"
-        ]
-
-        for d in dirs:
-            d.mkdir(parents=True, exist_ok=True)
-        cpy_file("JetBrainsMono-Bold.ttf", assets / "Fonts")
-
-        icons_source = Path.cwd() / "AnvilEngine" / "Resources" / "Icons"
-        icons_destination = engine / "Icons"
-        shutil.copytree(icons_source, icons_destination)
-
-        write(project_dir / f"{project_name}.anv", f"""[Settings]
-        Description = 'Anvil Project'
-        ProjDir = '{project_dir.as_posix()}'
-        ProjName = '{project_name}'
-        Version = '0.0.0'
-
-        [Settings.StartScene]
-        Name = 'Default'
-        Path = '@Assets/Scenes/Default.ascn'
-
-        [Settings.WindowInfo]
-        Height = 720
-        Width = 1280
-
-        [Settings.Directories]
-        Assets = 'Assets'
-        EngineRes = '@Assets/com.anvstu.engine'
-        Cache = '@Res/Cache'
-        AssetMeta = '@Res/AssetMeta'
-        Settings = '@Res/Settings'
-        """)
-
-        write(assets / "Scenes" / "Default.ascn", """[Scene]
-        Context = '2D'
-        Name = 'Default'
-        Path = '@Assets/Scenes/Default.ascn'
-        UUID = ''
-        """)
-
-        write(engine / "ShaderLib" / "sprite.glsl", """#type vert
-        #version 450
-
-        layout(push_constant)
-        uniform PushData
-        {
-            mat4 model;
-            vec4 color;
-        } push_data;
-
-        layout(set = 0, binding = 0) uniform Camera
-        {
-            mat4 View;
-            mat4 Projection;
-            mat4 ViewProjection;
-        } camera;
-
-        layout(location = 0) in vec2 inPosition;
-        layout(location = 1) in vec4 inColor;
-
-        layout(location = 0) out vec4 fragColor;
-
-        void main()
-        {
-            gl_Position = camera.ViewProjection * 
-            push_data.model * 
-            vec4(inPosition, 0.0, 1.0);
-
-            fragColor = push_data.color;
-        }
-        
-        #type frag
-        #version 450
-
-        layout(location = 0) out vec4 outColor;
-        layout(location = 0) in vec4 fragColor;
-
-        void main() {
-            outColor = fragColor;
-        }
-        """)
-    
-
-
-        print(f"Created Anvil project: {project_dir}")
 
     def launch_selected(self) -> None:
         project = self.get_selected_project()
-
         if project is None:
             return
 
-        project_path = project.project_path
-
-        if not project_path.exists():
+        if not project.project_path.exists():
             messagebox.showerror(
                 APP_NAME,
-                f"Project folder does not exist:\n{project_path}",
+                f"Project folder does not exist:\n{project.project_path}",
             )
             return
 
         executable_text = self.config_data.forge_executable.strip()
-
         if not executable_text:
             messagebox.showinfo(
                 APP_NAME,
@@ -444,7 +299,6 @@ class ForgeLauncher(tk.Tk):
             return
 
         executable = Path(executable_text).expanduser().resolve()
-
         if not executable.exists():
             messagebox.showerror(
                 APP_NAME,
@@ -452,22 +306,17 @@ class ForgeLauncher(tk.Tk):
             )
             return
 
-        project_file = self.find_project_file(project_path)
-
-        # Forge receives the project file when available, otherwise the project directory.
-        project_argument = project_file if project_file else project_path
+        project_file = self.find_project_file(project.project_path)
+        project_argument = project_file or project.project_path
 
         try:
             subprocess.Popen(
-                [str(executable), str("-prj"), str(project_argument)],
+                [str(executable), "-prj", str(project_argument)],
                 cwd=str(executable.parent),
                 start_new_session=True,
             )
         except OSError as error:
-            messagebox.showerror(
-                APP_NAME,
-                f"Could not launch Forge:\n{error}",
-            )
+            messagebox.showerror(APP_NAME, f"Could not launch Forge:\n{error}")
             return
 
         self.status_var.set(f"Launched {project.name}")
@@ -479,12 +328,10 @@ class ForgeLauncher(tk.Tk):
 
     def open_project_folder(self) -> None:
         project = self.get_selected_project()
-
         if project is None:
             return
 
         path = project.project_path
-
         if not path.exists():
             messagebox.showerror(APP_NAME, f"Folder does not exist:\n{path}")
             return
@@ -497,26 +344,20 @@ class ForgeLauncher(tk.Tk):
             else:
                 subprocess.Popen(["xdg-open", str(path)])
         except OSError as error:
-            messagebox.showerror(
-                APP_NAME,
-                f"Could not open project folder:\n{error}",
-            )
+            messagebox.showerror(APP_NAME, f"Could not open project folder:\n{error}")
 
     def remove_selected(self) -> None:
         index = self.get_selected_index()
-
         if index is None:
             messagebox.showinfo(APP_NAME, "Select a project first.")
             return
 
         project = self.projects[index]
-
         confirmed = messagebox.askyesno(
             APP_NAME,
             f"Remove '{project.name}' from the launcher?\n\n"
             "The project files will not be deleted.",
         )
-
         if not confirmed:
             return
 
@@ -536,12 +377,8 @@ class ForgeLauncher(tk.Tk):
         frame = ttk.Frame(window, padding=18)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        executable_var = tk.StringVar(
-            value=self.config_data.forge_executable
-        )
-        projects_root_var = tk.StringVar(
-            value=self.config_data.projects_root
-        )
+        executable_var = tk.StringVar(value=self.config_data.forge_executable)
+        projects_root_var = tk.StringVar(value=self.config_data.projects_root)
 
         ttk.Label(frame, text="Forge executable").grid(
             row=0,
@@ -549,18 +386,12 @@ class ForgeLauncher(tk.Tk):
             sticky=tk.W,
             pady=(0, 5),
         )
-
         executable_entry = ttk.Entry(
             frame,
             textvariable=executable_var,
             width=62,
         )
-        executable_entry.grid(
-            row=1,
-            column=0,
-            sticky=tk.EW,
-            padx=(0, 8),
-        )
+        executable_entry.grid(row=1, column=0, sticky=tk.EW, padx=(0, 8))
 
         def choose_executable() -> None:
             file_path = filedialog.askopenfilename(
@@ -582,18 +413,11 @@ class ForgeLauncher(tk.Tk):
             sticky=tk.W,
             pady=(18, 5),
         )
-
-        projects_root_entry = ttk.Entry(
+        ttk.Entry(
             frame,
             textvariable=projects_root_var,
             width=62,
-        )
-        projects_root_entry.grid(
-            row=3,
-            column=0,
-            sticky=tk.EW,
-            padx=(0, 8),
-        )
+        ).grid(row=3, column=0, sticky=tk.EW, padx=(0, 8))
 
         def choose_projects_root() -> None:
             directory = filedialog.askdirectory(
@@ -630,7 +454,6 @@ class ForgeLauncher(tk.Tk):
             text="Cancel",
             command=window.destroy,
         ).pack(side=tk.RIGHT, padx=(8, 0))
-
         ttk.Button(
             button_row,
             text="Save",
