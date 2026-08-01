@@ -339,6 +339,10 @@ class ForgeLauncher(tk.Tk):
             d.mkdir(parents=True, exist_ok=True)
         cpy_file("JetBrainsMono-Bold.ttf", assets / "Fonts")
 
+        icons_source = Path.cwd() / "AnvilEngine" / "Resources" / "Icons"
+        icons_destination = engine / "Icons"
+        shutil.copytree(icons_source, icons_destination)
+
         write(project_dir / f"{project_name}.anv", f"""[Settings]
         Description = 'Anvil Project'
         ProjDir = '{project_dir.as_posix()}'
@@ -558,62 +562,55 @@ class ForgeLauncher(tk.Tk):
             padx=(0, 8),
         )
 
-        def browse_executable() -> None:
-            filetypes = [
-                ("All files", "*"),
-            ]
-
-            selected = filedialog.askopenfilename(
-                parent=window,
+        def choose_executable() -> None:
+            file_path = filedialog.askopenfilename(
                 title="Select Forge executable",
-                filetypes=filetypes,
+                parent=window,
             )
-
-            if selected:
-                executable_var.set(selected)
+            if file_path:
+                executable_var.set(file_path)
 
         ttk.Button(
             frame,
             text="Browse",
-            command=browse_executable,
+            command=choose_executable,
         ).grid(row=1, column=1)
 
-        ttk.Label(frame, text="Default projects folder").grid(
+        ttk.Label(frame, text="Projects folder").grid(
             row=2,
             column=0,
             sticky=tk.W,
             pady=(18, 5),
         )
 
-        projects_entry = ttk.Entry(
+        projects_root_entry = ttk.Entry(
             frame,
             textvariable=projects_root_var,
             width=62,
         )
-        projects_entry.grid(
+        projects_root_entry.grid(
             row=3,
             column=0,
             sticky=tk.EW,
             padx=(0, 8),
         )
 
-        def browse_projects_root() -> None:
-            selected = filedialog.askdirectory(
+        def choose_projects_root() -> None:
+            directory = filedialog.askdirectory(
+                title="Select projects folder",
                 parent=window,
-                title="Select default projects folder",
             )
-
-            if selected:
-                projects_root_var.set(selected)
+            if directory:
+                projects_root_var.set(directory)
 
         ttk.Button(
             frame,
             text="Browse",
-            command=browse_projects_root,
+            command=choose_projects_root,
         ).grid(row=3, column=1)
 
-        buttons = ttk.Frame(frame)
-        buttons.grid(
+        button_row = ttk.Frame(frame)
+        button_row.grid(
             row=4,
             column=0,
             columnspan=2,
@@ -624,47 +621,33 @@ class ForgeLauncher(tk.Tk):
         def save_settings() -> None:
             self.config_data.forge_executable = executable_var.get().strip()
             self.config_data.projects_root = projects_root_var.get().strip()
-
-            if not self.config_data.projects_root:
-                self.config_data.projects_root = str(
-                    Path.home() / "AnvilProjects"
-                )
-
             self.save_config()
-            self.status_var.set("Settings saved")
             window.destroy()
+            self.status_var.set("Settings saved")
 
         ttk.Button(
-            buttons,
+            button_row,
             text="Cancel",
             command=window.destroy,
         ).pack(side=tk.RIGHT, padx=(8, 0))
 
         ttk.Button(
-            buttons,
+            button_row,
             text="Save",
             command=save_settings,
         ).pack(side=tk.RIGHT)
 
-        frame.columnconfigure(0, weight=1)
+        executable_entry.focus_set()
 
     def on_close(self) -> None:
-        try:
-            self.save_config()
-        finally:
-            self.destroy()
+        self.save_config()
+        self.destroy()
 
 
 def main() -> int:
-    try:
-        app = ForgeLauncher()
-        app.mainloop()
-        return 0
-    except KeyboardInterrupt:
-        return 130
-    except Exception as error:
-        print(f"{APP_NAME} failed: {error}", file=sys.stderr)
-        return 1
+    app = ForgeLauncher()
+    app.mainloop()
+    return 0
 
 
 if __name__ == "__main__":
