@@ -1,0 +1,20 @@
+[Settings]
+Description = 'Anvil Project'
+ProjDir = '{{PROJECT_DIR}}'
+ProjName = '{{PROJECT_NAME}}'
+Version = '0.0.0'
+
+[Settings.StartScene]
+Name = 'Default'
+Path = '@Assets/Scenes/Default.ascn'
+
+[Settings.WindowInfo]
+Height = 720
+Width = 1280
+
+[Settings.Directories]
+Assets = 'Assets'
+EngineRes = '@Assets/com.anvstu.engine'
+Cache = '@Res/Cache'
+AssetMeta = '@Res/AssetMeta'
+Settings = '@Res/Settings'
