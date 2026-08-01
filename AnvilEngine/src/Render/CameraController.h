@@ -29,5 +29,8 @@ namespace anv
 		float m_Speed = 2.f;
 		float m_ZoomLevel = 1.0f;
 		bool m_InputEnabled = false;
+
+		glm::vec2 m_PreviousMousePosition{0.0f};
+		bool m_WasPanning = false;
 	};
 }
