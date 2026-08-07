@@ -1,6 +1,6 @@
 #include "PythonScriptEngine.h"
+#include "Bindings/PythonBindings.h"
 
-#include "../Core/App.h"
 #include "../Scene/Component.h"
 #include "../Scene/Scene.h"
 #include "../Util/UMacros.h"
@@ -96,42 +96,6 @@ namespace anv
             return false;
         }
 
-        ////////////
-        // LOGGING
-        ///////////
-        PyObject *python_log(PyObject *, PyObject *_args)
-        {
-            const char *message = nullptr;
-            if (!PyArg_ParseTuple(_args, "s", &message))
-                return nullptr;
-
-            ANV_LOG_INFO("[Python] %s", message);
-            Py_RETURN_NONE;
-        }
-
-        PyObject *python_warn(PyObject *, PyObject *_args)
-        {
-            const char *message = nullptr;
-            if (!PyArg_ParseTuple(_args, "s", &message))
-                return nullptr;
-
-            ANV_LOG_WARN("[Python] %s", message);
-            Py_RETURN_NONE;
-        }
-
-        PyObject *python_error(PyObject *, PyObject *_args)
-        {
-            const char *message = nullptr;
-            if (!PyArg_ParseTuple(_args, "s", &message))
-                return nullptr;
-
-            ANV_LOG_ERROR("[Python] %s", message);
-            Py_RETURN_NONE;
-        }
-
-        ////////////
-        /// TRANSFORM
-        ////////////
         PyObject *python_get_position(PyObject *, PyObject *_args)
         {
             const char *entityID = nullptr;
@@ -210,55 +174,15 @@ namespace anv
             Py_RETURN_NONE;
         }
 
-        ////////////
-        /// INPUT
-        ////////////
-
-        PyObject *python_is_key_pressed(PyObject *, PyObject *_args)
-        {
-            int key = 0;
-
-            if (!PyArg_ParseTuple(_args, "i", &key))
-                return nullptr;
-
-            App *app = App::GetInstance();
-            if (!app)
-            {
-                PyErr_SetString(
-                    PyExc_RuntimeError,
-                    "The Anvil application instance is unavailable.");
-
-                return nullptr;
-            }
-
-            auto inputSystem = app->GetInputSystem();
-            if (!inputSystem)
-            {
-                PyErr_SetString(
-                    PyExc_RuntimeError,
-                    "The Anvil input system is unavailable.");
-
-                return nullptr;
-            }
-
-            return PyBool_FromLong(
-                inputSystem->IsKeyPressed(key) ? 1 : 0);
-        }
-
         PyMethodDef s_AnvilMethods[] = {
-            // logging
-            {"log", python_log, METH_VARARGS, "Write an informational message to the Anvil log."},
-            {"warn", python_warn, METH_VARARGS, "Write a warning to the Anvil log."},
-            {"error", python_error, METH_VARARGS, "Write an error to the Anvil log."},
-
-            // transform
+            {"log", python::Log, METH_VARARGS, "Write an informational message to the Anvil log."},
+            {"warn", python::Warn, METH_VARARGS, "Write a warning to the Anvil log."},
+            {"error", python::Error, METH_VARARGS, "Write an error to the Anvil log."},
             {"_get_position", python_get_position, METH_VARARGS, nullptr},
             {"_set_position", python_set_position, METH_VARARGS, nullptr},
             {"_get_rotation", python_get_rotation, METH_VARARGS, nullptr},
             {"_set_rotation", python_set_rotation, METH_VARARGS, nullptr},
-
-            // input
-            {"_is_key_pressed", python_is_key_pressed, METH_VARARGS, nullptr},
+            {"_is_key_pressed", python::IsKeyPressed, METH_VARARGS, nullptr},
             {nullptr, nullptr, 0, nullptr}};
 
         PyModuleDef s_AnvilNativeModule = {
@@ -502,7 +426,7 @@ namespace anv
             return true;
         }
 #endif
-    } // Empty Namespace
+    }
 
     bool PythonScriptEngine::Initialize(const std::filesystem::path &_projectDirectory)
     {
@@ -511,7 +435,6 @@ namespace anv
 
         s_ProjectDirectory = _projectDirectory;
         s_ScriptsDirectory = s_ProjectDirectory / "Scripts";
-
         s_PythonModuleDirectory = s_ExecDir / "Anvil" / "Resources" / "Python";
 
         if (!std::filesystem::exists(s_PythonModuleDirectory))
@@ -519,7 +442,6 @@ namespace anv
             ANV_LOG_ERROR(
                 "Anvil Python API directory was not found: '%s'",
                 s_PythonModuleDirectory.string().c_str());
-
             return false;
         }
 
@@ -566,9 +488,7 @@ namespace anv
         }
         Py_DECREF(modulePath);
 
-        PyObject *anvilModule =
-            PyImport_ImportModule("anvil");
-
+        PyObject *anvilModule = PyImport_ImportModule("anvil");
         if (!anvilModule)
         {
             log_python_exception("importing the Anvil Python API");
@@ -578,13 +498,8 @@ namespace anv
 
         Py_DECREF(anvilModule);
 
-        ANV_LOG_INFO(
-            "Anvil Python API: '%s'",
-            s_PythonModuleDirectory.string().c_str());
-
-        ANV_LOG_INFO(
-            "Project Scripts: '%s'",
-            s_ScriptsDirectory.string().c_str());
+        ANV_LOG_INFO("Anvil Python API: '%s'", s_PythonModuleDirectory.string().c_str());
+        ANV_LOG_INFO("Project Scripts: '%s'", s_ScriptsDirectory.string().c_str());
         return true;
 #endif
     }
@@ -888,17 +803,14 @@ namespace anv
 #endif
     }
 
-    void PythonScriptEngine::log_python_exception(
-        const char *_context)
+    void PythonScriptEngine::log_python_exception(const char *_context)
     {
 #ifdef ANV_ENABLE_PYTHON
         if (!PyErr_Occurred())
         {
             ANV_LOG_ERROR(
-                "Python operation failed while %s, "
-                "but no Python exception was available.",
+                "Python operation failed while %s, but no Python exception was available.",
                 _context);
-
             return;
         }
 
@@ -906,105 +818,60 @@ namespace anv
         PyObject *exceptionValue = nullptr;
         PyObject *exceptionTraceback = nullptr;
 
-        PyErr_Fetch(
-            &exceptionType,
-            &exceptionValue,
-            &exceptionTraceback);
+        PyErr_Fetch(&exceptionType, &exceptionValue, &exceptionTraceback);
+        PyErr_NormalizeException(&exceptionType, &exceptionValue, &exceptionTraceback);
 
-        PyErr_NormalizeException(
-            &exceptionType,
-            &exceptionValue,
-            &exceptionTraceback);
-
-        PyObject *tracebackModule =
-            PyImport_ImportModule("traceback");
-
+        PyObject *tracebackModule = PyImport_ImportModule("traceback");
         PyObject *formattedList = nullptr;
         PyObject *formattedString = nullptr;
 
         if (tracebackModule)
         {
-            PyObject *formatException =
-                PyObject_GetAttrString(
-                    tracebackModule,
-                    "format_exception");
-
-            if (formatException &&
-                PyCallable_Check(formatException))
+            PyObject *formatException = PyObject_GetAttrString(tracebackModule, "format_exception");
+            if (formatException && PyCallable_Check(formatException))
             {
                 formattedList = PyObject_CallFunctionObjArgs(
                     formatException,
-                    exceptionType
-                        ? exceptionType
-                        : Py_None,
-                    exceptionValue
-                        ? exceptionValue
-                        : Py_None,
-                    exceptionTraceback
-                        ? exceptionTraceback
-                        : Py_None,
+                    exceptionType ? exceptionType : Py_None,
+                    exceptionValue ? exceptionValue : Py_None,
+                    exceptionTraceback ? exceptionTraceback : Py_None,
                     nullptr);
             }
-
             Py_XDECREF(formatException);
         }
 
         if (formattedList)
         {
-            PyObject *separator =
-                PyUnicode_FromString("");
-
+            PyObject *separator = PyUnicode_FromString("");
             if (separator)
             {
-                formattedString =
-                    PyUnicode_Join(
-                        separator,
-                        formattedList);
-
+                formattedString = PyUnicode_Join(separator, formattedList);
                 Py_DECREF(separator);
             }
         }
 
-        const char *message = formattedString
-                                  ? PyUnicode_AsUTF8(formattedString)
-                                  : nullptr;
-
+        const char *message = formattedString ? PyUnicode_AsUTF8(formattedString) : nullptr;
         if (message)
         {
-            ANV_LOG_ERROR(
-                "Python exception while %s:\n%s",
-                _context,
-                message);
+            ANV_LOG_ERROR("Python exception while %s:\n%s", _context, message);
         }
         else
         {
-            PyObject *valueString = exceptionValue
-                                        ? PyObject_Str(exceptionValue)
-                                        : nullptr;
-
-            const char *fallback = valueString
-                                       ? PyUnicode_AsUTF8(valueString)
-                                       : nullptr;
-
+            PyObject *valueString = exceptionValue ? PyObject_Str(exceptionValue) : nullptr;
+            const char *fallback = valueString ? PyUnicode_AsUTF8(valueString) : nullptr;
             ANV_LOG_ERROR(
                 "Python exception while %s: %s",
                 _context,
-                fallback
-                    ? fallback
-                    : "Unable to format exception");
-
+                fallback ? fallback : "Unable to format exception");
             Py_XDECREF(valueString);
         }
 
         Py_XDECREF(formattedString);
         Py_XDECREF(formattedList);
         Py_XDECREF(tracebackModule);
-
         Py_XDECREF(exceptionType);
         Py_XDECREF(exceptionValue);
         Py_XDECREF(exceptionTraceback);
-
-        // Clear formatting errors, if traceback formatting failed.
         PyErr_Clear();
 #else
         (void)_context;
