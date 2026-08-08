@@ -39,6 +39,8 @@ namespace anv
         void StartPhysics();
         void StopPhysics();
         bool IsPhysicsRunning() const;
+        Physics2D* GetPhysics2D() { return m_Physics2D.get(); }
+        const Physics2D* GetPhysics2D() const { return m_Physics2D.get(); }
 
         entt::entity CreateEntity(std::string tag);
         entt::entity RegisterEntity(std::string tag, uuid::EntityUUID uuid);
