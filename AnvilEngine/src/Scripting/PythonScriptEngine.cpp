@@ -449,201 +449,178 @@ namespace anv
         (void)_scene; (void)_entity; return false;
 #else
         auto &registry = _scene.Registry();
-        if (!registry.valid(_entity) || !registry.any_of<Component::Script>(_entity)) return false;
+        if (!registry.valid(_entity) || !registry.all_of<uuid::EntityUUID, Component::Script>(_entity)) return false;
 
+        auto &id = registry.get<uuid::EntityUUID>(_entity);
         auto &component = registry.get<Component::Script>(_entity);
-        std::string entityID;
-        if (!get_entity_id(_scene, _entity, entityID)) return false;
-
-        const auto modulePath = component.modulePath.is_absolute() ? component.modulePath : s_ScriptsDirectory / component.modulePath;
-        auto &record = s_Modules[normalize_path(modulePath)];
-        if (!record.module && !load_module(modulePath, record))
+        const std::filesystem::path path = component.modulePath.ends_with(".py") ? s_ScriptsDirectory / component.modulePath : s_ScriptsDirectory / (component.modulePath + ".py");
+        if (!std::filesystem::exists(path))
         {
-            log_python_exception("loading script module");
+            ANV_LOG_ERROR("Python script module was not found: '%s'.", path.string().c_str());
             return false;
         }
+
+        const std::string normalizedPath = normalize_path(path);
+        ModuleRecord &record = s_Modules[normalizedPath];
+        if (!record.module && !load_module(path, record)) { log_python_exception("loading a script module"); return false; }
 
         PyObject *classObject = PyObject_GetAttrString(record.module, component.className.c_str());
-        if (!classObject)
+        if (!classObject) { log_python_exception("resolving a script class"); return false; }
+
+        PyObject *publicModule = PyImport_ImportModule("anvil");
+        PyObject *baseClass = publicModule ? PyObject_GetAttrString(publicModule, "Script") : nullptr;
+        const bool validClass = PyType_Check(classObject) && baseClass && PyObject_IsSubclass(classObject, baseClass) == 1;
+        Py_XDECREF(baseClass); Py_XDECREF(publicModule);
+        if (!validClass)
         {
-            log_python_exception("finding script class");
-            return false;
+            ANV_LOG_ERROR("Python class '%s' must derive from anvil.Script.", component.className.c_str());
+            Py_DECREF(classObject); return false;
         }
+
         reflect_fields(classObject, component);
-
-        PyObject *instanceObject = PyObject_CallNoArgs(classObject);
+        PyObject *object = PyObject_CallNoArgs(classObject);
         Py_DECREF(classObject);
-        if (!instanceObject)
-        {
-            log_python_exception("constructing script instance");
-            return false;
-        }
+        if (!object) { log_python_exception("constructing a script instance"); return false; }
 
-        PyObject *pythonEntityID = PyUnicode_FromString(entityID.c_str());
-        if (!pythonEntityID || PyObject_SetAttrString(instanceObject, "entity_id", pythonEntityID) != 0)
+        PyObject *entityID = PyUnicode_FromString(id.uuid.c_str());
+        if (!entityID || PyObject_SetAttrString(object, "entity_id", entityID) != 0)
         {
-            Py_XDECREF(pythonEntityID);
-            Py_DECREF(instanceObject);
-            log_python_exception("assigning script entity_id");
-            return false;
+            Py_XDECREF(entityID); Py_DECREF(object);
+            log_python_exception("binding an entity to a script instance"); return false;
         }
-        Py_DECREF(pythonEntityID);
+        Py_DECREF(entityID);
 
         for (const auto &[name, field] : component.fields)
         {
             PyObject *value = string_to_python_value(field);
-            if (PyObject_SetAttrString(instanceObject, name.c_str(), value) != 0)
+            if (!value || PyObject_SetAttrString(object, name.c_str(), value) != 0)
             {
-                Py_DECREF(value);
-                Py_DECREF(instanceObject);
-                log_python_exception("applying serialized script field");
-                return false;
+                Py_XDECREF(value); Py_DECREF(object);
+                log_python_exception("restoring a reflected script field"); return false;
             }
             Py_DECREF(value);
         }
 
         RuntimeInstance instance;
-        instance.scene = &_scene;
-        instance.entity = _entity;
-        instance.modulePath = modulePath;
-        instance.object = instanceObject;
-        s_Instances[entityID] = instance;
+        instance.scene = &_scene; instance.entity = _entity; instance.modulePath = path; instance.object = object;
+        s_Instances[id.uuid] = instance;
 
-        if (!call_method(instanceObject, "on_create"))
+        if (!call_method(object, "on_create"))
         {
             log_python_exception("calling script on_create");
-            destroy_instance(entityID, false);
-            return false;
+            destroy_instance(id.uuid, false); return false;
         }
+
+        ANV_LOG_INFO("Created Python script '%s.%s' for entity '%s'.", component.modulePath.c_str(), component.className.c_str(), id.uuid.c_str());
         return true;
 #endif
     }
 
-    void PythonScriptEngine::destroy_instance(const std::string &_entityID, bool _callDestroy)
+    void PythonScriptEngine::destroy_instance(const std::string &_entityID, bool _invokeDestroy)
     {
 #ifdef ANV_ENABLE_PYTHON
         auto iterator = s_Instances.find(_entityID);
         if (iterator == s_Instances.end()) return;
         save_instance_fields(iterator->second);
-        if (_callDestroy && !call_method(iterator->second.object, "on_destroy")) log_python_exception("calling script on_destroy");
+        if (_invokeDestroy && !call_method(iterator->second.object, "on_destroy")) log_python_exception("calling script on_destroy");
         Py_XDECREF(iterator->second.object);
         s_Instances.erase(iterator);
 #else
-        (void)_entityID; (void)_callDestroy;
-#endif
-    }
-
-    bool PythonScriptEngine::load_component_metadata(Component::Script &_component)
-    {
-#ifndef ANV_ENABLE_PYTHON
-        (void)_component; return false;
-#else
-        if (!s_Initialized || _component.modulePath.empty() || _component.className.empty()) return false;
-        const auto modulePath = _component.modulePath.is_absolute() ? _component.modulePath : s_ScriptsDirectory / _component.modulePath;
-        auto &record = s_Modules[normalize_path(modulePath)];
-        if (!record.module && !load_module(modulePath, record))
-        {
-            log_python_exception("loading script metadata");
-            return false;
-        }
-        PyObject *classObject = PyObject_GetAttrString(record.module, _component.className.c_str());
-        if (!classObject)
-        {
-            log_python_exception("finding script class metadata");
-            return false;
-        }
-        reflect_fields(classObject, _component);
-        Py_DECREF(classObject);
-        return true;
+        (void)_entityID; (void)_invokeDestroy;
 #endif
     }
 
     void PythonScriptEngine::reload_changed_modules(Scene &_scene)
     {
-#ifdef ANV_ENABLE_PYTHON
-        std::unordered_set<std::string> changed;
-        for (auto &[path, record] : s_Modules)
+#ifndef ANV_ENABLE_PYTHON
+        (void)_scene;
+#else
+        std::unordered_set<std::string> reloadPaths;
+        auto view = _scene.Registry().view<Component::Script>();
+        for (auto [entity, script] : view.each())
         {
+            if (script.modulePath.empty()) continue;
+            const std::filesystem::path path = script.modulePath.ends_with(".py") ? s_ScriptsDirectory / script.modulePath : s_ScriptsDirectory / (script.modulePath + ".py");
+            const std::string normalized = normalize_path(path);
+            auto module = s_Modules.find(normalized);
+            if (module == s_Modules.end() || !std::filesystem::exists(path)) continue;
             std::error_code error;
             const auto writeTime = std::filesystem::last_write_time(path, error);
-            if (!error && writeTime != record.lastWriteTime) changed.insert(path);
+            const bool requested = s_ReloadAll || (!s_RequestedReloadPath.empty() && normalize_path(s_RequestedReloadPath) == normalized);
+            if (requested || (!error && writeTime != module->second.lastWriteTime)) reloadPaths.insert(normalized);
         }
-        if (s_ReloadAll)
-        {
-            for (const auto &[path, record] : s_Modules) changed.insert(path);
-            s_ReloadAll = false;
-        }
-        if (!s_RequestedReloadPath.empty())
-        {
-            changed.insert(normalize_path(s_RequestedReloadPath));
-            s_RequestedReloadPath.clear();
-        }
-        for (const auto &path : changed) reload_module(_scene, path);
-#else
-        (void)_scene;
-#endif
-    }
 
-    void PythonScriptEngine::reload_module(Scene &_scene, const std::string &_normalizedPath)
-    {
-#ifdef ANV_ENABLE_PYTHON
-        auto moduleIterator = s_Modules.find(_normalizedPath);
-        if (moduleIterator == s_Modules.end()) return;
-        std::vector<std::string> affected;
-        for (const auto &[entityID, instance] : s_Instances)
-            if (instance.scene == &_scene && normalize_path(instance.modulePath) == _normalizedPath) affected.push_back(entityID);
-        for (const auto &entityID : affected) destroy_instance(entityID, true);
-        if (!load_module(_normalizedPath, moduleIterator->second))
+        for (const std::string &path : reloadPaths)
         {
-            log_python_exception("hot reloading script module");
-            return;
+            for (auto iterator = s_Instances.begin(); iterator != s_Instances.end();)
+            {
+                if (normalize_path(iterator->second.modulePath) != path) { ++iterator; continue; }
+                save_instance_fields(iterator->second);
+                if (!call_method(iterator->second.object, "on_destroy")) log_python_exception("calling on_destroy before hot reload");
+                Py_XDECREF(iterator->second.object);
+                iterator = s_Instances.erase(iterator);
+            }
+
+            ModuleRecord &record = s_Modules[path];
+            if (!load_module(path, record)) { log_python_exception("hot reloading a script module"); continue; }
+            ANV_LOG_INFO("Hot reloaded Python module '%s'.", path.c_str());
         }
-        auto view = _scene.Registry().view<uuid::EntityUUID, Component::Script>();
-        for (auto [entity, id, script] : view.each())
-        {
-            const auto modulePath = script.modulePath.is_absolute() ? script.modulePath : s_ScriptsDirectory / script.modulePath;
-            if (normalize_path(modulePath) == _normalizedPath) create_instance(_scene, entity);
-        }
-#else
-        (void)_scene; (void)_normalizedPath;
+        s_ReloadAll = false;
+        s_RequestedReloadPath.clear();
 #endif
     }
 
     void PythonScriptEngine::log_python_exception(const char *_context)
     {
 #ifdef ANV_ENABLE_PYTHON
-        if (!PyErr_Occurred()) return;
+        if (!PyErr_Occurred())
+        {
+            ANV_LOG_ERROR("Python operation failed while %s, but no Python exception was available.", _context);
+            return;
+        }
 
-        PyObject *type = nullptr;
-        PyObject *value = nullptr;
-        PyObject *traceback = nullptr;
-        PyErr_Fetch(&type, &value, &traceback);
-        PyErr_NormalizeException(&type, &value, &traceback);
+        PyObject *exceptionType = nullptr;
+        PyObject *exceptionValue = nullptr;
+        PyObject *exceptionTraceback = nullptr;
+        PyErr_Fetch(&exceptionType, &exceptionValue, &exceptionTraceback);
+        PyErr_NormalizeException(&exceptionType, &exceptionValue, &exceptionTraceback);
 
         PyObject *tracebackModule = PyImport_ImportModule("traceback");
-        PyObject *formatted = tracebackModule
-            ? PyObject_CallMethod(tracebackModule, "format_exception", "OOO", type ? type : Py_None, value ? value : Py_None, traceback ? traceback : Py_None)
-            : nullptr;
-        PyObject *separator = PyUnicode_FromString("");
-        PyObject *joined = formatted && separator ? PyUnicode_Join(separator, formatted) : nullptr;
-        const char *message = joined ? PyUnicode_AsUTF8(joined) : nullptr;
+        PyObject *formattedList = nullptr;
+        PyObject *formattedString = nullptr;
+        if (tracebackModule)
+        {
+            PyObject *formatException = PyObject_GetAttrString(tracebackModule, "format_exception");
+            if (formatException && PyCallable_Check(formatException))
+                formattedList = PyObject_CallFunctionObjArgs(formatException, exceptionType ? exceptionType : Py_None, exceptionValue ? exceptionValue : Py_None, exceptionTraceback ? exceptionTraceback : Py_None, nullptr);
+            Py_XDECREF(formatException);
+        }
 
-        if (message)
+        if (formattedList)
+        {
+            PyObject *separator = PyUnicode_FromString("");
+            if (separator)
+            {
+                formattedString = PyUnicode_Join(separator, formattedList);
+                Py_DECREF(separator);
+            }
+        }
+
+        const char *message = formattedString ? PyUnicode_AsUTF8(formattedString) : nullptr;
+        if (message) 
         {
             ANV_LOG_ERROR("Python exception while %s:\n%s", _context, message);
         }
         else
         {
-            ANV_LOG_ERROR("Python exception while %s.", _context);
+            PyObject *valueString = exceptionValue ? PyObject_Str(exceptionValue) : nullptr;
+            const char *fallback = valueString ? PyUnicode_AsUTF8(valueString) : nullptr;
+            ANV_LOG_ERROR("Python exception while %s: %s", _context, fallback ? fallback : "Unable to format exception");
+            Py_XDECREF(valueString);
         }
 
-        Py_XDECREF(joined);
-        Py_XDECREF(separator);
-        Py_XDECREF(formatted);
-        Py_XDECREF(tracebackModule);
-        Py_XDECREF(traceback);
-        Py_XDECREF(value);
-        Py_XDECREF(type);
+        Py_XDECREF(formattedString); Py_XDECREF(formattedList); Py_XDECREF(tracebackModule);
+        Py_XDECREF(exceptionType); Py_XDECREF(exceptionValue); Py_XDECREF(exceptionTraceback);
         PyErr_Clear();
 #else
         (void)_context;
