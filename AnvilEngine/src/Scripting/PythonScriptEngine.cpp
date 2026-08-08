@@ -1,4 +1,5 @@
 #include "PythonScriptEngine.h"
+#include "ScriptEntityContext.h"
 #include "Bindings/PythonBindings.h"
 
 #include "../Scene/Component.h"
@@ -27,7 +28,6 @@ namespace anv
         std::filesystem::path s_ScriptsDirectory;
         std::filesystem::path s_RequestedReloadPath;
         std::filesystem::path s_PythonModuleDirectory;
-        std::unordered_set<Scene *> s_ActiveScenes;
 
 #ifdef ANV_ENABLE_PYTHON
         struct ModuleRecord
@@ -71,117 +71,14 @@ namespace anv
             return !_out.empty();
         }
 
-        bool find_entity(const char *_entityID, Scene *&_scene, entt::entity &_entity)
-        {
-            if (!_entityID)
-                return false;
-
-            for (Scene *scene : s_ActiveScenes)
-            {
-                if (!scene)
-                    continue;
-
-                auto view = scene->Registry().view<uuid::EntityUUID>();
-                for (auto [entity, id] : view.each())
-                {
-                    if (id.uuid == _entityID)
-                    {
-                        _scene = scene;
-                        _entity = entity;
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        PyObject *python_get_position(PyObject *, PyObject *_args)
-        {
-            const char *entityID = nullptr;
-            if (!PyArg_ParseTuple(_args, "s", &entityID))
-                return nullptr;
-
-            Scene *scene = nullptr;
-            entt::entity entity = entt::null;
-            if (!find_entity(entityID, scene, entity) ||
-                !scene->HasComponent<Component::Transform2d>(entity))
-            {
-                PyErr_SetString(PyExc_KeyError, "Entity or Transform2d component was not found");
-                return nullptr;
-            }
-
-            const auto &transform = scene->GetComponent<Component::Transform2d>(entity);
-            return Py_BuildValue("(ff)", transform.position.x, transform.position.y);
-        }
-
-        PyObject *python_set_position(PyObject *, PyObject *_args)
-        {
-            const char *entityID = nullptr;
-            float x = 0.0f;
-            float y = 0.0f;
-            if (!PyArg_ParseTuple(_args, "sff", &entityID, &x, &y))
-                return nullptr;
-
-            Scene *scene = nullptr;
-            entt::entity entity = entt::null;
-            if (!find_entity(entityID, scene, entity) ||
-                !scene->HasComponent<Component::Transform2d>(entity))
-            {
-                PyErr_SetString(PyExc_KeyError, "Entity or Transform2d component was not found");
-                return nullptr;
-            }
-
-            scene->GetComponent<Component::Transform2d>(entity).position = {x, y};
-            Py_RETURN_NONE;
-        }
-
-        PyObject *python_get_rotation(PyObject *, PyObject *_args)
-        {
-            const char *entityID = nullptr;
-            if (!PyArg_ParseTuple(_args, "s", &entityID))
-                return nullptr;
-
-            Scene *scene = nullptr;
-            entt::entity entity = entt::null;
-            if (!find_entity(entityID, scene, entity) ||
-                !scene->HasComponent<Component::Transform2d>(entity))
-            {
-                PyErr_SetString(PyExc_KeyError, "Entity or Transform2d component was not found");
-                return nullptr;
-            }
-
-            return PyFloat_FromDouble(scene->GetComponent<Component::Transform2d>(entity).rotation);
-        }
-
-        PyObject *python_set_rotation(PyObject *, PyObject *_args)
-        {
-            const char *entityID = nullptr;
-            float rotation = 0.0f;
-            if (!PyArg_ParseTuple(_args, "sf", &entityID, &rotation))
-                return nullptr;
-
-            Scene *scene = nullptr;
-            entt::entity entity = entt::null;
-            if (!find_entity(entityID, scene, entity) ||
-                !scene->HasComponent<Component::Transform2d>(entity))
-            {
-                PyErr_SetString(PyExc_KeyError, "Entity or Transform2d component was not found");
-                return nullptr;
-            }
-
-            scene->GetComponent<Component::Transform2d>(entity).rotation = rotation;
-            Py_RETURN_NONE;
-        }
-
         PyMethodDef s_AnvilMethods[] = {
             {"log", python::Log, METH_VARARGS, "Write an informational message to the Anvil log."},
             {"warn", python::Warn, METH_VARARGS, "Write a warning to the Anvil log."},
             {"error", python::Error, METH_VARARGS, "Write an error to the Anvil log."},
-            {"_get_position", python_get_position, METH_VARARGS, nullptr},
-            {"_set_position", python_set_position, METH_VARARGS, nullptr},
-            {"_get_rotation", python_get_rotation, METH_VARARGS, nullptr},
-            {"_set_rotation", python_set_rotation, METH_VARARGS, nullptr},
+            {"_get_position", python::GetPosition, METH_VARARGS, nullptr},
+            {"_set_position", python::SetPosition, METH_VARARGS, nullptr},
+            {"_get_rotation", python::GetRotation, METH_VARARGS, nullptr},
+            {"_set_rotation", python::SetRotation, METH_VARARGS, nullptr},
             {"_is_key_pressed", python::IsKeyPressed, METH_VARARGS, nullptr},
             {nullptr, nullptr, 0, nullptr}};
 
@@ -527,7 +424,7 @@ namespace anv
             ANV_LOG_ERROR("Python interpreter shutdown reported an error.");
 #endif
 
-        s_ActiveScenes.clear();
+        ClearScriptScenes();
         s_ProjectDirectory.clear();
         s_ScriptsDirectory.clear();
         s_Initialized = false;
@@ -549,7 +446,7 @@ namespace anv
         if (!s_Initialized)
             return;
 
-        s_ActiveScenes.insert(&_scene);
+        RegisterScriptScene(_scene);
         reload_changed_modules(_scene);
 
         auto view = _scene.Registry().view<uuid::EntityUUID, Component::Script>();
@@ -589,7 +486,7 @@ namespace anv
             iterator = s_Instances.erase(iterator);
         }
 #endif
-        s_ActiveScenes.erase(&_scene);
+        UnregisterScriptScene(_scene);
     }
 
     void PythonScriptEngine::DestroyEntity(Scene &_scene, entt::entity _entity)
