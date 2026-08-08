@@ -15,5 +15,8 @@ namespace anv::python
     PyObject* SetPosition(PyObject* self, PyObject* args);
     PyObject* GetRotation(PyObject* self, PyObject* args);
     PyObject* SetRotation(PyObject* self, PyObject* args);
+
+    PyObject* RigidBodyAddForce(PyObject* self, PyObject* args);
+    PyObject* RigidBodyApplyImpulse(PyObject* self, PyObject* args);
 }
 #endif
