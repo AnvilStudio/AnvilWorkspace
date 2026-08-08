@@ -125,8 +125,6 @@ namespace anv
 
         RemoveDestroyedBodies(scene);
 
-        // Scripts run before physics. Push any script-authored transform changes
-        // into Box2D before advancing the world so the body and collider move too.
         SynchronizeBodiesFromTransforms(scene);
 
         m_Accumulator += std::clamp(deltaTime, 0.0f, 0.25f);
@@ -146,7 +144,7 @@ namespace anv
         if (it == m_Bodies.end())
             return;
 
-        b2DestroyBody(it->second);
+        it->second.Destroy();
         m_Bodies.erase(it);
     }
 
@@ -193,7 +191,6 @@ namespace anv
         }
         else
         {
-            // Collider-only entities are environment geometry by default.
             bodyDef.type = b2_staticBody;
             bodyDef.gravityScale = 0.0f;
             bodyDef.isEnabled = true;
@@ -204,8 +201,12 @@ namespace anv
         bodyDef.enableSleep = true;
         bodyDef.isAwake = true;
 
-        const b2BodyId body = b2CreateBody(m_World.GetNativeWorld(), &bodyDef);
-        m_Bodies.emplace(entity, body);
+        const b2BodyId nativeBody = b2CreateBody(m_World.GetNativeWorld(), &bodyDef);
+        auto [bodyIterator, inserted] = m_Bodies.emplace(entity, PhysicsBody2D(nativeBody));
+        if (!inserted)
+            return;
+
+        PhysicsBody2D& body = bodyIterator->second;
 
         ANV_LOG_INFO(
             "Physics2D body created: entity=%u type=%s position=(%.3f, %.3f) collider=%s",
@@ -258,7 +259,7 @@ namespace anv
             b2MakeRot(0.0f));
 
         const b2ShapeId shape =
-            b2CreatePolygonShape(body, &shapeDef, &box);
+            b2CreatePolygonShape(body.GetNativeBody(), &shapeDef, &box);
 
         if (B2_IS_NULL(shape))
         {
@@ -301,9 +302,10 @@ namespace anv
 
     void Physics2D::SynchronizeBodiesFromTransforms(Scene& scene)
     {
-        for (const auto& [entity, body] : m_Bodies)
+        for (auto& [entity, body] : m_Bodies)
         {
-            if (!scene.Registry().valid(entity) ||
+            if (!body.IsValid() ||
+                !scene.Registry().valid(entity) ||
                 !scene.HasComponent<Component::Transform2d>(entity))
             {
                 continue;
@@ -312,9 +314,8 @@ namespace anv
             const auto& transform =
                 scene.GetComponent<Component::Transform2d>(entity);
 
-            const b2Vec2 bodyPosition = b2Body_GetPosition(body);
-            const float bodyRotation = glm::degrees(
-                b2Rot_GetAngle(b2Body_GetRotation(body)));
+            const b2Vec2 bodyPosition = body.GetPosition();
+            const float bodyRotation = glm::degrees(body.GetRotationRadians());
 
             const bool positionChanged =
                 !NearlyEqual(transform.position.x, bodyPosition.x) ||
@@ -326,12 +327,11 @@ namespace anv
             if (!positionChanged && !rotationChanged)
                 continue;
 
-            b2Body_SetTransform(
-                body,
-                {transform.position.x, transform.position.y},
-                b2MakeRot(glm::radians(transform.rotation)));
-
-            b2Body_SetAwake(body, true);
+            body.SetTransform(
+                transform.position.x,
+                transform.position.y,
+                glm::radians(transform.rotation));
+            body.SetAwake(true);
         }
     }
 
@@ -339,7 +339,8 @@ namespace anv
     {
         for (const auto& [entity, body] : m_Bodies)
         {
-            if (!scene.Registry().valid(entity) ||
+            if (!body.IsValid() ||
+                !scene.Registry().valid(entity) ||
                 !scene.HasComponent<Component::Transform2d>(entity) ||
                 !scene.HasComponent<Component::Rigidbody2D>(entity))
             {
@@ -355,11 +356,9 @@ namespace anv
             auto& transform =
                 scene.GetComponent<Component::Transform2d>(entity);
 
-            const b2Vec2 position = b2Body_GetPosition(body);
-            const b2Rot rotation = b2Body_GetRotation(body);
-
+            const b2Vec2 position = body.GetPosition();
             transform.position = {position.x, position.y};
-            transform.rotation = glm::degrees(b2Rot_GetAngle(rotation));
+            transform.rotation = glm::degrees(body.GetRotationRadians());
         }
     }
 
