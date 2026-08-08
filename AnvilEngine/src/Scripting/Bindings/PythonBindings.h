@@ -11,6 +11,8 @@ namespace anv::python
 
     PyObject* IsKeyPressed(PyObject* self, PyObject* args);
 
+    PyObject* HasComponent(PyObject* self, PyObject* args);
+
     PyObject* GetPosition(PyObject* self, PyObject* args);
     PyObject* SetPosition(PyObject* self, PyObject* args);
     PyObject* GetRotation(PyObject* self, PyObject* args);
