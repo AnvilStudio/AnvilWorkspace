@@ -58,17 +58,18 @@ namespace anv
         return !B2_IS_NULL(shape);
     }
 
-    b2Vec2 PhysicsBody2D::GetPosition() const
+    PhysicsTransform2D PhysicsBody2D::GetTransform() const
     {
-        return IsValid() ? b2Body_GetPosition(m_Body) : b2Vec2{0.0f, 0.0f};
-    }
-
-    float PhysicsBody2D::GetRotationRadians() const
-    {
+        PhysicsTransform2D transform;
         if (!IsValid())
-            return 0.0f;
+            return transform;
 
-        return b2Rot_GetAngle(b2Body_GetRotation(m_Body));
+        const b2Vec2 position = b2Body_GetPosition(m_Body);
+        transform.positionX = position.x;
+        transform.positionY = position.y;
+        transform.rotationRadians =
+            b2Rot_GetAngle(b2Body_GetRotation(m_Body));
+        return transform;
     }
 
     void PhysicsBody2D::SetTransform(float x, float y, float rotationRadians)
