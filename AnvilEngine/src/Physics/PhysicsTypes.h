@@ -9,6 +9,13 @@ namespace anv
         Dynamic = 2
     };
 
+    struct PhysicsTransform2D
+    {
+        float positionX = 0.0f;
+        float positionY = 0.0f;
+        float rotationRadians = 0.0f;
+    };
+
     struct PhysicsBodyDefinition2D
     {
         PhysicsBodyType2D type = PhysicsBodyType2D::Static;
