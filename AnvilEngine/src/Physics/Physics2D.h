@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PhysicsBody2D.h"
 #include "PhysicsWorld2D.h"
 #include "../Core/Reference.h"
 #include "../vendor/entt/single_include/entt/entt.hpp"
@@ -34,8 +35,7 @@ namespace anv
             if (!m_Running || it == m_Bodies.end())
                 return false;
 
-            b2Body_ApplyForceToCenter(it->second, {x, y}, true);
-            return true;
+            return it->second.AddForce(x, y);
         }
 
         bool ApplyImpulse(entt::entity entity, float x, float y)
@@ -44,8 +44,7 @@ namespace anv
             if (!m_Running || it == m_Bodies.end())
                 return false;
 
-            b2Body_ApplyLinearImpulseToCenter(it->second, {x, y}, true);
-            return true;
+            return it->second.ApplyImpulse(x, y);
         }
 
     private:
@@ -58,7 +57,7 @@ namespace anv
 
     private:
         PhysicsWorld2D m_World;
-        std::unordered_map<entt::entity, b2BodyId> m_Bodies;
+        std::unordered_map<entt::entity, PhysicsBody2D> m_Bodies;
 
         float m_Accumulator = 0.0f;
         float m_FixedTimeStep = 1.0f / 60.0f;
