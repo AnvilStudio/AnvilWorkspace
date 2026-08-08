@@ -5,8 +5,6 @@
 #include "../Core/Reference.h"
 #include "../vendor/entt/single_include/entt/entt.hpp"
 
-#include <box2d/box2d.h>
-
 #include <unordered_map>
 
 namespace anv
@@ -52,8 +50,6 @@ namespace anv
         void RemoveDestroyedBodies(Scene& scene);
         void SynchronizeBodiesFromTransforms(Scene& scene);
         void SynchronizeTransforms(Scene& scene);
-
-        static b2BodyType ToBox2DType(int type);
 
     private:
         PhysicsWorld2D m_World;
