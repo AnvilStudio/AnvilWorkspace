@@ -320,12 +320,12 @@ namespace anv
             const auto& transform =
                 scene.GetComponent<Component::Transform2d>(entity);
 
-            const b2Vec2 bodyPosition = body.GetPosition();
-            const float bodyRotation = glm::degrees(body.GetRotationRadians());
+            const PhysicsTransform2D bodyTransform = body.GetTransform();
+            const float bodyRotation = glm::degrees(bodyTransform.rotationRadians);
 
             const bool positionChanged =
-                !NearlyEqual(transform.position.x, bodyPosition.x) ||
-                !NearlyEqual(transform.position.y, bodyPosition.y);
+                !NearlyEqual(transform.position.x, bodyTransform.positionX) ||
+                !NearlyEqual(transform.position.y, bodyTransform.positionY);
 
             const bool rotationChanged =
                 !NearlyEqual(transform.rotation, bodyRotation);
@@ -362,9 +362,12 @@ namespace anv
             auto& transform =
                 scene.GetComponent<Component::Transform2d>(entity);
 
-            const b2Vec2 position = body.GetPosition();
-            transform.position = {position.x, position.y};
-            transform.rotation = glm::degrees(body.GetRotationRadians());
+            const PhysicsTransform2D bodyTransform = body.GetTransform();
+            transform.position = {
+                bodyTransform.positionX,
+                bodyTransform.positionY
+            };
+            transform.rotation = glm::degrees(bodyTransform.rotationRadians);
         }
     }
 }
