@@ -80,6 +80,8 @@ namespace anv
             {"_get_rotation", python::GetRotation, METH_VARARGS, nullptr},
             {"_set_rotation", python::SetRotation, METH_VARARGS, nullptr},
             {"_is_key_pressed", python::IsKeyPressed, METH_VARARGS, nullptr},
+            {"_rigid_body_add_force", python::RigidBodyAddForce, METH_VARARGS, nullptr},
+            {"_rigid_body_apply_impulse", python::RigidBodyApplyImpulse, METH_VARARGS, nullptr},
             {nullptr, nullptr, 0, nullptr}};
 
         PyModuleDef s_AnvilNativeModule = {
