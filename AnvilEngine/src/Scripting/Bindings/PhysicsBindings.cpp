@@ -2,7 +2,7 @@
 
 #ifdef ANV_ENABLE_PYTHON
 #include "../ScriptEntityContext.h"
-#include "../../Physics/Physics2D.h"
+#include "../../Physics/PhysicsSystem2D.h"
 #include "../../Scene/Component.h"
 #include "../../Scene/Scene.h"
 
@@ -10,7 +10,10 @@ namespace anv::python
 {
     namespace
     {
-        bool ResolveRigidBody(const char* entityID, ScriptEntityContext& context, Physics2D*& physics)
+        bool ResolveRigidBody(
+            const char* entityID,
+            ScriptEntityContext& context,
+            PhysicsSystem2D*& physics)
         {
             context = ResolveScriptEntity(entityID ? entityID : "");
             if (!context)
@@ -25,10 +28,10 @@ namespace anv::python
                 return false;
             }
 
-            physics = context.scene->GetPhysics2D();
+            physics = context.scene->GetPhysicsSystem2D();
             if (!physics || !physics->IsRunning())
             {
-                PyErr_SetString(PyExc_RuntimeError, "Physics2D is not running for this scene");
+                PyErr_SetString(PyExc_RuntimeError, "PhysicsSystem2D is not running for this scene");
                 return false;
             }
 
@@ -46,7 +49,7 @@ namespace anv::python
             return nullptr;
 
         ScriptEntityContext context;
-        Physics2D* physics = nullptr;
+        PhysicsSystem2D* physics = nullptr;
         if (!ResolveRigidBody(entityID, context, physics))
             return nullptr;
 
@@ -69,7 +72,7 @@ namespace anv::python
             return nullptr;
 
         ScriptEntityContext context;
-        Physics2D* physics = nullptr;
+        PhysicsSystem2D* physics = nullptr;
         if (!ResolveRigidBody(entityID, context, physics))
             return nullptr;
 
