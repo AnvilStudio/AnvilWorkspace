@@ -1,5 +1,6 @@
 #include "PythonBindings.h"
 
+#ifdef ANV_ENABLE_PYTHON
 #include "../ScriptEntityContext.h"
 #include "../../Scene/Component.h"
 #include "../../Scene/Scene.h"
@@ -79,3 +80,4 @@ namespace anv::python
         Py_RETURN_NONE;
     }
 }
+#endif
