@@ -7,6 +7,7 @@
 namespace anv
 {
     class Physics2D;
+    using PhysicsSystem2D = Physics2D;
 
     class Scene : public RefCounter
     {
@@ -39,6 +40,11 @@ namespace anv
         void StartPhysics();
         void StopPhysics();
         bool IsPhysicsRunning() const;
+
+        PhysicsSystem2D* GetPhysicsSystem2D() { return m_Physics2D.get(); }
+        const PhysicsSystem2D* GetPhysicsSystem2D() const { return m_Physics2D.get(); }
+
+        // Temporary compatibility accessors. Prefer GetPhysicsSystem2D().
         Physics2D* GetPhysics2D() { return m_Physics2D.get(); }
         const Physics2D* GetPhysics2D() const { return m_Physics2D.get(); }
 
