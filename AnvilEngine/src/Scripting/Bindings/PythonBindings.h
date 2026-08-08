@@ -10,6 +10,7 @@ namespace anv::python
     PyObject* Error(PyObject* self, PyObject* args);
 
     PyObject* IsKeyPressed(PyObject* self, PyObject* args);
+    PyObject* IsKeyJustPressed(PyObject* self, PyObject* args);
 
     PyObject* HasComponent(PyObject* self, PyObject* args);
 
