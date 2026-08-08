@@ -3,6 +3,8 @@
 #include "../Util/UMacros.h"
 #include "../Core/Window.h"
 
+#include <unordered_map>
+
 namespace anv
 {
 	class InputSystem
@@ -12,6 +14,13 @@ namespace anv
 		InputSystem(_shared<Window> _win);
 
 		bool IsKeyPressed(int _code) { return s_InputSystem->is_key_pressed(_code); }
+		bool IsKeyJustPressed(int _code)
+		{
+			const bool pressed = s_InputSystem->is_key_pressed(_code);
+			const bool wasPressed = m_KeyStates[_code];
+			m_KeyStates[_code] = pressed;
+			return pressed && !wasPressed;
+		}
 		bool IsMouseButtonPressed(int _button) { return s_InputSystem->is_mouse_button_pressed(_button); }
 		std::pair<float, float> GetMousePos() { return s_InputSystem->get_mouse_pos(); }
 		float GetMouseScrollX() { return s_InputSystem->getMouseScrollX(); }
@@ -31,5 +40,6 @@ namespace anv
 
 	private:
 		inline static _shared<InputSystem> s_InputSystem = nullptr;
+		std::unordered_map<int, bool> m_KeyStates;
 	};
 }
