@@ -24,6 +24,21 @@ namespace anv
             return "Unknown";
         }
 
+        PhysicsBodyType2D ToPhysicsBodyType(Component::Rigidbody2DType type)
+        {
+            switch (type)
+            {
+                case Component::Rigidbody2DType::Static:
+                    return PhysicsBodyType2D::Static;
+                case Component::Rigidbody2DType::Kinematic:
+                    return PhysicsBodyType2D::Kinematic;
+                case Component::Rigidbody2DType::Dynamic:
+                    return PhysicsBodyType2D::Dynamic;
+            }
+
+            return PhysicsBodyType2D::Static;
+        }
+
         bool NearlyEqual(float left, float right, float epsilon = 0.0001f)
         {
             return std::abs(left - right) <= epsilon;
@@ -143,7 +158,7 @@ namespace anv
         if (it == m_Bodies.end())
             return;
 
-        it->second.Destroy();
+        m_World.DestroyBody(it->second);
         m_Bodies.erase(it);
     }
 
@@ -168,7 +183,11 @@ namespace anv
         const auto& transform =
             scene.GetComponent<Component::Transform2d>(entity);
 
-        b2BodyDef bodyDef = b2DefaultBodyDef();
+        PhysicsBodyDefinition2D bodyDefinition;
+        bodyDefinition.positionX = transform.position.x;
+        bodyDefinition.positionY = transform.position.y;
+        bodyDefinition.rotationRadians = glm::radians(transform.rotation);
+
         Component::Rigidbody2DType engineBodyType =
             Component::Rigidbody2DType::Static;
 
@@ -178,34 +197,38 @@ namespace anv
                 scene.GetComponent<Component::Rigidbody2D>(entity);
 
             engineBodyType = rigidbody.type;
-            bodyDef.type = ToBox2DType(static_cast<int>(rigidbody.type));
-            bodyDef.linearDamping = std::max(0.0f, rigidbody.linearDamping);
-            bodyDef.angularDamping = std::max(0.0f, rigidbody.angularDamping);
-            bodyDef.gravityScale = rigidbody.gravityScale;
-            bodyDef.motionLocks.linearX = false;
-            bodyDef.motionLocks.linearY = false;
-            bodyDef.motionLocks.angularZ = rigidbody.fixedRotation;
-            bodyDef.isBullet = rigidbody.bullet;
-            bodyDef.isEnabled = rigidbody.enabled;
+            bodyDefinition.type = ToPhysicsBodyType(rigidbody.type);
+            bodyDefinition.linearDamping = std::max(0.0f, rigidbody.linearDamping);
+            bodyDefinition.angularDamping = std::max(0.0f, rigidbody.angularDamping);
+            bodyDefinition.gravityScale = rigidbody.gravityScale;
+            bodyDefinition.fixedRotation = rigidbody.fixedRotation;
+            bodyDefinition.bullet = rigidbody.bullet;
+            bodyDefinition.enabled = rigidbody.enabled;
         }
         else
         {
-            bodyDef.type = b2_staticBody;
-            bodyDef.gravityScale = 0.0f;
-            bodyDef.isEnabled = true;
+            bodyDefinition.type = PhysicsBodyType2D::Static;
+            bodyDefinition.gravityScale = 0.0f;
+            bodyDefinition.enabled = true;
         }
 
-        bodyDef.position = {transform.position.x, transform.position.y};
-        bodyDef.rotation = b2MakeRot(glm::radians(transform.rotation));
-        bodyDef.enableSleep = true;
-        bodyDef.isAwake = true;
-
-        const b2BodyId nativeBody = b2CreateBody(m_World.GetNativeWorld(), &bodyDef);
-        auto [bodyIterator, inserted] = m_Bodies.emplace(entity, PhysicsBody2D(nativeBody));
-        if (!inserted)
+        PhysicsBody2D body = m_World.CreateBody(bodyDefinition);
+        if (!body.IsValid())
+        {
+            ANV_LOG_ERROR(
+                "PhysicsSystem2D failed to create a runtime body for entity %u.",
+                static_cast<unsigned int>(entity));
             return;
+        }
 
-        PhysicsBody2D& body = bodyIterator->second;
+        auto [bodyIterator, inserted] = m_Bodies.emplace(entity, body);
+        if (!inserted)
+        {
+            m_World.DestroyBody(body);
+            return;
+        }
+
+        PhysicsBody2D& runtimeBody = bodyIterator->second;
 
         ANV_LOG_INFO(
             "PhysicsSystem2D body created: entity=%u type=%s position=(%.3f, %.3f) collider=%s",
@@ -226,41 +249,25 @@ namespace anv
         const auto& collider =
             scene.GetComponent<Component::BoxCollider2D>(entity);
 
-        b2ShapeDef shapeDef = b2DefaultShapeDef();
-        shapeDef.density = std::max(0.0f, collider.density);
-        shapeDef.material.friction = std::max(0.0f, collider.friction);
-        shapeDef.material.restitution =
-            std::clamp(collider.restitution, 0.0f, 1.0f);
-        shapeDef.isSensor = collider.sensor;
-        shapeDef.enableContactEvents = true;
-        shapeDef.enableSensorEvents = collider.sensor;
-
         const float absoluteScaleX = std::abs(transform.scale.x);
         const float absoluteScaleY = std::abs(transform.scale.y);
 
-        const float halfWidth = std::max(
+        PhysicsBoxColliderDefinition2D colliderDefinition;
+        colliderDefinition.halfWidth = std::max(
             0.001f,
             std::abs(collider.size.x) * absoluteScaleX * 0.5f);
-
-        const float halfHeight = std::max(
+        colliderDefinition.halfHeight = std::max(
             0.001f,
             std::abs(collider.size.y) * absoluteScaleY * 0.5f);
+        colliderDefinition.offsetX = collider.offset.x * transform.scale.x;
+        colliderDefinition.offsetY = collider.offset.y * transform.scale.y;
+        colliderDefinition.density = std::max(0.0f, collider.density);
+        colliderDefinition.friction = std::max(0.0f, collider.friction);
+        colliderDefinition.restitution =
+            std::clamp(collider.restitution, 0.0f, 1.0f);
+        colliderDefinition.sensor = collider.sensor;
 
-        const b2Vec2 scaledOffset{
-            collider.offset.x * transform.scale.x,
-            collider.offset.y * transform.scale.y
-        };
-
-        const b2Polygon box = b2MakeOffsetBox(
-            halfWidth,
-            halfHeight,
-            scaledOffset,
-            b2MakeRot(0.0f));
-
-        const b2ShapeId shape =
-            b2CreatePolygonShape(body.GetNativeBody(), &shapeDef, &box);
-
-        if (B2_IS_NULL(shape))
+        if (!runtimeBody.CreateBoxCollider(colliderDefinition))
         {
             ANV_LOG_ERROR(
                 "PhysicsSystem2D failed to create BoxCollider2D shape for entity %u.",
@@ -271,8 +278,8 @@ namespace anv
             ANV_LOG_INFO(
                 "PhysicsSystem2D collider created: entity=%u halfExtents=(%.3f, %.3f) sensor=%s",
                 static_cast<unsigned int>(entity),
-                halfWidth,
-                halfHeight,
+                colliderDefinition.halfWidth,
+                colliderDefinition.halfHeight,
                 collider.sensor ? "true" : "false");
         }
     }
@@ -359,20 +366,5 @@ namespace anv
             transform.position = {position.x, position.y};
             transform.rotation = glm::degrees(body.GetRotationRadians());
         }
-    }
-
-    b2BodyType PhysicsSystem2D::ToBox2DType(int type)
-    {
-        switch (static_cast<Component::Rigidbody2DType>(type))
-        {
-            case Component::Rigidbody2DType::Static:
-                return b2_staticBody;
-            case Component::Rigidbody2DType::Kinematic:
-                return b2_kinematicBody;
-            case Component::Rigidbody2DType::Dynamic:
-                return b2_dynamicBody;
-        }
-
-        return b2_staticBody;
     }
 }
