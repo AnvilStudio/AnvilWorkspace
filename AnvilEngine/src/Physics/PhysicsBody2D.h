@@ -1,5 +1,7 @@
 #pragma once
 
+#include "PhysicsTypes.h"
+
 #include <box2d/box2d.h>
 
 namespace anv
@@ -20,6 +22,7 @@ namespace anv
 
         bool AddForce(float x, float y);
         bool ApplyImpulse(float x, float y);
+        bool CreateBoxCollider(const PhysicsBoxColliderDefinition2D& definition);
 
         b2Vec2 GetPosition() const;
         float GetRotationRadians() const;
