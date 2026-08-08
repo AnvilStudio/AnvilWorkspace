@@ -6,8 +6,7 @@
 
 namespace anv
 {
-    class Physics2D;
-    using PhysicsSystem2D = Physics2D;
+    class PhysicsSystem2D;
 
     class Scene : public RefCounter
     {
@@ -41,12 +40,8 @@ namespace anv
         void StopPhysics();
         bool IsPhysicsRunning() const;
 
-        PhysicsSystem2D* GetPhysicsSystem2D() { return m_Physics2D.get(); }
-        const PhysicsSystem2D* GetPhysicsSystem2D() const { return m_Physics2D.get(); }
-
-        // Temporary compatibility accessors. Prefer GetPhysicsSystem2D().
-        Physics2D* GetPhysics2D() { return m_Physics2D.get(); }
-        const Physics2D* GetPhysics2D() const { return m_Physics2D.get(); }
+        PhysicsSystem2D* GetPhysicsSystem2D() { return m_PhysicsSystem2D.get(); }
+        const PhysicsSystem2D* GetPhysicsSystem2D() const { return m_PhysicsSystem2D.get(); }
 
         entt::entity CreateEntity(std::string tag);
         entt::entity RegisterEntity(std::string tag, uuid::EntityUUID uuid);
@@ -104,7 +99,7 @@ namespace anv
         uuid::AssetUUID m_UUID;
         entt::registry m_Registry;
         std::string m_Path;
-        _unique<Physics2D> m_Physics2D = nullptr;
+        _unique<PhysicsSystem2D> m_PhysicsSystem2D = nullptr;
 
         friend class SceneManager;
         friend class SceneRenderer2D;
