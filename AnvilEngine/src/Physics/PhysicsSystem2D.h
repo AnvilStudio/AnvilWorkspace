@@ -27,22 +27,22 @@ namespace anv
         void DestroyBody(entt::entity entity);
         bool IsRunning() const { return m_Running; }
 
-        bool AddForce(entt::entity entity, float x, float y)
+        PhysicsBody2D* GetBody(entt::entity entity)
         {
-            const auto it = m_Bodies.find(entity);
-            if (!m_Running || it == m_Bodies.end())
-                return false;
+            if (!m_Running)
+                return nullptr;
 
-            return it->second.AddForce(x, y);
+            const auto it = m_Bodies.find(entity);
+            return it != m_Bodies.end() ? &it->second : nullptr;
         }
 
-        bool ApplyImpulse(entt::entity entity, float x, float y)
+        const PhysicsBody2D* GetBody(entt::entity entity) const
         {
-            const auto it = m_Bodies.find(entity);
-            if (!m_Running || it == m_Bodies.end())
-                return false;
+            if (!m_Running)
+                return nullptr;
 
-            return it->second.ApplyImpulse(x, y);
+            const auto it = m_Bodies.find(entity);
+            return it != m_Bodies.end() ? &it->second : nullptr;
         }
 
     private:
