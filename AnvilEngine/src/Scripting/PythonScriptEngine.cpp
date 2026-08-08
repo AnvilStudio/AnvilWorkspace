@@ -606,7 +606,10 @@ namespace anv
         }
 
         const char *message = formattedString ? PyUnicode_AsUTF8(formattedString) : nullptr;
-        if (message) ANV_LOG_ERROR("Python exception while %s:\n%s", _context, message);
+        if (message) 
+        {
+            ANV_LOG_ERROR("Python exception while %s:\n%s", _context, message);
+        }
         else
         {
             PyObject *valueString = exceptionValue ? PyObject_Str(exceptionValue) : nullptr;
