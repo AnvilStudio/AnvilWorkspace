@@ -2,6 +2,7 @@
 
 #ifdef ANV_ENABLE_PYTHON
 #include "../ScriptEntityContext.h"
+#include "../../Physics/PhysicsBody2D.h"
 #include "../../Physics/PhysicsSystem2D.h"
 #include "../../Scene/Component.h"
 #include "../../Scene/Scene.h"
@@ -13,7 +14,7 @@ namespace anv::python
         bool ResolveRigidBody(
             const char* entityID,
             ScriptEntityContext& context,
-            PhysicsSystem2D*& physics)
+            PhysicsBody2D*& body)
         {
             context = ResolveScriptEntity(entityID ? entityID : "");
             if (!context)
@@ -28,10 +29,17 @@ namespace anv::python
                 return false;
             }
 
-            physics = context.scene->GetPhysicsSystem2D();
+            PhysicsSystem2D* physics = context.scene->GetPhysicsSystem2D();
             if (!physics || !physics->IsRunning())
             {
                 PyErr_SetString(PyExc_RuntimeError, "PhysicsSystem2D is not running for this scene");
+                return false;
+            }
+
+            body = physics->GetBody(context.entity);
+            if (!body || !body->IsValid())
+            {
+                PyErr_SetString(PyExc_RuntimeError, "Rigidbody2D runtime body is unavailable");
                 return false;
             }
 
@@ -49,13 +57,13 @@ namespace anv::python
             return nullptr;
 
         ScriptEntityContext context;
-        PhysicsSystem2D* physics = nullptr;
-        if (!ResolveRigidBody(entityID, context, physics))
+        PhysicsBody2D* body = nullptr;
+        if (!ResolveRigidBody(entityID, context, body))
             return nullptr;
 
-        if (!physics->AddForce(context.entity, x, y))
+        if (!body->AddForce(x, y))
         {
-            PyErr_SetString(PyExc_RuntimeError, "Rigidbody2D runtime body is unavailable");
+            PyErr_SetString(PyExc_RuntimeError, "Failed to apply force to Rigidbody2D");
             return nullptr;
         }
 
@@ -72,13 +80,13 @@ namespace anv::python
             return nullptr;
 
         ScriptEntityContext context;
-        PhysicsSystem2D* physics = nullptr;
-        if (!ResolveRigidBody(entityID, context, physics))
+        PhysicsBody2D* body = nullptr;
+        if (!ResolveRigidBody(entityID, context, body))
             return nullptr;
 
-        if (!physics->ApplyImpulse(context.entity, x, y))
+        if (!body->ApplyImpulse(x, y))
         {
-            PyErr_SetString(PyExc_RuntimeError, "Rigidbody2D runtime body is unavailable");
+            PyErr_SetString(PyExc_RuntimeError, "Failed to apply impulse to Rigidbody2D");
             return nullptr;
         }
 
