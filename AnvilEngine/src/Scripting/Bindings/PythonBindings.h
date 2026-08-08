@@ -10,5 +10,10 @@ namespace anv::python
     PyObject* Error(PyObject* self, PyObject* args);
 
     PyObject* IsKeyPressed(PyObject* self, PyObject* args);
+
+    PyObject* GetPosition(PyObject* self, PyObject* args);
+    PyObject* SetPosition(PyObject* self, PyObject* args);
+    PyObject* GetRotation(PyObject* self, PyObject* args);
+    PyObject* SetRotation(PyObject* self, PyObject* args);
 }
 #endif
