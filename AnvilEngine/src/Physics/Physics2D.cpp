@@ -39,10 +39,12 @@ namespace anv
     {
         Stop();
 
-        b2WorldDef worldDef = b2DefaultWorldDef();
-        worldDef.gravity = {0.0f, -9.81f};
+        if (!m_World.Create(0.0f, -9.81f))
+        {
+            ANV_LOG_ERROR("Physics2D failed to create its physics world.");
+            return false;
+        }
 
-        m_World = b2CreateWorld(&worldDef);
         m_Running = true;
         m_Accumulator = 0.0f;
 
@@ -97,8 +99,7 @@ namespace anv
             return;
 
         m_Bodies.clear();
-        b2DestroyWorld(m_World);
-        m_World = b2_nullWorldId;
+        m_World.Destroy();
         m_Accumulator = 0.0f;
         m_Running = false;
 
@@ -132,7 +133,7 @@ namespace anv
 
         while (m_Accumulator >= m_FixedTimeStep)
         {
-            b2World_Step(m_World, m_FixedTimeStep, m_SubStepCount);
+            m_World.Step(m_FixedTimeStep, m_SubStepCount);
             m_Accumulator -= m_FixedTimeStep;
         }
 
@@ -203,7 +204,7 @@ namespace anv
         bodyDef.enableSleep = true;
         bodyDef.isAwake = true;
 
-        const b2BodyId body = b2CreateBody(m_World, &bodyDef);
+        const b2BodyId body = b2CreateBody(m_World.GetNativeWorld(), &bodyDef);
         m_Bodies.emplace(entity, body);
 
         ANV_LOG_INFO(
