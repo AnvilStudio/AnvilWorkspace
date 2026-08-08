@@ -3,7 +3,7 @@
 
 #include <Asset/AssetTypes/Texture.h>
 #include <Core/App.h>
-#include <Physics/Physics2D.h>
+#include <Physics/PhysicsSystem2D.h>
 #include <Render/Renderer.h>
 #include <Scripting/PythonScriptEngine.h>
 #include <Util/Serialize/Serializer.h>
@@ -297,22 +297,22 @@ namespace anv
 
     void Scene::StartPhysics()
     {
-        if (!m_Physics2D)
-            m_Physics2D = std::make_unique<Physics2D>();
+        if (!m_PhysicsSystem2D)
+            m_PhysicsSystem2D = std::make_unique<PhysicsSystem2D>();
 
-        if (!m_Physics2D->IsRunning())
-            m_Physics2D->Start(*this);
+        if (!m_PhysicsSystem2D->IsRunning())
+            m_PhysicsSystem2D->Start(*this);
     }
 
     void Scene::StopPhysics()
     {
-        if (m_Physics2D)
-            m_Physics2D->Stop();
+        if (m_PhysicsSystem2D)
+            m_PhysicsSystem2D->Stop();
     }
 
     bool Scene::IsPhysicsRunning() const
     {
-        return m_Physics2D && m_Physics2D->IsRunning();
+        return m_PhysicsSystem2D && m_PhysicsSystem2D->IsRunning();
     }
 
     void Scene::OnUpdate(float deltaTime)
@@ -320,8 +320,8 @@ namespace anv
         if (m_ScriptExecutionEnabled)
             PythonScriptEngine::UpdateScene(*this, deltaTime);
 
-        if (m_Physics2D && m_Physics2D->IsRunning())
-            m_Physics2D->Step(*this, deltaTime);
+        if (m_PhysicsSystem2D && m_PhysicsSystem2D->IsRunning())
+            m_PhysicsSystem2D->Step(*this, deltaTime);
     }
 
     void Scene::Render()
@@ -366,8 +366,8 @@ namespace anv
         if (entity == entt::null || !m_Registry.valid(entity))
             return;
 
-        if (m_Physics2D)
-            m_Physics2D->DestroyBody(entity);
+        if (m_PhysicsSystem2D)
+            m_PhysicsSystem2D->DestroyBody(entity);
 
         PythonScriptEngine::DestroyEntity(*this, entity);
         m_Registry.destroy(entity);
