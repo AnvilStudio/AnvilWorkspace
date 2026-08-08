@@ -27,6 +27,26 @@ namespace anv
         void DestroyBody(entt::entity entity);
         bool IsRunning() const { return m_Running; }
 
+        bool AddForce(entt::entity entity, float x, float y)
+        {
+            const auto it = m_Bodies.find(entity);
+            if (!m_Running || it == m_Bodies.end())
+                return false;
+
+            b2Body_ApplyForceToCenter(it->second, {x, y}, true);
+            return true;
+        }
+
+        bool ApplyImpulse(entt::entity entity, float x, float y)
+        {
+            const auto it = m_Bodies.find(entity);
+            if (!m_Running || it == m_Bodies.end())
+                return false;
+
+            b2Body_ApplyLinearImpulseToCenter(it->second, {x, y}, true);
+            return true;
+        }
+
     private:
         void CreateBody(Scene& scene, entt::entity entity);
         void RemoveDestroyedBodies(Scene& scene);
