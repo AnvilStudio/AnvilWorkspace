@@ -5,6 +5,8 @@ from _anvil import (
     _set_rotation,
 )
 
+from .physics import RigidBody2D
+
 
 class Script:
     def __init__(self):
@@ -33,6 +35,10 @@ class Script:
             self.entity_id,
             float(value)
         )
+
+    @property
+    def rigid_body(self):
+        return RigidBody2D(self.entity_id)
 
     def on_create(self):
         pass
