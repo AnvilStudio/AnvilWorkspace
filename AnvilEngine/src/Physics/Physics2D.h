@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PhysicsWorld2D.h"
 #include "../Core/Reference.h"
 #include "../vendor/entt/single_include/entt/entt.hpp"
 
@@ -56,7 +57,7 @@ namespace anv
         static b2BodyType ToBox2DType(int type);
 
     private:
-        b2WorldId m_World = b2_nullWorldId;
+        PhysicsWorld2D m_World;
         std::unordered_map<entt::entity, b2BodyId> m_Bodies;
 
         float m_Accumulator = 0.0f;
