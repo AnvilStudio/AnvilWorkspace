@@ -1,5 +1,7 @@
 #include "PhysicsBody2D.h"
 
+#include <algorithm>
+
 namespace anv
 {
     void PhysicsBody2D::Destroy()
@@ -27,6 +29,33 @@ namespace anv
 
         b2Body_ApplyLinearImpulseToCenter(m_Body, {x, y}, true);
         return true;
+    }
+
+    bool PhysicsBody2D::CreateBoxCollider(
+        const PhysicsBoxColliderDefinition2D& definition)
+    {
+        if (!IsValid())
+            return false;
+
+        b2ShapeDef shapeDef = b2DefaultShapeDef();
+        shapeDef.density = std::max(0.0f, definition.density);
+        shapeDef.material.friction = std::max(0.0f, definition.friction);
+        shapeDef.material.restitution =
+            std::clamp(definition.restitution, 0.0f, 1.0f);
+        shapeDef.isSensor = definition.sensor;
+        shapeDef.enableContactEvents = true;
+        shapeDef.enableSensorEvents = definition.sensor;
+
+        const b2Polygon box = b2MakeOffsetBox(
+            std::max(0.001f, definition.halfWidth),
+            std::max(0.001f, definition.halfHeight),
+            {definition.offsetX, definition.offsetY},
+            b2MakeRot(0.0f));
+
+        const b2ShapeId shape =
+            b2CreatePolygonShape(m_Body, &shapeDef, &box);
+
+        return !B2_IS_NULL(shape);
     }
 
     b2Vec2 PhysicsBody2D::GetPosition() const
