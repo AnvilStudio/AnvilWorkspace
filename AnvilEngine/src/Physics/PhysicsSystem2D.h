@@ -33,7 +33,7 @@ namespace anv
                 return nullptr;
 
             const auto it = m_Bodies.find(entity);
-            return it != m_Bodies.end() ? &it->second : nullptr;
+            return it != m_Bodies.end() ? &it->second.body : nullptr;
         }
 
         const PhysicsBody2D* GetBody(entt::entity entity) const
@@ -42,18 +42,27 @@ namespace anv
                 return nullptr;
 
             const auto it = m_Bodies.find(entity);
-            return it != m_Bodies.end() ? &it->second : nullptr;
+            return it != m_Bodies.end() ? &it->second.body : nullptr;
         }
 
     private:
+        struct RuntimeBody2D
+        {
+            PhysicsBody2D body;
+            PhysicsTransform2D previousTransform;
+            PhysicsTransform2D currentTransform;
+        };
+
         void CreateBody(Scene& scene, entt::entity entity);
         void RemoveDestroyedBodies(Scene& scene);
         void SynchronizeBodiesFromTransforms(Scene& scene);
+        void CapturePreStepTransforms(Scene& scene);
+        void CapturePostStepTransforms(Scene& scene);
         void SynchronizeTransforms(Scene& scene);
 
     private:
         PhysicsWorld2D m_World;
-        std::unordered_map<entt::entity, PhysicsBody2D> m_Bodies;
+        std::unordered_map<entt::entity, RuntimeBody2D> m_Bodies;
 
         float m_Accumulator = 0.0f;
         float m_FixedTimeStep = 1.0f / 60.0f;
