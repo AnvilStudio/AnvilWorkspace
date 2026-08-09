@@ -47,4 +47,25 @@ namespace anv
 
         return {};
     }
+
+    ScriptEntityContext ResolveScriptEntityByName(std::string_view entityName)
+    {
+        if (entityName.empty())
+            return {};
+
+        for (Scene* scene : s_ActiveScriptScenes)
+        {
+            if (!scene)
+                continue;
+
+            auto view = scene->Registry().view<Component::Tag, uuid::EntityUUID>();
+            for (auto [entity, tag, id] : view.each())
+            {
+                if (std::string_view(tag.value) == entityName)
+                    return {scene, entity};
+            }
+        }
+
+        return {};
+    }
 }
