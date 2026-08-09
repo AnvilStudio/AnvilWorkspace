@@ -21,5 +21,7 @@ namespace anv::python
 
     PyObject* RigidBodyAddForce(PyObject* self, PyObject* args);
     PyObject* RigidBodyApplyImpulse(PyObject* self, PyObject* args);
+    PyObject* RigidBodyGetLinearVelocity(PyObject* self, PyObject* args);
+    PyObject* RigidBodySetLinearVelocity(PyObject* self, PyObject* args);
 }
 #endif
