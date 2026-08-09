@@ -3,24 +3,32 @@
 #include "../Util/UMacros.h"
 #include "../Core/Window.h"
 
-#include <unordered_map>
+#include <array>
 
 namespace anv
 {
+	enum class KeyState
+	{
+		Up = 0,
+		Pressed,
+		Held,
+		Released
+	};
+
 	class InputSystem
 	{
 	public:
 		static _shared<InputSystem> Create(_shared<Window> _win);
 		InputSystem(_shared<Window> _win);
 
-		bool IsKeyPressed(int _code) { return s_InputSystem->is_key_pressed(_code); }
-		bool IsKeyJustPressed(int _code)
-		{
-			const bool pressed = s_InputSystem->is_key_pressed(_code);
-			const bool wasPressed = m_KeyStates[_code];
-			m_KeyStates[_code] = pressed;
-			return pressed && !wasPressed;
-		}
+		void Update();
+
+		KeyState GetKeyState(int _code) const;
+		bool IsKeyPressed(int _code) const;
+		bool IsKeyJustPressed(int _code) const;
+		bool IsKeyHeld(int _code) const;
+		bool IsKeyReleased(int _code) const;
+
 		bool IsMouseButtonPressed(int _button) { return s_InputSystem->is_mouse_button_pressed(_button); }
 		std::pair<float, float> GetMousePos() { return s_InputSystem->get_mouse_pos(); }
 		float GetMouseScrollX() { return s_InputSystem->getMouseScrollX(); }
@@ -35,11 +43,13 @@ namespace anv
 		virtual float getMouseScrollY() = 0;
 		virtual void resetScroll() = 0;
 
-
 		_shared<Window> m_Window;
 
 	private:
+		static bool IsValidKeyCode(int _code);
+
 		inline static _shared<InputSystem> s_InputSystem = nullptr;
-		std::unordered_map<int, bool> m_KeyStates;
+		std::array<bool, ANV_KEY_LAST + 1> m_CurrentKeys{};
+		std::array<bool, ANV_KEY_LAST + 1> m_PreviousKeys{};
 	};
 }
