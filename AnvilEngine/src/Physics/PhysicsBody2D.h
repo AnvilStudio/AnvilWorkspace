@@ -25,6 +25,8 @@ namespace anv
         bool CreateBoxCollider(const PhysicsBoxColliderDefinition2D& definition);
 
         PhysicsTransform2D GetTransform() const;
+        PhysicsVector2D GetLinearVelocity() const;
+        void SetLinearVelocity(float x, float y);
         void SetTransform(float x, float y, float rotationRadians);
         void SetAwake(bool awake);
 
