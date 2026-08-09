@@ -43,6 +43,18 @@ namespace anv
         {
             return std::abs(left - right) <= epsilon;
         }
+
+        float Lerp(float start, float end, float alpha)
+        {
+            return start + (end - start) * alpha;
+        }
+
+        float LerpAngleRadians(float start, float end, float alpha)
+        {
+            constexpr float twoPi = 6.28318530717958647692f;
+            const float delta = std::remainder(end - start, twoPi);
+            return start + delta * alpha;
+        }
     }
 
     PhysicsSystem2D::~PhysicsSystem2D()
@@ -145,7 +157,9 @@ namespace anv
 
         while (m_Accumulator >= m_FixedTimeStep)
         {
+            CapturePreStepTransforms(scene);
             m_World.Step(m_FixedTimeStep, m_SubStepCount);
+            CapturePostStepTransforms(scene);
             m_Accumulator -= m_FixedTimeStep;
         }
 
@@ -158,7 +172,7 @@ namespace anv
         if (it == m_Bodies.end())
             return;
 
-        m_World.DestroyBody(it->second);
+        m_World.DestroyBody(it->second.body);
         m_Bodies.erase(it);
     }
 
@@ -221,14 +235,19 @@ namespace anv
             return;
         }
 
-        auto [bodyIterator, inserted] = m_Bodies.emplace(entity, body);
+        RuntimeBody2D runtimeBody;
+        runtimeBody.body = body;
+        runtimeBody.currentTransform = body.GetTransform();
+        runtimeBody.previousTransform = runtimeBody.currentTransform;
+
+        auto [bodyIterator, inserted] = m_Bodies.emplace(entity, runtimeBody);
         if (!inserted)
         {
             m_World.DestroyBody(body);
             return;
         }
 
-        PhysicsBody2D& runtimeBody = bodyIterator->second;
+        PhysicsBody2D& physicsBody = bodyIterator->second.body;
 
         ANV_LOG_INFO(
             "PhysicsSystem2D body created: entity=%u type=%s position=(%.3f, %.3f) collider=%s",
@@ -267,7 +286,7 @@ namespace anv
             std::clamp(collider.restitution, 0.0f, 1.0f);
         colliderDefinition.sensor = collider.sensor;
 
-        if (!runtimeBody.CreateBoxCollider(colliderDefinition))
+        if (!physicsBody.CreateBoxCollider(colliderDefinition))
         {
             ANV_LOG_ERROR(
                 "PhysicsSystem2D failed to create BoxCollider2D shape for entity %u.",
@@ -288,9 +307,9 @@ namespace anv
     {
         std::vector<entt::entity> staleEntities;
 
-        for (const auto& [entity, body] : m_Bodies)
+        for (const auto& [entity, runtimeBody] : m_Bodies)
         {
-            (void)body;
+            (void)runtimeBody;
 
             const bool stillParticipates =
                 scene.Registry().valid(entity) &&
@@ -308,8 +327,10 @@ namespace anv
 
     void PhysicsSystem2D::SynchronizeBodiesFromTransforms(Scene& scene)
     {
-        for (auto& [entity, body] : m_Bodies)
+        for (auto& [entity, runtimeBody] : m_Bodies)
         {
+            PhysicsBody2D& body = runtimeBody.body;
+
             if (!body.IsValid() ||
                 !scene.Registry().valid(entity) ||
                 !scene.HasComponent<Component::Transform2d>(entity))
@@ -347,13 +368,63 @@ namespace anv
                 transform.position.y,
                 glm::radians(transform.rotation));
             body.SetAwake(true);
+
+            runtimeBody.currentTransform = body.GetTransform();
+            runtimeBody.previousTransform = runtimeBody.currentTransform;
+        }
+    }
+
+    void PhysicsSystem2D::CapturePreStepTransforms(Scene& scene)
+    {
+        for (auto& [entity, runtimeBody] : m_Bodies)
+        {
+            if (!runtimeBody.body.IsValid() ||
+                !scene.Registry().valid(entity) ||
+                !scene.HasComponent<Component::Rigidbody2D>(entity))
+            {
+                continue;
+            }
+
+            const auto& rigidbody =
+                scene.GetComponent<Component::Rigidbody2D>(entity);
+
+            if (rigidbody.type != Component::Rigidbody2DType::Dynamic)
+                continue;
+
+            runtimeBody.previousTransform = runtimeBody.currentTransform;
+        }
+    }
+
+    void PhysicsSystem2D::CapturePostStepTransforms(Scene& scene)
+    {
+        for (auto& [entity, runtimeBody] : m_Bodies)
+        {
+            if (!runtimeBody.body.IsValid() ||
+                !scene.Registry().valid(entity) ||
+                !scene.HasComponent<Component::Rigidbody2D>(entity))
+            {
+                continue;
+            }
+
+            const auto& rigidbody =
+                scene.GetComponent<Component::Rigidbody2D>(entity);
+
+            if (rigidbody.type != Component::Rigidbody2DType::Dynamic)
+                continue;
+
+            runtimeBody.currentTransform = runtimeBody.body.GetTransform();
         }
     }
 
     void PhysicsSystem2D::SynchronizeTransforms(Scene& scene)
     {
-        for (const auto& [entity, body] : m_Bodies)
+        const float interpolationAlpha =
+            std::clamp(m_Accumulator / m_FixedTimeStep, 0.0f, 1.0f);
+
+        for (const auto& [entity, runtimeBody] : m_Bodies)
         {
+            const PhysicsBody2D& body = runtimeBody.body;
+
             if (!body.IsValid() ||
                 !scene.Registry().valid(entity) ||
                 !scene.HasComponent<Component::Transform2d>(entity) ||
@@ -370,6 +441,23 @@ namespace anv
 
             auto& transform =
                 scene.GetComponent<Component::Transform2d>(entity);
+
+            if (rigidbody.type == Component::Rigidbody2DType::Dynamic)
+            {
+                const PhysicsTransform2D& previous = runtimeBody.previousTransform;
+                const PhysicsTransform2D& current = runtimeBody.currentTransform;
+
+                transform.position = {
+                    Lerp(previous.positionX, current.positionX, interpolationAlpha),
+                    Lerp(previous.positionY, current.positionY, interpolationAlpha)
+                };
+                transform.rotation = glm::degrees(
+                    LerpAngleRadians(
+                        previous.rotationRadians,
+                        current.rotationRadians,
+                        interpolationAlpha));
+                continue;
+            }
 
             const PhysicsTransform2D bodyTransform = body.GetTransform();
             transform.position = {
