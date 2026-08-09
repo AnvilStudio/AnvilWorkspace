@@ -92,5 +92,38 @@ namespace anv::python
 
         Py_RETURN_NONE;
     }
+
+    PyObject* RigidBodyGetLinearVelocity(PyObject*, PyObject* args)
+    {
+        const char* entityID = nullptr;
+        if (!PyArg_ParseTuple(args, "s", &entityID))
+            return nullptr;
+
+        ScriptEntityContext context;
+        PhysicsBody2D* body = nullptr;
+        if (!ResolveRigidBody(entityID, context, body))
+            return nullptr;
+
+        const PhysicsVector2D velocity = body->GetLinearVelocity();
+        return Py_BuildValue("(ff)", velocity.x, velocity.y);
+    }
+
+    PyObject* RigidBodySetLinearVelocity(PyObject*, PyObject* args)
+    {
+        const char* entityID = nullptr;
+        float x = 0.0f;
+        float y = 0.0f;
+
+        if (!PyArg_ParseTuple(args, "sff", &entityID, &x, &y))
+            return nullptr;
+
+        ScriptEntityContext context;
+        PhysicsBody2D* body = nullptr;
+        if (!ResolveRigidBody(entityID, context, body))
+            return nullptr;
+
+        body->SetLinearVelocity(x, y);
+        Py_RETURN_NONE;
+    }
 }
 #endif
