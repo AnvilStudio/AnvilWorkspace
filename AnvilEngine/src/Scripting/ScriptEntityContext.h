@@ -24,4 +24,5 @@ namespace anv
     void ClearScriptScenes();
 
     ScriptEntityContext ResolveScriptEntity(std::string_view entityID);
+    ScriptEntityContext ResolveScriptEntityByName(std::string_view entityName);
 }
