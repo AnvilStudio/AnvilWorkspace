@@ -9,6 +9,12 @@ namespace anv
         Dynamic = 2
     };
 
+    struct PhysicsVector2D
+    {
+        float x = 0.0f;
+        float y = 0.0f;
+    };
+
     struct PhysicsTransform2D
     {
         float positionX = 0.0f;
