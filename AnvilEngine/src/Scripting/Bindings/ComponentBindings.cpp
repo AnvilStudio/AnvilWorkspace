@@ -38,5 +38,19 @@ namespace anv::python
 
         return PyBool_FromLong(hasComponent ? 1 : 0);
     }
+
+    PyObject* FindEntityByName(PyObject*, PyObject* args)
+    {
+        const char* entityName = nullptr;
+        if (!PyArg_ParseTuple(args, "s", &entityName))
+            return nullptr;
+
+        const auto context = ResolveScriptEntityByName(entityName ? entityName : "");
+        if (!context || !context.scene->HasComponent<uuid::EntityUUID>(context.entity))
+            Py_RETURN_NONE;
+
+        const auto& id = context.scene->GetComponent<uuid::EntityUUID>(context.entity);
+        return PyUnicode_FromString(id.uuid.c_str());
+    }
 }
 #endif
