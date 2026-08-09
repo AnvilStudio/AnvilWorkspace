@@ -126,6 +126,7 @@ namespace anv
 
 			// Poll input/events
 			m_AppWin->OnUpdate();
+			m_InputSystem->Update();
 
 			// Update engine/game layers
 			for (Layer *layer : m_LayerStack)
@@ -255,6 +256,7 @@ namespace anv
 					ser.FieldOr<std::string>("Cache", cache, "Assets/com.anvstu.engine/Cache/");
 					ser.FieldOr<std::string>("AssetMeta", ameta, "Assets/com.anvstu.engine/AssetMeta");
 					ser.FieldOr<std::string>("Settings", settings, "Assets/com.anvstu.engine/Settings");
+
 				}); });
 
 		ser.Close();
