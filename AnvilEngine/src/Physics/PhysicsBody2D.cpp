@@ -72,6 +72,27 @@ namespace anv
         return transform;
     }
 
+    PhysicsVector2D PhysicsBody2D::GetLinearVelocity() const
+    {
+        PhysicsVector2D velocity;
+        if (!IsValid())
+            return velocity;
+
+        const b2Vec2 nativeVelocity = b2Body_GetLinearVelocity(m_Body);
+        velocity.x = nativeVelocity.x;
+        velocity.y = nativeVelocity.y;
+        return velocity;
+    }
+
+    void PhysicsBody2D::SetLinearVelocity(float x, float y)
+    {
+        if (!IsValid())
+            return;
+
+        b2Body_SetLinearVelocity(m_Body, {x, y});
+        b2Body_SetAwake(m_Body, true);
+    }
+
     void PhysicsBody2D::SetTransform(float x, float y, float rotationRadians)
     {
         if (!IsValid())
