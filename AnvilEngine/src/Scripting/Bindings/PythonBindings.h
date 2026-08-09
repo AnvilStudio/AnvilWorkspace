@@ -13,6 +13,7 @@ namespace anv::python
     PyObject* IsKeyJustPressed(PyObject* self, PyObject* args);
 
     PyObject* HasComponent(PyObject* self, PyObject* args);
+    PyObject* FindEntityByName(PyObject* self, PyObject* args);
 
     PyObject* GetPosition(PyObject* self, PyObject* args);
     PyObject* SetPosition(PyObject* self, PyObject* args);
