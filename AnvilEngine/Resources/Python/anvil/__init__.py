@@ -1,5 +1,6 @@
 from _anvil import log, warn, error
 
+from .entity import Entity, find_entity
 from .script import Script
 from .input import input
 from .key import Key
@@ -8,6 +9,8 @@ from .physics import RigidBody2D
 from .collider import BoxCollider2D
 
 __all__ = [
+    "Entity",
+    "find_entity",
     "Script",
     "Transform2D",
     "RigidBody2D",
