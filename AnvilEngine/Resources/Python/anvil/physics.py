@@ -7,6 +7,19 @@ class RigidBody2D:
     def __init__(self, entity_id: str):
         self._entity_id = entity_id
 
+    @property
+    def linear_velocity(self):
+        return _anvil._rigid_body_get_linear_velocity(self._entity_id)
+
+    @linear_velocity.setter
+    def linear_velocity(self, value):
+        x, y = value
+        _anvil._rigid_body_set_linear_velocity(
+            self._entity_id,
+            float(x),
+            float(y)
+        )
+
     def add_force(self, x: float, y: float):
         _anvil._rigid_body_add_force(
             self._entity_id,
