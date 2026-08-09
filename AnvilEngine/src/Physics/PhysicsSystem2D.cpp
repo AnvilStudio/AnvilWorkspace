@@ -317,6 +317,15 @@ namespace anv
                 continue;
             }
 
+            if (scene.HasComponent<Component::Rigidbody2D>(entity))
+            {
+                const auto& rigidbody =
+                    scene.GetComponent<Component::Rigidbody2D>(entity);
+
+                if (rigidbody.type == Component::Rigidbody2DType::Dynamic)
+                    continue;
+            }
+
             const auto& transform =
                 scene.GetComponent<Component::Transform2d>(entity);
 
