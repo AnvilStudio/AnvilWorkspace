@@ -84,6 +84,8 @@ namespace anv
             {"_is_key_just_pressed", python::IsKeyJustPressed, METH_VARARGS, nullptr},
             {"_rigid_body_add_force", python::RigidBodyAddForce, METH_VARARGS, nullptr},
             {"_rigid_body_apply_impulse", python::RigidBodyApplyImpulse, METH_VARARGS, nullptr},
+            {"_rigid_body_get_linear_velocity", python::RigidBodyGetLinearVelocity, METH_VARARGS, nullptr},
+            {"_rigid_body_set_linear_velocity", python::RigidBodySetLinearVelocity, METH_VARARGS, nullptr},
             {nullptr, nullptr, 0, nullptr}};
 
         PyModuleDef s_AnvilNativeModule = {
