@@ -76,6 +76,7 @@ namespace anv
             {"warn", python::Warn, METH_VARARGS, "Write a warning to the Anvil log."},
             {"error", python::Error, METH_VARARGS, "Write an error to the Anvil log."},
             {"_has_component", python::HasComponent, METH_VARARGS, nullptr},
+            {"_find_entity_by_name", python::FindEntityByName, METH_VARARGS, nullptr},
             {"_get_position", python::GetPosition, METH_VARARGS, nullptr},
             {"_set_position", python::SetPosition, METH_VARARGS, nullptr},
             {"_get_rotation", python::GetRotation, METH_VARARGS, nullptr},
