@@ -308,7 +308,7 @@ namespace anv
 
 			std::string win_name = m_Settings.projectName;
 			win_name.append(" | ver ");
-			win_name.append(m_Settings.version);
+			win_name.append(ANV_ENGINE_VERSION);
 			win_name.append(" | Anvil Engine");
 			m_Settings.WindowCreateInfo.name = win_name;
 		}
