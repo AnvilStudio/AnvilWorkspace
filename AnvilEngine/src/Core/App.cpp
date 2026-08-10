@@ -327,7 +327,11 @@ namespace anv
 	void App::InitializeFileSys()
 	{
 		m_FileSystem = std::make_unique<FileSystem>(m_Settings.projectDir);
-		m_FileSystem->MountKey("Assets", m_Settings.assetDir);
+
+		// Get Asset dir
+		std::filesystem::path assetPath(m_Settings.projectDir);
+		
+		m_FileSystem->MountKey("Assets", (assetPath / "Assets").c_str());
 		m_FileSystem->MountKey("Res", "@Assets/com.anvstu.engine");
 		m_FileSystem->MountKey("Cache", "@Res/Cache");
 		m_FileSystem->MountKey("ShaderCache", "@Cache/ShaderCache");

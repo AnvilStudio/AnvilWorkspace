@@ -1,4 +1,4 @@
-#include "EditorLayer.h"
+﻿#include "EditorLayer.h"
 
 using namespace anv;
 
@@ -19,7 +19,7 @@ void EditorLayer::OnAttach()
     ImGuiIO& io = ImGui::GetIO();
 
     auto& fs = App::GetInstance()->GetFS();
-    auto path = fs.GetKeyVal("Assets") / "Fonts/JetBrainsMono-Bold.ttf";
+    auto path = fs.GetKeyVal("Assets") / "Fonts" / "JetBrainsMono-Bold.ttf";
 
     io.Fonts->AddFontFromFileTTF(path.string().c_str(), 18.0f);
     io.ConfigDpiScaleFonts = true;
