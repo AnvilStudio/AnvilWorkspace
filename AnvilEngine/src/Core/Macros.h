@@ -7,6 +7,8 @@
 
 #pragma once
 
+#define ANV_ENGINE_VERSION "ver. dev2026.0.1"
+
 /// OS detection
 # ifdef _WIN32
 	# ifdef _WIN64
