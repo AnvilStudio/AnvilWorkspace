@@ -7,7 +7,7 @@ from pathlib import Path
 PROJECT_CREATOR_DIR = Path(__file__).resolve().parent
 WORKSPACE_ROOT = PROJECT_CREATOR_DIR.parent
 TEMPLATE_DIR = PROJECT_CREATOR_DIR / "Template"
-FONT_SOURCE = WORKSPACE_ROOT / "JetBrainsMono-Bold.ttf"
+FONT_SOURCE = PROJECT_CREATOR_DIR / "JetBrainsMono-Bold.ttf"
 ICONS_SOURCE = WORKSPACE_ROOT / "AnvilEngine" / "Resources" / "Icons"
 
 PROJECT_FILE_TEMPLATE = "Project.anv"
