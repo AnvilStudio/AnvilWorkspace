@@ -74,7 +74,7 @@ namespace anv
         m_Layer.autoresizingMask =
             kCALayerWidthSizable | kCALayerHeightSizable;
         #if TARGET_OS_OSX
-        m_Layer.displaySyncEnabled = YES;
+        m_Layer.displaySyncEnabled = NO;
         #endif
         view.layer = m_Layer;
 
