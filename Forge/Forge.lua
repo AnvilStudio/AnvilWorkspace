@@ -59,18 +59,33 @@ filter "system:macosx"
     {
         "GLFW",
         "Cocoa.framework",
-        "QuartzCore.framework",
-        "Metal.framework",
-        "MetalKit.framework",
         "IOKit.framework",
         "CoreVideo.framework",
         "CoreFoundation.framework"
     }
 
-    buildoptions
-    {
-        "-fobjc-arc"
-    }
+    if MACOS_RENDERER == "vulkan" then
+        defines { "ANV_RENDERER_VULKAN" }
+        includedirs { "%{VULKAN_SDK}" }
+        libdirs { "%{VULKAN_LIB}" }
+
+        links
+        {
+            "vulkan",
+            "shaderc_combined"
+        }
+    else
+        defines { "ANV_RENDERER_METAL" }
+
+        links
+        {
+            "QuartzCore.framework",
+            "Metal.framework",
+            "MetalKit.framework"
+        }
+
+        buildoptions { "-fobjc-arc" }
+    end
 
     if pythonLinkFlags ~= nil and pythonLinkFlags ~= "" then
         linkoptions
