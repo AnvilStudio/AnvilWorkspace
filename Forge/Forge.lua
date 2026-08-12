@@ -79,6 +79,14 @@ filter "system:macosx"
             "vulkan",
             "shaderc_combined"
         }
+
+        -- The LunarG Vulkan loader is installed with an @rpath install name.
+        -- Add the selected SDK's lib directory so dyld can resolve
+        -- libvulkan.1.dylib when Forge is launched outside the SDK shell.
+        linkoptions
+        {
+            "-Wl,-rpath," .. VULKAN_LIB
+        }
     else
         defines { "ANV_RENDERER_METAL" }
 
