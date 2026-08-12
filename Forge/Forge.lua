@@ -59,6 +59,7 @@ filter "system:macosx"
     {
         "GLFW",
         "Cocoa.framework",
+        "QuartzCore.framework",
         "IOKit.framework",
         "CoreVideo.framework",
         "CoreFoundation.framework"
@@ -83,7 +84,6 @@ filter "system:macosx"
 
         links
         {
-            "QuartzCore.framework",
             "Metal.framework",
             "MetalKit.framework"
         }
