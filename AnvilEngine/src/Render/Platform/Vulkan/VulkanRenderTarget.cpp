@@ -3,6 +3,7 @@
 #include <Render/RenderPass.h>
 #include "VulkanSwapChainTarget.h"
 #include "VulkanUtil.h"
+#include <imgui.h>
 #include <backends/imgui_impl_vulkan.h>
 #include "VulkanImage.h"
 
@@ -52,6 +53,10 @@ namespace anv
         create_image();
         create_framebuffer();
         create_sampler();
+
+        // The image view changed, so any ImGui descriptor referring to the old
+        // view must not be reused. It will be recreated lazily when requested.
+        m_ImGuiDescriptor = VK_NULL_HANDLE;
     }
 
     Ref<Image2D> VulkanRenderTarget::GetImage()
@@ -79,6 +84,33 @@ namespace anv
         m_Renderpass->End(_cmd);
     }
 
+    void* VulkanRenderTarget::GetImGuiTextureID()
+    {
+        if (m_ImGuiDescriptor == VK_NULL_HANDLE)
+        {
+            // Render targets can be created before the ImGui Vulkan backend is
+            // initialized. Register the texture only when the editor actually
+            // asks ImGui to display it.
+            if (ImGui::GetCurrentContext() == nullptr ||
+                ImGui::GetIO().BackendRendererUserData == nullptr)
+            {
+                return nullptr;
+            }
+
+            auto vkImageView = m_ImageView.As<VulkanImageView>();
+            if (!vkImageView || m_Sampler == VK_NULL_HANDLE)
+                return nullptr;
+
+            m_ImGuiDescriptor = ImGui_ImplVulkan_AddTexture(
+                m_Sampler,
+                vkImageView->Get(),
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            );
+        }
+
+        return (void*)m_ImGuiDescriptor;
+    }
+
     void VulkanRenderTarget::create_framebuffer()
     {
         m_ImageView = m_Image->MakeImageView();
@@ -90,11 +122,6 @@ namespace anv
             m_Width,
             m_Height
         );
-    }
-
-    void* VulkanRenderTarget::GetImGuiTextureID()
-    {
-        return (void*)m_ImGuiDescriptor;
     }
 
     void VulkanRenderTarget::create_sampler()
@@ -132,12 +159,6 @@ namespace anv
                 &m_Sampler
             ),
             "Failed to create Vulkan render target sampler!"
-        );
-
-        m_ImGuiDescriptor = ImGui_ImplVulkan_AddTexture(
-            m_Sampler,
-            m_ImageView.As<VulkanImageView>()->Get(),
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         );
     }
 
