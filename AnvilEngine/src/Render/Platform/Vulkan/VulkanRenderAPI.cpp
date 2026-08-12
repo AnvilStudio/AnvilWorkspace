@@ -31,7 +31,6 @@ namespace anv {
 
 		// TODO: should probably be done in the parent class. all children of RenderAPI will use these
 		m_Context = m_CreateInfo.pTarget->GetContext();
-		m_AssetManager = App::GetInstance()->GetAssetManager();
 		m_RenderCmdChain = std::make_shared<QueueChain>();
 
 		m_RenderCmdChain->Start();
@@ -359,7 +358,7 @@ namespace anv {
 	{
 		// sprite
 		auto spritepath = App::GetInstance()->GetFS().GetKeyVal("ShaderLib") / "sprite.glsl";
-		m_SpriteShader = m_AssetManager->CreateShader(spritepath.string(), m_CreateInfo.pTarget->GetContext());
+		m_SpriteShader = Shader::CreateInternal(spritepath.string(), m_Context);
 	}
 
 	void VulkanRenderAPI::build_2D_pipelines()
@@ -707,7 +706,7 @@ namespace anv {
 			sizeof(QuadVertex)
 		);
 
-		auto pipeline = m_AssetManager->CreateGraphicsPipeline(
+		auto pipeline = GraphicsPipeline::CreateInternal(
 			m_Context,
 			"Sprite Pipeline"
 		);
