@@ -19,6 +19,14 @@ namespace anv
 
 		virtual void OnSave(Serializer& _ser) = 0;
 
+		// Renderer-owned shaders should not depend on the application AssetManager.
+		// This avoids startup cycles while still keeping normal project shaders
+		// registered through AssetManager::CreateShader().
+		ANV_NO_DSCRD
+		static Ref<Shader> CreateInternal(const std::string& _shaderPath, _shared<Context> _ctx)
+		{
+			return Create(_shaderPath, _ctx);
+		}
 
 	protected:
 		ANV_NO_DSCRD
@@ -32,4 +40,3 @@ namespace anv
 		friend class AssetManager;
 	};
 }
-
