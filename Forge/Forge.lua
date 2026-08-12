@@ -65,7 +65,11 @@ filter "system:macosx"
     }
 
     if MACOS_RENDERER == "vulkan" then
-        defines { "ANV_RENDERER_VULKAN" }
+        defines
+        {
+            "ANV_RENDERER_VULKAN",
+            "PLATFORM_APPLE_VK"
+        }
         includedirs { "%{VULKAN_SDK}" }
         libdirs { "%{VULKAN_LIB}" }
 
