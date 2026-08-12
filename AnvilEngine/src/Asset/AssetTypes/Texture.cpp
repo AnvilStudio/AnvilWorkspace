@@ -2,11 +2,11 @@
 #include "Util/Serialize/Serializer.h"
 #include "Render/RenderAPI.h"
 
-#ifdef PLATFORM_APPLE
+#if defined(PLATFORM_APPLE) && !defined(PLATFORM_APPLE_VK)
 #include "Render/Platform/Metal/MtlTexture.h"
 #endif
 
-#if defined(PLATFORM_WIN64) || defined(PLATFORM_LINUX)
+#if defined(PLATFORM_WIN64) || defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE_VK)
 #include "Render/Platform/Vulkan/VulkanTexture.h"
 #endif
 
@@ -38,13 +38,13 @@ namespace anv
         switch (RenderAPI::GetAPI())
         {
         case GraphicsAPI::MTL:
-#ifdef PLATFORM_APPLE
+#if defined(PLATFORM_APPLE) && !defined(PLATFORM_APPLE_VK)
             return Ref<MetalTexture>::Create(path);
 #else
             break;
 #endif
         case GraphicsAPI::VK:
-#if defined(PLATFORM_WIN64) || defined(PLATFORM_LINUX)
+#if defined(PLATFORM_WIN64) || defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE_VK)
             return Ref<VulkanTexture>::Create(path);
 #else
             break;
@@ -62,13 +62,13 @@ namespace anv
         switch (RenderAPI::GetAPI())
         {
         case GraphicsAPI::MTL:
-#ifdef PLATFORM_APPLE
+#if defined(PLATFORM_APPLE) && !defined(PLATFORM_APPLE_VK)
             return Ref<MetalTexture>::Create(deserialized).As<Texture>();
 #else
             break;
 #endif
         case GraphicsAPI::VK:
-#if defined(PLATFORM_WIN64) || defined(PLATFORM_LINUX)
+#if defined(PLATFORM_WIN64) || defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE_VK)
             return Ref<VulkanTexture>::Create(deserialized).As<Texture>();
 #else
             break;
