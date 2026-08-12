@@ -5,6 +5,20 @@ newoption {
     description = "Number of parallel macOS build jobs"
 }
 
+-- Renderer selection for macOS builds. Metal remains the default so the
+-- existing feature-macos workflow is unchanged unless Vulkan is requested.
+newoption {
+    trigger = "macos-renderer",
+    value = "RENDERER",
+    description = "Graphics API to use for macOS builds",
+    allowed = {
+        { "metal", "Metal" },
+        { "vulkan", "Vulkan via MoltenVK" }
+    }
+}
+
+MACOS_RENDERER = _OPTIONS["macos-renderer"] or "metal"
+
 local function get_macos_job_count()
     local requestedJobs = tonumber(_OPTIONS["jobs"])
     if requestedJobs ~= nil and requestedJobs > 0 then
@@ -85,6 +99,23 @@ workspace "AnvilWorkspace"
     outdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
     ROOTDIR = os.getcwd() .. "/"
     print("Root Directory: ", ROOTDIR)
+
+    -- Resolve the LunarG Vulkan SDK before project scripts are included so
+    -- Anvil.lua and Forge.lua can consume these paths during generation.
+    if os.host() == "macosx" and MACOS_RENDERER == "vulkan" then
+        local vulkanRoot = os.getenv("VULKAN_SDK")
+        if vulkanRoot == nil or vulkanRoot == "" then
+            error("--macos-renderer=vulkan requires VULKAN_SDK to point at the LunarG Vulkan SDK.")
+        end
+
+        VULKAN_SDK = path.join(vulkanRoot, "include")
+        VULKAN_LIB = path.join(vulkanRoot, "lib")
+        print("macOS renderer: Vulkan (MoltenVK)")
+        print("Vulkan include directory: ", VULKAN_SDK)
+        print("Vulkan library directory: ", VULKAN_LIB)
+    elseif os.host() == "macosx" then
+        print("macOS renderer: Metal")
+    end
 
     group "Dependencies"
         include "AnvilEngine/vendor/GLFW/glfw.lua"
