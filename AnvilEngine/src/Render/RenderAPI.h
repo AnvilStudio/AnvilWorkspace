@@ -49,10 +49,9 @@ namespace anv
         virtual void SetMainCamera(_shared<Camera2D> camera) = 0;
 
     protected:
-#if defined(PLATFORM_WIN64) || defined(PLATFORM_LINUX)
+#if defined(PLATFORM_WIN64) || defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE_VK)
         inline static GraphicsAPI s_API = GraphicsAPI::VK;
-#endif
-#ifdef PLATFORM_APPLE
+#elif defined(PLATFORM_APPLE)
         inline static GraphicsAPI s_API = GraphicsAPI::MTL;
 #endif
         _shared<Context> m_Context = nullptr;
