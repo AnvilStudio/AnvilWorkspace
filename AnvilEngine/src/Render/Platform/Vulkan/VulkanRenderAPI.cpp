@@ -207,9 +207,6 @@ namespace anv {
 
 	void VulkanRenderAPI::EndScene()
 	{
-		// End the logical ImGui frame before swapchain acquisition. DrawFrame() may
-		// return early when a resize makes the swapchain out of date. Without this,
-		// the next ImGui::NewFrame() sees the previous frame still open and asserts.
 		if (ImGui::GetCurrentContext())
 			ImGui::EndFrame();
 	}
@@ -275,7 +272,6 @@ namespace anv {
 		auto vkCtx = m_Context->GetAs<VulkanContext>();
 		vkCtx->IdleDevice();
 
-		// Framebuffers reference swapchain image views, so they must die first.
 		m_SwapchainTarget->ReleaseFramebuffers();
 		m_Context->GetSwapchain()->ResetSwap();
 
@@ -383,7 +379,11 @@ namespace anv {
 		ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO();
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+#if !defined(PLATFORM_APPLE_VK)
 		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+#else
+		ANV_LOG_INFO("ImGui platform viewports disabled on macOS Vulkan")
+#endif
 		ImGui::StyleColorsDark();
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 		{
