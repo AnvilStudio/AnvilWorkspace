@@ -105,6 +105,8 @@ project "AnvilEngine"
 
             files
             {
+                "./src/Render/Platform/Vulkan/**.cpp",
+                "./src/Render/Platform/Vulkan/**.h",
                 "./vendor/imgui/backends/imgui_impl_vulkan.h",
                 "./vendor/imgui/backends/imgui_impl_vulkan.cpp"
             }
