@@ -18,7 +18,11 @@ namespace anv
 		{
 		case GraphicsAPI::VK:
 			#if defined(PLATFORM_WIN64) || defined(PLATFORM_APPLE_VK)
-			return std::make_shared<VulkanRenderAPI>(_info);
+			// Construct the base shared_ptr directly instead of going through
+			// std::make_shared's __shared_ptr_emplace control block. This keeps
+			// backend ownership identical while avoiding a libc++ control-block
+			// instantiation failure seen in the macOS Vulkan build.
+			return _shared<RenderAPI>(new VulkanRenderAPI(_info));
 			#else
 			ANV_LOG_FATAL("Failed to create RenderAPI with Vulkan!")
 			return nullptr;
