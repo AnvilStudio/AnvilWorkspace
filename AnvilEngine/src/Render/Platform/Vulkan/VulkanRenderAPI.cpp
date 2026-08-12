@@ -203,7 +203,7 @@ namespace anv {
 		BeginScene(m_SwapchainTarget);
 	}
 
-	void VulkanRenderAPI::DrawScene(Ref<RenderTarget> _renderTarget, Ref<Camera2D> camera)
+	void VulkanRenderAPI::DrawScene(Ref<RenderTarget> _renderTarget, _shared<Camera2D> camera)
 	{
 		auto pipeline = m_PipelineLibrary.Get("Sprite", _renderTarget);
 		m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext& frame) mutable
@@ -518,7 +518,6 @@ namespace anv {
 			vkAllocateDescriptorSets(
 				m_Context->GetAs<VulkanContext>()->GetDevice(),
 				&allocInfo,
-				nullptr,
 				&m_CameraDescriptorSet
 			),
 			"Failed to allocate camera descriptor set!"
