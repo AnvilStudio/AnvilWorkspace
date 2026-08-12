@@ -96,7 +96,12 @@ workspace "AnvilWorkspace"
         "Release"
     }
 
-    outdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+    local rendererSuffix = ""
+    if os.host() == "macosx" then
+        rendererSuffix = "-" .. MACOS_RENDERER
+    end
+
+    outdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}" .. rendererSuffix
     ROOTDIR = os.getcwd() .. "/"
     print("Root Directory: ", ROOTDIR)
 
