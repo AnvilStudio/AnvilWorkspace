@@ -2,10 +2,10 @@
 #include "Core/Window.h"
 #include "Renderer.h"
 
-#ifdef PLATFORM_WIN64
+#if defined(PLATFORM_WIN64) || defined(PLATFORM_APPLE_VK)
  #include "Render/Platform/Vulkan/VulkanContext.h"
 #endif
-#ifdef PLATFORM_APPLE
+#if defined(PLATFORM_APPLE) && !defined(PLATFORM_APPLE_VK)
  #include "Render/Platform/Metal/MtlContext.h"
 #endif
 #include "RenderAPI.h"
@@ -17,7 +17,7 @@ namespace anv {
 		switch (RenderAPI::GetAPI())
 		{
 		case GraphicsAPI::VK:
-			#ifdef PLATFORM_WIN64 //|| PLATFORM_LINUX
+			#if defined(PLATFORM_WIN64) || defined(PLATFORM_APPLE_VK)
 				return std::make_shared<VulkanContext>(_win);
 			#else
 				ANV_LOG_FATAL("Vulkan was set as the Graphics API, but this machine is not supported!")
@@ -26,7 +26,7 @@ namespace anv {
 			break;
 
 		case GraphicsAPI::MTL:
-			#ifdef PLATFORM_APPLE
+			#if defined(PLATFORM_APPLE) && !defined(PLATFORM_APPLE_VK)
 				return std::make_shared<MetalContext>(_win);
 			#else
 				ANV_LOG_FATAL("Metal was set as the Graphics API, but this machine is not supported!")
