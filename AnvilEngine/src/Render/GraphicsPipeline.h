@@ -82,6 +82,13 @@ namespace anv
 
 		virtual void OnSave(Serializer& _ser) = 0;
 
+		// Renderer-owned pipelines are runtime resources, not project assets.
+		ANV_NO_DSCRD
+		static Ref<GraphicsPipeline> CreateInternal(_shared<Context> _ctx, std::string _dName)
+		{
+			return create_pipeline_asset(_ctx, std::move(_dName));
+		}
+
 	protected:
 		GraphicsPipeline(_shared<Context> _ctx, std::string _dName);
 		ANV_NO_DSCRD
