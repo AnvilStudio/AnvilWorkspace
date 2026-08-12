@@ -1,6 +1,6 @@
 #include "Shader.h"
 #include "RenderAPI.h"
-#ifdef PLATFORM_WIN64
+#if defined(PLATFORM_WIN64) || defined(PLATFORM_APPLE_VK)
 #include "Platform/Vulkan/VulkanShader.h"
 #elif defined(PLATFORM_APPLE)
 // #include "Platform/Metal/MtlShader.h"
@@ -16,7 +16,7 @@ namespace anv
 		{
 		case GraphicsAPI::VK:
 		{
-			#ifdef PLATFORM_WIN64
+			#if defined(PLATFORM_WIN64) || defined(PLATFORM_APPLE_VK)
 			auto shader = Ref<VulkanShader>::Create(_shaderPath, _ctx);
 			shader->GenMetaFile();
 			return shader;
@@ -28,7 +28,7 @@ namespace anv
 		}
 		case GraphicsAPI::MTL:
 		{
-			#ifdef PLATFORM_APPLE
+			#if defined(PLATFORM_APPLE) && !defined(PLATFORM_APPLE_VK)
 			// TODO: IMPL
 			//auto shader = Ref<MetalShader>::Create(_shaderPath, _ctx);
 			//shader->GenMetaFile();
@@ -52,14 +52,17 @@ namespace anv
 		GraphicsAPI api = RenderAPI::GetAPI();
 		if (api == GraphicsAPI::VK)
 		{
-			#ifdef PLATFORM_WIN64
+			#if defined(PLATFORM_WIN64) || defined(PLATFORM_APPLE_VK)
 			return Ref<VulkanShader>::Create(_dser);
+			#else
+			ANV_LOG_FATAL("Vulkan shader backend is unavailable on this platform!")
+			return nullptr;
 			#endif
 		}
 		else
 		{
 			ANV_LOG_FATAL("GraphicsAPI not supported!")
-				return nullptr;
+			return nullptr;
 		}
 	}
 
