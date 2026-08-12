@@ -205,7 +205,14 @@ namespace anv {
 		m_RenderStats.QuadCount++;
 	}
 
-	void VulkanRenderAPI::EndScene() {}
+	void VulkanRenderAPI::EndScene()
+	{
+		// End the logical ImGui frame before swapchain acquisition. DrawFrame() may
+		// return early when a resize makes the swapchain out of date. Without this,
+		// the next ImGui::NewFrame() sees the previous frame still open and asserts.
+		if (ImGui::GetCurrentContext())
+			ImGui::EndFrame();
+	}
 	void VulkanRenderAPI::SetMainCamera(_shared<Camera2D> camera) { m_Camera = camera; }
 	RendererStats VulkanRenderAPI::GetStats() { return m_RenderStats; }
 
