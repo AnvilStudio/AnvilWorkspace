@@ -286,7 +286,7 @@ namespace anv {
 							glm::vec3(quad.Position, 0)
 						)
 						*
-						glm::rotate(glm::mat4(1.f), glm::radians(quad.Rotaion), {0, 0, 1})
+						glm::rotate(glm::mat4(1.f), glm::radians(quad.Rotation), {0, 0, 1})
 						*
 						glm::scale(
 							glm::mat4(1.0f),
@@ -321,13 +321,20 @@ namespace anv {
 		});
 	}
 
-	void VulkanRenderAPI::DrawQuad(const glm::vec2& position, float rotation, const glm::vec2& size, glm::vec4 color, int layer)
+	void VulkanRenderAPI::DrawQuad(
+		const glm::vec2& position,
+		float rotation,
+		const glm::vec2& size,
+		glm::vec4 color,
+		Ref<Texture> texture,
+		int layer)
 	{
 		m_QuadQueue.push_back({
 			position,
 			rotation,
 			size,
 			color,
+			texture,
 			layer
 		});
 		m_RenderStats.QuadCount++;
@@ -511,6 +518,7 @@ namespace anv {
 			vkAllocateDescriptorSets(
 				m_Context->GetAs<VulkanContext>()->GetDevice(),
 				&allocInfo,
+				nullptr,
 				&m_CameraDescriptorSet
 			),
 			"Failed to allocate camera descriptor set!"
