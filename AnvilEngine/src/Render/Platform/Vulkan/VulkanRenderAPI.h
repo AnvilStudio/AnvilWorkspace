@@ -12,6 +12,8 @@
 
 namespace anv
 {
+	class AssetManager;
+
 	//struct PushContantData
 	//{
 	//	glm::mat4 model;
@@ -33,9 +35,10 @@ namespace anv
 		virtual void DrawScene(Ref<RenderTarget> _renderTarget, Ref<Camera2D> camera);
 		virtual void DrawQuad(
 			const glm::vec2& position,
-			float rotation, 
-			const glm::vec2& size, 
+			float rotation,
+			const glm::vec2& size,
 			glm::vec4 color,
+			Ref<Texture> texture,
 			int layer) override;
 		virtual void EndScene() override;
 
@@ -102,4 +105,3 @@ namespace anv
 		RendererStats m_RenderStats;
 	};
 }
-
