@@ -74,12 +74,7 @@ project "AnvilEngine"
                 "ANV_ENABLE_PYTHON"
             }
 
-            buildoptions
-            {
-                "-fobjc-arc",
-                pythonIncludes
-            }
-
+            buildoptions { pythonIncludes }
             linkoptions { pythonLinkFlags }
         else
             print("Warning: python3-config was not found; Python scripting will be disabled.")
@@ -88,32 +83,67 @@ project "AnvilEngine"
                 "PLATFORM_APPLE",
                 "PLATFORM_MACOS"
             }
-
-            buildoptions { "-fobjc-arc" }
         end
 
         files
         {
-            "./src/**.mm",
             "./vendor/imgui/backends/imgui_impl_glfw.h",
-            "./vendor/imgui/backends/imgui_impl_glfw.cpp",
-            "./vendor/imgui/backends/imgui_impl_metal.h",
-            "./vendor/imgui/backends/imgui_impl_metal.mm"
+            "./vendor/imgui/backends/imgui_impl_glfw.cpp"
         }
 
-        removefiles { "./src/Render/Platform/Vulkan/**" }
+        if MACOS_RENDERER == "vulkan" then
+            defines { "ANV_RENDERER_VULKAN" }
 
-        links
-        {
-            "GLFW",
-            "Cocoa.framework",
-            "QuartzCore.framework",
-            "Metal.framework",
-            "MetalKit.framework",
-            "IOKit.framework",
-            "CoreVideo.framework",
-            "CoreFoundation.framework"
-        }
+            removefiles
+            {
+                "./src/Render/Platform/Metal/**"
+            }
+
+            files
+            {
+                "./vendor/imgui/backends/imgui_impl_vulkan.h",
+                "./vendor/imgui/backends/imgui_impl_vulkan.cpp"
+            }
+
+            includedirs { "%{VULKAN_SDK}" }
+            libdirs { "%{VULKAN_LIB}" }
+
+            links
+            {
+                "GLFW",
+                "vulkan",
+                "shaderc_combined",
+                "Cocoa.framework",
+                "IOKit.framework",
+                "CoreVideo.framework",
+                "CoreFoundation.framework"
+            }
+        else
+            defines { "ANV_RENDERER_METAL" }
+
+            files
+            {
+                "./src/**.mm",
+                "./vendor/imgui/backends/imgui_impl_metal.h",
+                "./vendor/imgui/backends/imgui_impl_metal.mm"
+            }
+
+            removefiles { "./src/Render/Platform/Vulkan/**" }
+
+            buildoptions { "-fobjc-arc" }
+
+            links
+            {
+                "GLFW",
+                "Cocoa.framework",
+                "QuartzCore.framework",
+                "Metal.framework",
+                "MetalKit.framework",
+                "IOKit.framework",
+                "CoreVideo.framework",
+                "CoreFoundation.framework"
+            }
+        end
 
     filter "configurations:DebugG"
         defines { "DEBUG", "DEBUG_G" }
