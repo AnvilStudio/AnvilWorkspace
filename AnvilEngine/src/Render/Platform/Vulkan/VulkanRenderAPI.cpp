@@ -207,8 +207,10 @@ namespace anv {
 
 	void VulkanRenderAPI::EndScene()
 	{
+		// Finalize ImGui exactly once before DrawFrame() can hit a swapchain-resize
+		// early return. The Vulkan command recording path only consumes DrawData.
 		if (ImGui::GetCurrentContext())
-			ImGui::EndFrame();
+			ImGui::Render();
 	}
 	void VulkanRenderAPI::SetMainCamera(_shared<Camera2D> camera) { m_Camera = camera; }
 	RendererStats VulkanRenderAPI::GetStats() { return m_RenderStats; }
@@ -435,7 +437,6 @@ namespace anv {
 
 	void VulkanRenderAPI::end_imgui(Ref<CommandBuffer> cmd)
 	{
-		ImGui::Render();
 		auto vkCmd = cmd.As<VulkanCommandBuffer>();
 		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkCmd->Get());
 	}
