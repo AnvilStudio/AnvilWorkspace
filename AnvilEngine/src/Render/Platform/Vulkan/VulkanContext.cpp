@@ -16,19 +16,24 @@ namespace anv {
 		vkc_physical  (); // select gpu
 		vkc_logical   (); // create logical device
 		vkc_cmd_pool  ();
+		create_immediate_submit_objects();
 	}
 
 	VulkanContext::~VulkanContext()
 	{
 		ANV_PROFILE_SCOPE();
 
+		if (m_Device != VK_NULL_HANDLE)
+			vkDeviceWaitIdle(m_Device);
 
 		m_Swapchain.Reset();
+		destroy_immediate_submit_objects();
 
-		//if (m_CmdPool != VK_NULL_HANDLE)
-		//{
-		//	vkDestroyCommandPool(m_Device, m_CmdPool, nullptr);
-		//}
+		if (m_CmdPool != VK_NULL_HANDLE)
+		{
+			vkDestroyCommandPool(m_Device, m_CmdPool, nullptr);
+			m_CmdPool = VK_NULL_HANDLE;
+		}
 
 		vkDestroyDevice(m_Device, nullptr);
 
