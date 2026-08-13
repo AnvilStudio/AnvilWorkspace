@@ -1,6 +1,7 @@
 #include "QueueChain.h"
 #include "../Util/UMacros.h"
-#include "CommandBuffer.h" 
+#include "CommandBuffer.h"
+#include <vector>
 
 namespace anv
 {
