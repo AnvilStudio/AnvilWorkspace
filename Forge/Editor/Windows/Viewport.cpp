@@ -101,7 +101,11 @@ void Viewport::Draw()
     if (validSize && m_ViewportTarget)
     {
         anv::Renderer2D::DrawScene(m_ViewportTarget, m_EditorCamera);
-        ImGui::Image(m_ViewportTarget->GetImGuiTextureID(), viewportSize);
+        ImGui::Image(
+            m_ViewportTarget->GetImGuiTextureID(),
+            viewportSize,
+            ImVec2(0.0f, 1.0f),
+            ImVec2(1.0f, 0.0f));
 
         set_gizmo_bounds();
         draw_selection_overlay(scene);
@@ -313,7 +317,6 @@ void Viewport::draw_selection_overlay(
                 1.0f);
         }
 
-        // Editor-only camera icon. It stays a readable size regardless of zoom.
         constexpr float iconHalfWidth = 10.0f;
         constexpr float iconHalfHeight = 7.0f;
         constexpr float lensLength = 7.0f;
