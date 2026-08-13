@@ -6,6 +6,7 @@
 #include "Render/Buffer.h"
 #include "VulkanFrameResources.h"
 #include "VulkanSwapChainTarget.h"
+#include "VulkanTexture.h"
 
 #include <Scene/SceneData.h>
 #include <Render/RenderData.h>
@@ -13,7 +14,6 @@
 namespace anv
 {
 	class AssetManager;
-	class VulkanTexture;
 
 	class VulkanRenderAPI
 		: public RenderAPI
