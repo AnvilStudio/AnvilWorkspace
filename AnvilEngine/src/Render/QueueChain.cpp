@@ -92,6 +92,13 @@ namespace anv
 
             lock.unlock();
 
+            // Keep executed tasks alive through command-buffer submission. Tasks
+            // capture Ref<> objects such as pipelines, render targets, and
+            // framebuffers. Destroying those captures immediately after command
+            // recording can invalidate raw Vulkan handles before MoltenVK encodes
+            // the command buffer inside vkQueueSubmit().
+            std::vector<Task> retainedTasks;
+
             // ---- record commands ----
             cmd->Begin();
 
@@ -109,7 +116,10 @@ namespace anv
                 }
 
                 if (task)
+                {
                     task(cmd, frame);
+                    retainedTasks.push_back(std::move(task));
+                }
             }
 
             cmd->End();
@@ -117,6 +127,10 @@ namespace anv
             // ---- submit (Vulkan-only logic via callback) ----
             if (submitFn)
                 submitFn(cmd);
+
+            // retainedTasks intentionally stays alive until after submitFn()
+            // returns, then releases its captured Ref<> resources here.
+            retainedTasks.clear();
 
             // ---- mark batch complete ----
             {
