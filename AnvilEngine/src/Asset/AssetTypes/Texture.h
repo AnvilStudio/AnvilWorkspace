@@ -23,6 +23,7 @@ namespace anv
     protected:
         explicit Texture(const std::filesystem::path& path);
         explicit Texture(Deserialized& deserialized);
+        explicit Texture(const std::string& internalName);
 
         void Load();
         void Unload();
