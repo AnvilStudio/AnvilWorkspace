@@ -61,7 +61,6 @@ namespace anv {
 		auto& fr = m_Frames[m_FrameIndex];
 
 		vkWaitForFences(vkCtx->GetDevice(), 1, &fr.sync.inFlightFence, VK_TRUE, UINT64_MAX);
-		vkResetFences(vkCtx->GetDevice(), 1, &fr.sync.inFlightFence);
 
 		uint32_t imageIndex = m_SwapchainTarget->AcquireNextImage(fr.sync.imageAvailable, m_SwapRecreateFlag);
 		if (m_SwapRecreateFlag)
@@ -71,6 +70,11 @@ namespace anv {
 			m_SwapRecreateFlag = false;
 			return;
 		}
+
+		// Only reset the fence once we know this frame will actually submit work.
+		// If acquire returns OUT_OF_DATE/SUBOPTIMAL during a resize, no submit occurs
+		// and resetting here earlier would leave this fence permanently unsignaled.
+		vkResetFences(vkCtx->GetDevice(), 1, &fr.sync.inFlightFence);
 
 		SwapExtent ext = vkCtx->GetSwapchain()->GetExtent();
 		RenderFrameContext frame{ imageIndex, ext.width, ext.height };
