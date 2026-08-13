@@ -19,10 +19,6 @@ void main()
     gl_Position = push_data.transform *
         vec4(inPosition, 0.0, 1.0);
 
-    // GLM/Anvil use +Y up. Vulkan's positive-height viewport maps
-    // clip-space +Y toward the bottom, so correct it here once.
-    gl_Position.y = -gl_Position.y;
-
     fragColor = push_data.color;
     fragTexCoord = inTexCoord;
 }
