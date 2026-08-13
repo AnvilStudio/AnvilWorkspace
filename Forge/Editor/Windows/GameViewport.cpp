@@ -68,7 +68,11 @@ void GameViewport::Draw()
     if (validSize && m_GameViewportTarget && sceneCamera)
     {
         anv::Renderer2D::DrawScene(m_GameViewportTarget, sceneCamera);
-        ImGui::Image(m_GameViewportTarget->GetImGuiTextureID(), viewportSize);
+        ImGui::Image(
+            m_GameViewportTarget->GetImGuiTextureID(),
+            viewportSize,
+            ImVec2(0.0f, 1.0f),
+            ImVec2(1.0f, 0.0f));
     }
     else if (validSize && !sceneCamera)
     {
