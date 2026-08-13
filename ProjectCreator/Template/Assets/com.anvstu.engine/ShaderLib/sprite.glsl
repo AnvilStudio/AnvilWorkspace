@@ -4,16 +4,9 @@
 layout(push_constant)
 uniform PushData
 {
-    mat4 model;
+    mat4 transform;
     vec4 color;
 } push_data;
-
-layout(set = 0, binding = 0) uniform Camera
-{
-    mat4 View;
-    mat4 Projection;
-    mat4 ViewProjection;
-} camera;
 
 layout(location = 0) in vec2 inPosition;
 layout(location = 1) in vec2 inTexCoord;
@@ -23,9 +16,12 @@ layout(location = 1) out vec2 fragTexCoord;
 
 void main()
 {
-    gl_Position = camera.ViewProjection *
-        push_data.model *
+    gl_Position = push_data.transform *
         vec4(inPosition, 0.0, 1.0);
+
+    // GLM/Anvil use +Y up. Vulkan's positive-height viewport maps
+    // clip-space +Y toward the bottom, so correct it here once.
+    gl_Position.y = -gl_Position.y;
 
     fragColor = push_data.color;
     fragTexCoord = inTexCoord;
