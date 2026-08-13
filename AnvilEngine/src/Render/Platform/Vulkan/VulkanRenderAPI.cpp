@@ -21,7 +21,7 @@ namespace anv {
 
 	struct SpritePush
 	{
-		glm::mat4 Model;
+		glm::mat4 Transform;
 		glm::vec4 Color;
 	};
 
@@ -156,10 +156,16 @@ namespace anv {
 
 	void VulkanRenderAPI::DrawScene(Ref<RenderTarget> _renderTarget, _shared<Camera2D> camera)
 	{
+		ANV_ASSERT(camera, "VulkanRenderAPI::DrawScene requires a camera");
+
+		camera->Update(Time::DeltaTime());
+		const glm::mat4 sceneViewProjection = camera->GetCameraUBO().ViewProjection;
+		auto sceneQuads = m_QuadQueue;
 		auto pipeline = m_PipelineLibrary.Get("Sprite", _renderTarget);
+
 		m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext& frame) mutable
 		{
-			std::sort(m_QuadQueue.begin(), m_QuadQueue.end(), [](const QuadSubmission& a, const QuadSubmission& b)
+			std::stable_sort(sceneQuads.begin(), sceneQuads.end(), [](const QuadSubmission& a, const QuadSubmission& b)
 			{
 				return a.Layer < b.Layer;
 			});
@@ -206,7 +212,7 @@ namespace anv {
 			vkCmdBindIndexBuffer(vkCmd->Get(), vkIB->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
 			m_RenderStats.DrawCalls = 0;
 
-			for (auto& quad : m_QuadQueue)
+			for (auto& quad : sceneQuads)
 			{
 				Ref<VulkanTexture> texture = m_WhiteTexture;
 				if (quad.TextureAsset)
@@ -228,10 +234,13 @@ namespace anv {
 					0,
 					nullptr);
 
-				SpritePush push{};
-				push.Model = glm::translate(glm::mat4(1.0f), glm::vec3(quad.Position, 0))
+				const glm::mat4 model =
+					glm::translate(glm::mat4(1.0f), glm::vec3(quad.Position, 0))
 					* glm::rotate(glm::mat4(1.f), glm::radians(quad.Rotation), {0, 0, 1})
 					* glm::scale(glm::mat4(1.0f), glm::vec3(quad.Size, 1));
+
+				SpritePush push{};
+				push.Transform = sceneViewProjection * model;
 				push.Color = quad.Color;
 
 				vkCmdPushConstants(
