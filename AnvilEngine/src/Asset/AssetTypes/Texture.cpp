@@ -28,6 +28,12 @@ namespace anv
         Load();
     }
 
+    Texture::Texture(const std::string& internalName)
+        : Asset(internalName)
+    {
+        m_Type = "Texture";
+    }
+
     Texture::~Texture()
     {
         Unload();
