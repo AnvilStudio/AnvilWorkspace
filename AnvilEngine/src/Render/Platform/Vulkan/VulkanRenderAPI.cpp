@@ -6,6 +6,7 @@
 #include "VulkanContext.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanBuffer.h"
+#include "VulkanTexture.h"
 #include "Render/RenderData.h"
 #include "VulkanPipeline.h"
 
@@ -44,6 +45,7 @@ namespace anv {
 		create_descriptor_set_layout();
 		create_descriptor_pool();
 		create_camera_descriptor_set();
+		create_white_texture();
 
 		m_SwapchainTarget = Ref<VulkanSwapchainRenderTarget>::Create(m_Context);
 		m_CurrentTarget = m_SwapchainTarget;
@@ -71,9 +73,6 @@ namespace anv {
 			return;
 		}
 
-		// Only reset the fence once we know this frame will actually submit work.
-		// If acquire returns OUT_OF_DATE/SUBOPTIMAL during a resize, no submit occurs
-		// and resetting here earlier would leave this fence permanently unsignaled.
 		vkResetFences(vkCtx->GetDevice(), 1, &fr.sync.inFlightFence);
 
 		SwapExtent ext = vkCtx->GetSwapchain()->GetExtent();
@@ -122,7 +121,18 @@ namespace anv {
 
 	void VulkanRenderAPI::OnShutdown()
 	{
-		m_Context->GetAs<VulkanContext>()->IdleDevice();
+		auto vkctx = m_Context->GetAs<VulkanContext>();
+		vkctx->IdleDevice();
+
+		if (m_RenderCmdChain)
+		{
+			m_RenderCmdChain->Flush();
+			m_RenderCmdChain->Stop();
+		}
+
+		m_PipelineLibrary.Clear();
+		m_WhiteTexture = nullptr;
+		destroy_descriptor_resources();
 		destroy_frames();
 		shutdown_imgui();
 	}
@@ -179,22 +189,59 @@ namespace anv {
 			VkBuffer vertexBuffers[] = { vkVB->GetBuffer() };
 			VkDeviceSize offsets[] = { 0 };
 
-			vkCmdBindDescriptorSets(vkCmd->Get(), VK_PIPELINE_BIND_POINT_GRAPHICS,
-				pipeline.As<VulkanPipeline>()->GetPipelineLayout(), 0, 1,
-				&m_CameraDescriptorSet, 0, nullptr);
+			auto vkPipeline = pipeline.As<VulkanPipeline>();
+			VkPipelineLayout pipelineLayout = vkPipeline->GetPipelineLayout();
+
+			vkCmdBindDescriptorSets(
+				vkCmd->Get(),
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				pipelineLayout,
+				0,
+				1,
+				&m_CameraDescriptorSet,
+				0,
+				nullptr);
+
 			vkCmdBindVertexBuffers(vkCmd->Get(), 0, 1, vertexBuffers, offsets);
 			vkCmdBindIndexBuffer(vkCmd->Get(), vkIB->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
 			m_RenderStats.DrawCalls = 0;
 
 			for (auto& quad : m_QuadQueue)
 			{
+				Ref<VulkanTexture> texture = m_WhiteTexture;
+				if (quad.TextureAsset)
+				{
+					auto requestedTexture = quad.TextureAsset.As<VulkanTexture>();
+					if (requestedTexture && requestedTexture->IsGPUReady())
+						texture = requestedTexture;
+				}
+
+				ANV_ASSERT(texture && texture->IsGPUReady(), "No valid Vulkan sprite texture available");
+				VkDescriptorSet textureSet = texture->GetDescriptorSet();
+				vkCmdBindDescriptorSets(
+					vkCmd->Get(),
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					pipelineLayout,
+					1,
+					1,
+					&textureSet,
+					0,
+					nullptr);
+
 				SpritePush push{};
 				push.Model = glm::translate(glm::mat4(1.0f), glm::vec3(quad.Position, 0))
 					* glm::rotate(glm::mat4(1.f), glm::radians(quad.Rotation), {0, 0, 1})
 					* glm::scale(glm::mat4(1.0f), glm::vec3(quad.Size, 1));
 				push.Color = quad.Color;
-				vkCmdPushConstants(vkCmd->Get(), pipeline.As<VulkanPipeline>()->GetPipelineLayout(),
-					VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(SpritePush), &push);
+
+				vkCmdPushConstants(
+					vkCmd->Get(),
+					pipelineLayout,
+					VK_SHADER_STAGE_VERTEX_BIT,
+					0,
+					sizeof(SpritePush),
+					&push);
+
 				vkCmdDrawIndexed(vkCmd->Get(), 6, 1, 0, 0, 0);
 				m_RenderStats.DrawCalls++;
 			}
@@ -211,11 +258,10 @@ namespace anv {
 
 	void VulkanRenderAPI::EndScene()
 	{
-		// Finalize ImGui exactly once before DrawFrame() can hit a swapchain-resize
-		// early return. The Vulkan command recording path only consumes DrawData.
 		if (ImGui::GetCurrentContext())
 			ImGui::Render();
 	}
+
 	void VulkanRenderAPI::SetMainCamera(_shared<Camera2D> camera) { m_Camera = camera; }
 	RendererStats VulkanRenderAPI::GetStats() { return m_RenderStats; }
 
@@ -309,16 +355,37 @@ namespace anv {
 
 	void VulkanRenderAPI::create_descriptor_set_layout()
 	{
+		VkDevice device = m_Context->GetAs<VulkanContext>()->GetDevice();
+
 		VkDescriptorSetLayoutBinding cameraBinding{};
 		cameraBinding.binding = 0;
 		cameraBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		cameraBinding.descriptorCount = 1;
 		cameraBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		VkDescriptorSetLayoutCreateInfo layoutInfo{};
-		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = 1;
-		layoutInfo.pBindings = &cameraBinding;
-		ANV_VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_Context->GetAs<VulkanContext>()->GetDevice(), &layoutInfo, nullptr, &m_CameraDescriptorSetLayout), "Failed to create camera descriptor set layout!");
+
+		VkDescriptorSetLayoutCreateInfo cameraLayoutInfo{};
+		cameraLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		cameraLayoutInfo.bindingCount = 1;
+		cameraLayoutInfo.pBindings = &cameraBinding;
+
+		ANV_VK_CHECK_RESULT(
+			vkCreateDescriptorSetLayout(device, &cameraLayoutInfo, nullptr, &m_CameraDescriptorSetLayout),
+			"Failed to create camera descriptor set layout!");
+
+		VkDescriptorSetLayoutBinding textureBinding{};
+		textureBinding.binding = 0;
+		textureBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		textureBinding.descriptorCount = 1;
+		textureBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutCreateInfo textureLayoutInfo{};
+		textureLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		textureLayoutInfo.bindingCount = 1;
+		textureLayoutInfo.pBindings = &textureBinding;
+
+		ANV_VK_CHECK_RESULT(
+			vkCreateDescriptorSetLayout(device, &textureLayoutInfo, nullptr, &m_TextureDescriptorSetLayout),
+			"Failed to create texture descriptor set layout!");
 	}
 
 	void VulkanRenderAPI::create_descriptor_pool()
@@ -355,6 +422,30 @@ namespace anv {
 		descriptorWrite.descriptorCount = 1;
 		descriptorWrite.pBufferInfo = &bufferInfo;
 		vkUpdateDescriptorSets(m_Context->GetAs<VulkanContext>()->GetDevice(), 1, &descriptorWrite, 0, nullptr);
+	}
+
+	void VulkanRenderAPI::create_white_texture()
+	{
+		const unsigned char white[4] = { 255, 255, 255, 255 };
+		m_WhiteTexture = Ref<VulkanTexture>::Create(white, 1, 1, "Vulkan White Texture");
+		ANV_ASSERT(m_WhiteTexture && m_WhiteTexture->IsGPUReady(), "Failed to create Vulkan white texture");
+	}
+
+	void VulkanRenderAPI::destroy_descriptor_resources()
+	{
+		VkDevice device = m_Context->GetAs<VulkanContext>()->GetDevice();
+
+		if (m_DescriptorPool != VK_NULL_HANDLE)
+			vkDestroyDescriptorPool(device, m_DescriptorPool, nullptr);
+		if (m_TextureDescriptorSetLayout != VK_NULL_HANDLE)
+			vkDestroyDescriptorSetLayout(device, m_TextureDescriptorSetLayout, nullptr);
+		if (m_CameraDescriptorSetLayout != VK_NULL_HANDLE)
+			vkDestroyDescriptorSetLayout(device, m_CameraDescriptorSetLayout, nullptr);
+
+		m_CameraDescriptorSet = VK_NULL_HANDLE;
+		m_DescriptorPool = VK_NULL_HANDLE;
+		m_TextureDescriptorSetLayout = VK_NULL_HANDLE;
+		m_CameraDescriptorSetLayout = VK_NULL_HANDLE;
 	}
 
 	void VulkanRenderAPI::begin_batch() {}
@@ -451,11 +542,16 @@ namespace anv {
 		quadLayout.binding = 0;
 		quadLayout.stride = sizeof(QuadVertex);
 		quadLayout.AddAttribute("Position", 0, offsetof(QuadVertex, Position), sizeof(glm::vec2), sizeof(QuadVertex));
+		quadLayout.AddAttribute("TexCoord", 1, offsetof(QuadVertex, TexCoord), sizeof(glm::vec2), sizeof(QuadVertex));
+
 		auto pipeline = GraphicsPipeline::CreateInternal(m_Context, "Sprite Pipeline");
 		pipeline->SetShaderStages(m_SpriteShader);
 		pipeline->SetVertexInputLayout(&quadLayout);
 		pipeline->SetRasterizationSettings(nullptr);
-		pipeline.As<VulkanPipeline>()->SetDescriptorSetLayouts({ m_CameraDescriptorSetLayout });
+		pipeline.As<VulkanPipeline>()->SetDescriptorSetLayouts({
+			m_CameraDescriptorSetLayout,
+			m_TextureDescriptorSetLayout
+		});
 		pipeline.As<VulkanPipeline>()->SetPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, sizeof(SpritePush));
 		pipeline->SetColorBlendSettings(nullptr);
 		pipeline->SetRenderPass(renderPass);
