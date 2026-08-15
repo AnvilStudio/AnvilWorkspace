@@ -49,8 +49,6 @@ namespace anv
 
 		void create_quad_buffers();
 		void create_descriptor_set_layout();
-		void create_descriptor_pool();
-		void create_camera_descriptor_set();
 		void create_white_texture();
 		void destroy_descriptor_resources();
 
@@ -79,15 +77,15 @@ namespace anv
 
 		Ref<Buffer> m_QuadVB;
 		Ref<Buffer> m_QuadIB;
-		Ref<Buffer> m_CameraUBO;
 		Ref<VulkanTexture> m_WhiteTexture = nullptr;
 
 		Ref<VulkanSwapchainRenderTarget> m_SwapchainTarget = nullptr;
 
-		VkDescriptorSetLayout m_CameraDescriptorSetLayout = VK_NULL_HANDLE;
+		// Descriptor set 0 is intentionally empty/reserved. Sprite textures stay
+		// at set 1 so the Vulkan renderer can add per-pass data later without
+		// reindexing all texture descriptors.
+		VkDescriptorSetLayout m_ReservedDescriptorSetLayout = VK_NULL_HANDLE;
 		VkDescriptorSetLayout m_TextureDescriptorSetLayout = VK_NULL_HANDLE;
-		VkDescriptorPool m_DescriptorPool = VK_NULL_HANDLE;
-		VkDescriptorSet m_CameraDescriptorSet = VK_NULL_HANDLE;
 
 		VkDescriptorPool m_ImGuiDescriptorPool = VK_NULL_HANDLE;
 
