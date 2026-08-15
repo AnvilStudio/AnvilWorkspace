@@ -188,17 +188,27 @@ namespace anv
 			vkCmdSetViewport(vkCmd->Get(), 0, 1, &vp);
 
 			VkRect2D sc{};
-			sc.offset = { 0, 0 };
-			sc.extent = { _renderTarget->GetWidth(), _renderTarget->GetHeight() };
+			sc.offset = {0, 0};
+			sc.extent = {_renderTarget->GetWidth(), _renderTarget->GetHeight()};
 			vkCmdSetScissor(vkCmd->Get(), 0, 1, &sc);
 
 			auto vkVB = m_QuadVB.As<VulkanBuffer>();
 			auto vkIB = m_QuadIB.As<VulkanBuffer>();
-			VkBuffer vertexBuffers[] = { vkVB->GetBuffer() };
-			VkDeviceSize offsets[] = { 0 };
+			VkBuffer vertexBuffers[] = {vkVB->GetBuffer()};
+			VkDeviceSize offsets[] = {0};
 
 			auto vkPipeline = pipeline.As<VulkanPipeline>();
 			VkPipelineLayout pipelineLayout = vkPipeline->GetPipelineLayout();
+
+			vkCmdBindDescriptorSets(
+				vkCmd->Get(),
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				pipelineLayout,
+				0,
+				1,
+				&m_CameraDescriptorSet,
+				0,
+				nullptr);
 
 			vkCmdBindVertexBuffers(vkCmd->Get(), 0, 1, vertexBuffers, offsets);
 			vkCmdBindIndexBuffer(vkCmd->Get(), vkIB->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
@@ -220,7 +230,7 @@ namespace anv
 					vkCmd->Get(),
 					VK_PIPELINE_BIND_POINT_GRAPHICS,
 					pipelineLayout,
-					0,
+					1,
 					1,
 					&textureSet,
 					0,
@@ -305,14 +315,11 @@ namespace anv
 	{
 		auto vkCtx = m_Context->GetAs<VulkanContext>();
 		VkDevice device = vkCtx->GetDevice();
-		for (auto &fr : m_Frames)
+		for (auto& fr : m_Frames)
 		{
-			if (fr.sync.imageAvailable)
-				vkDestroySemaphore(device, fr.sync.imageAvailable, nullptr);
-			if (fr.sync.renderFinished)
-				vkDestroySemaphore(device, fr.sync.renderFinished, nullptr);
-			if (fr.sync.inFlightFence)
-				vkDestroyFence(device, fr.sync.inFlightFence, nullptr);
+			if (fr.sync.imageAvailable) vkDestroySemaphore(device, fr.sync.imageAvailable, nullptr);
+			if (fr.sync.renderFinished) vkDestroySemaphore(device, fr.sync.renderFinished, nullptr);
+			if (fr.sync.inFlightFence) vkDestroyFence(device, fr.sync.inFlightFence, nullptr);
 			fr.sync.imageAvailable = VK_NULL_HANDLE;
 			fr.sync.renderFinished = VK_NULL_HANDLE;
 			fr.sync.inFlightFence = VK_NULL_HANDLE;
@@ -458,7 +465,13 @@ namespace anv
 	void VulkanRenderAPI::create_imgui_descriptor_pool()
 	{
 		VkDescriptorPoolSize poolSizes[] = {
-			{VK_DESCRIPTOR_TYPE_SAMPLER, 1000}, {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000}, {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000}, {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000}, {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}};
+			{VK_DESCRIPTOR_TYPE_SAMPLER, 1000}, {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
+			{VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
+			{VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
+			{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
+			{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
+			{VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}
+		};
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
@@ -472,7 +485,7 @@ namespace anv
 	{
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
-		ImGuiIO &io = ImGui::GetIO();
+		ImGuiIO& io = ImGui::GetIO();
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 #if !defined(PLATFORM_APPLE_VK)
 		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
@@ -482,7 +495,7 @@ namespace anv
 		ImGui::StyleColorsDark();
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 		{
-			ImGuiStyle &style = ImGui::GetStyle();
+			ImGuiStyle& style = ImGui::GetStyle();
 			style.WindowRounding = 0.0f;
 			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 		}
@@ -547,6 +560,7 @@ namespace anv
 		pipeline->SetVertexInputLayout(&quadLayout);
 		pipeline->SetRasterizationSettings(nullptr);
 		pipeline.As<VulkanPipeline>()->SetDescriptorSetLayouts({
+			m_CameraDescriptorSetLayout,
 			m_TextureDescriptorSetLayout
 		});
 		pipeline.As<VulkanPipeline>()->SetPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, sizeof(SpritePush));
