@@ -145,7 +145,7 @@ namespace anv
 		m_CreateInfo.rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		m_CreateInfo.rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		m_CreateInfo.rasterizer.lineWidth = 1.0f;
-		m_CreateInfo.rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+		m_CreateInfo.rasterizer.cullMode = VK_CULL_MODE_NONE;
 		m_CreateInfo.rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
 		m_CreateInfo.rasterizer.depthBiasEnable = VK_FALSE;
 		m_CreateInfo.rasterizer.depthBiasConstantFactor = 0.0f; // Optional

@@ -17,7 +17,8 @@
 #include <Util/Time/Time.h>
 #include <glm/ext/matrix_transform.hpp>
 
-namespace anv {
+namespace anv
+{
 
 	struct SpritePush
 	{
@@ -40,7 +41,7 @@ namespace anv {
 		camera_info.Size = sizeof(CameraUBO);
 		camera_info.Dynamic = true;
 		m_CameraUBO = Buffer::Create(m_Context, camera_info);
-		
+
 		create_imgui_descriptor_pool();
 		create_descriptor_set_layout();
 		create_descriptor_pool();
@@ -60,7 +61,7 @@ namespace anv {
 			return;
 
 		auto vkCtx = m_Context->GetAs<VulkanContext>();
-		auto& fr = m_Frames[m_FrameIndex];
+		auto &fr = m_Frames[m_FrameIndex];
 
 		vkWaitForFences(vkCtx->GetDevice(), 1, &fr.sync.inFlightFence, VK_TRUE, UINT64_MAX);
 
@@ -76,7 +77,7 @@ namespace anv {
 		vkResetFences(vkCtx->GetDevice(), 1, &fr.sync.inFlightFence);
 
 		SwapExtent ext = vkCtx->GetSwapchain()->GetExtent();
-		RenderFrameContext frame{ imageIndex, ext.width, ext.height };
+		RenderFrameContext frame{imageIndex, ext.width, ext.height};
 		fr.cmd->Reset();
 		m_RenderCmdChain->SetActiveCommandBuffer(fr.cmd);
 		m_RenderCmdChain->SetActiveFrame(frame);
@@ -101,7 +102,7 @@ namespace anv {
 		m_RenderCmdChain->Swap();
 		m_RenderCmdChain->WaitForProcessComplete();
 
-		ImGuiIO& io = ImGui::GetIO();
+		ImGuiIO &io = ImGui::GetIO();
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 		{
 			ImGui::UpdatePlatformWindows();
@@ -179,10 +180,11 @@ namespace anv {
 			VkViewport vp{};
 			vp.x = 0.0f;
 			vp.y = 0.0f;
-			vp.width = (float)_renderTarget->GetWidth();
-			vp.height = (float)_renderTarget->GetHeight();
+			vp.width = static_cast<float>(_renderTarget->GetWidth());
+			vp.height = static_cast<float>(_renderTarget->GetHeight());
 			vp.minDepth = 0.0f;
 			vp.maxDepth = 1.0f;
+
 			vkCmdSetViewport(vkCmd->Get(), 0, 1, &vp);
 
 			VkRect2D sc{};
@@ -261,7 +263,7 @@ namespace anv {
 	void VulkanRenderAPI::DrawQuad(const glm::vec2& position, float rotation, const glm::vec2& size,
 		glm::vec4 color, Ref<Texture> texture, int layer)
 	{
-		m_QuadQueue.push_back({ position, rotation, size, color, texture, layer });
+		m_QuadQueue.push_back({position, rotation, size, color, texture, layer});
 		m_RenderStats.QuadCount++;
 	}
 
@@ -313,11 +315,14 @@ namespace anv {
 	{
 		auto vkCtx = m_Context->GetAs<VulkanContext>();
 		VkDevice device = vkCtx->GetDevice();
-		for (auto& fr : m_Frames)
+		for (auto &fr : m_Frames)
 		{
-			if (fr.sync.imageAvailable) vkDestroySemaphore(device, fr.sync.imageAvailable, nullptr);
-			if (fr.sync.renderFinished) vkDestroySemaphore(device, fr.sync.renderFinished, nullptr);
-			if (fr.sync.inFlightFence) vkDestroyFence(device, fr.sync.inFlightFence, nullptr);
+			if (fr.sync.imageAvailable)
+				vkDestroySemaphore(device, fr.sync.imageAvailable, nullptr);
+			if (fr.sync.renderFinished)
+				vkDestroySemaphore(device, fr.sync.renderFinished, nullptr);
+			if (fr.sync.inFlightFence)
+				vkDestroyFence(device, fr.sync.inFlightFence, nullptr);
 			fr.sync.imageAvailable = VK_NULL_HANDLE;
 			fr.sync.renderFinished = VK_NULL_HANDLE;
 			fr.sync.inFlightFence = VK_NULL_HANDLE;
@@ -435,7 +440,7 @@ namespace anv {
 
 	void VulkanRenderAPI::create_white_texture()
 	{
-		const unsigned char white[4] = { 255, 255, 255, 255 };
+		const unsigned char white[4] = {255, 255, 255, 255};
 		m_WhiteTexture = Ref<VulkanTexture>::Create(white, 1, 1, "Vulkan White Texture");
 		ANV_ASSERT(m_WhiteTexture && m_WhiteTexture->IsGPUReady(), "Failed to create Vulkan white texture");
 	}
@@ -463,13 +468,7 @@ namespace anv {
 	void VulkanRenderAPI::create_imgui_descriptor_pool()
 	{
 		VkDescriptorPoolSize poolSizes[] = {
-			{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 }, { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 }, { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 }, { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 }, { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
-		};
+			{VK_DESCRIPTOR_TYPE_SAMPLER, 1000}, {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000}, {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000}, {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000}, {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}};
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
@@ -483,7 +482,7 @@ namespace anv {
 	{
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
-		ImGuiIO& io = ImGui::GetIO();
+		ImGuiIO &io = ImGui::GetIO();
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 #if !defined(PLATFORM_APPLE_VK)
 		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
@@ -493,7 +492,7 @@ namespace anv {
 		ImGui::StyleColorsDark();
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 		{
-			ImGuiStyle& style = ImGui::GetStyle();
+			ImGuiStyle &style = ImGui::GetStyle();
 			style.WindowRounding = 0.0f;
 			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 		}
