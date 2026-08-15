@@ -200,16 +200,6 @@ namespace anv
 			auto vkPipeline = pipeline.As<VulkanPipeline>();
 			VkPipelineLayout pipelineLayout = vkPipeline->GetPipelineLayout();
 
-			vkCmdBindDescriptorSets(
-				vkCmd->Get(),
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				pipelineLayout,
-				0,
-				1,
-				&m_CameraDescriptorSet,
-				0,
-				nullptr);
-
 			vkCmdBindVertexBuffers(vkCmd->Get(), 0, 1, vertexBuffers, offsets);
 			vkCmdBindIndexBuffer(vkCmd->Get(), vkIB->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
 			m_RenderStats.DrawCalls = 0;
@@ -230,7 +220,7 @@ namespace anv
 					vkCmd->Get(),
 					VK_PIPELINE_BIND_POINT_GRAPHICS,
 					pipelineLayout,
-					1,
+					0,
 					1,
 					&textureSet,
 					0,
@@ -557,7 +547,6 @@ namespace anv
 		pipeline->SetVertexInputLayout(&quadLayout);
 		pipeline->SetRasterizationSettings(nullptr);
 		pipeline.As<VulkanPipeline>()->SetDescriptorSetLayouts({
-			m_CameraDescriptorSetLayout,
 			m_TextureDescriptorSetLayout
 		});
 		pipeline.As<VulkanPipeline>()->SetPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, sizeof(SpritePush));
