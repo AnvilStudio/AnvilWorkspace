@@ -9,7 +9,7 @@
 using namespace anv;
 
 void InspectorLayer::Draw(
-    Ref<Scene>& scene,
+    Ref<Scene> &scene,
     entt::entity selectedEntity)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 2));
@@ -26,7 +26,7 @@ void InspectorLayer::Draw(
             "Tag",
             selectedEntity,
             scene,
-            [&](Component::Tag& tag)
+            [&](Component::Tag &tag)
             {
                 char buffer[256]{};
                 std::strncpy(buffer, tag.Get().c_str(), sizeof(buffer) - 1);
@@ -48,7 +48,7 @@ void InspectorLayer::Draw(
             "Transform2D",
             selectedEntity,
             scene,
-            [&](Component::Transform2d& transform)
+            [&](Component::Transform2d &transform)
             {
                 if (ImGui::BeginTable("Transform2DProps", 2, ImGuiTableFlags_SizingStretchProp))
                 {
@@ -68,7 +68,7 @@ void InspectorLayer::Draw(
             "Camera 2D",
             selectedEntity,
             scene,
-            [&](Component::Camera2D& cameraComponent)
+            [&](Component::Camera2D &cameraComponent)
             {
                 if (!cameraComponent.camera)
                     cameraComponent.camera = std::make_shared<anv::Camera2D>();
@@ -106,12 +106,12 @@ void InspectorLayer::Draw(
             "Sprite Renderer",
             selectedEntity,
             scene,
-            [&](Component::SpriteRenderer& sprite)
+            [&](Component::SpriteRenderer &sprite)
             {
                 auto assetManager = App::GetInstance()->GetAssetManager();
                 Ref<Texture> currentTexture = assetManager
-                    ? assetManager->GetAs<Texture>(sprite.texture)
-                    : nullptr;
+                                                  ? assetManager->GetAs<Texture>(sprite.texture)
+                                                  : nullptr;
 
                 if (ImGui::BeginTable("SpriteProps", 2, ImGuiTableFlags_SizingStretchProp))
                 {
@@ -123,22 +123,19 @@ void InspectorLayer::Draw(
                     ImGui::TextUnformatted("Texture");
                     ImGui::TableSetColumnIndex(1);
 
-                    const char* textureLabel = currentTexture
-                        ? currentTexture->GetName().c_str()
-                        : "None — drop texture here";
+                    const char *textureLabel = currentTexture
+                                                   ? currentTexture->GetName().c_str()
+                                                   : "None — drop texture here";
 
                     ImGui::Button("##TextureSlot", ImVec2(-1.0f, 0.0f));
-                    ImGui::SetItemTooltip("%s", textureLabel);
-                    ImGui::SameLine(0.0f, -ImGui::GetItemRectSize().x);
-                    ImGui::TextUnformatted(textureLabel);
 
                     if (ImGui::BeginDragDropTarget())
                     {
-                        if (const ImGuiPayload* payload =
+                        if (const ImGuiPayload *payload =
                                 ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
                         {
-                            const char* pathData =
-                                static_cast<const char*>(payload->Data);
+                            const char *pathData =
+                                static_cast<const char *>(payload->Data);
 
                             std::filesystem::path texturePath(pathData ? pathData : "");
                             std::string extension = texturePath.extension().string();
@@ -169,11 +166,26 @@ void InspectorLayer::Draw(
                                     currentTexture = texture;
                                     scene->Save();
                                 }
+                                else
+                                {
+                                    if (!texture)
+                                    {
+                                        ANV_LOG_ERROR("Failed Drag/Drop Texture, No Texture Found!");
+                                    }
+                                    else if (!texture->IsGPUReady())
+                                    {
+                                        ANV_LOG_ERROR("Failed Drag/Drop Texture, Not GPU ready!");
+                                    }
+                                }
                             }
                         }
 
                         ImGui::EndDragDropTarget();
                     }
+
+                    ImGui::SetItemTooltip("%s", textureLabel);
+                    ImGui::SameLine(0.0f, -ImGui::GetItemRectSize().x);
+                    ImGui::TextUnformatted(textureLabel);
 
                     if (currentTexture)
                     {
@@ -210,7 +222,7 @@ void InspectorLayer::Draw(
             "Rigidbody 2D",
             selectedEntity,
             scene,
-            [&](Component::Rigidbody2D& rigidbody)
+            [&](Component::Rigidbody2D &rigidbody)
             {
                 if (ImGui::BeginTable("Rigidbody2DProps", 2, ImGuiTableFlags_SizingStretchProp))
                 {
@@ -220,7 +232,7 @@ void InspectorLayer::Draw(
                     ImGui::TableNextRow();
                     property_label("Body Type");
                     int bodyType = static_cast<int>(rigidbody.type);
-                    const char* bodyTypes[] = {"Static", "Kinematic", "Dynamic"};
+                    const char *bodyTypes[] = {"Static", "Kinematic", "Dynamic"};
                     if (ImGui::Combo(
                             "##BodyType",
                             &bodyType,
@@ -258,7 +270,7 @@ void InspectorLayer::Draw(
             "Box Collider 2D",
             selectedEntity,
             scene,
-            [&](Component::BoxCollider2D& collider)
+            [&](Component::BoxCollider2D &collider)
             {
                 if (ImGui::BeginTable("BoxCollider2DProps", 2, ImGuiTableFlags_SizingStretchProp))
                 {
@@ -306,7 +318,7 @@ void InspectorLayer::Draw(
 }
 
 void InspectorLayer::draw_add_component_menu(
-    Ref<Scene>& scene,
+    Ref<Scene> &scene,
     entt::entity entity)
 {
     if (!scene || entity == entt::null || !scene->Registry().valid(entity))

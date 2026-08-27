@@ -16,7 +16,8 @@ layout(location = 1) out vec2 fragTexCoord;
 
 void main()
 {
-    gl_Position = push_data.transform *
+    gl_Position =
+        push_data.transform *
         vec4(inPosition, 0.0, 1.0);
 
     fragColor = push_data.color;

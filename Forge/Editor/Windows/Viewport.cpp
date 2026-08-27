@@ -12,7 +12,7 @@
 
 namespace
 {
-    bool IsTextureFile(const std::filesystem::path& path)
+    bool IsTextureFile(const std::filesystem::path &path)
     {
         std::string extension = path.extension().string();
         std::transform(
@@ -59,8 +59,8 @@ void Viewport::Draw()
             m_EditorCamera->SetAspectRatio(currentSize.x / currentSize.y);
 
         bool camInputEn =
-        (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
-         ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows));
+            (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+             ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows));
 
         m_Controller.SetInputEnabled(camInputEn);
 
@@ -75,12 +75,12 @@ void Viewport::Draw()
     const ImVec2 framebufferScale = ImGui::GetIO().DisplayFramebufferScale;
 
     const uint32_t targetWidth = validSize
-        ? static_cast<uint32_t>(viewportSize.x * framebufferScale.x)
-        : 0;
+                                     ? static_cast<uint32_t>(viewportSize.x * framebufferScale.x)
+                                     : 0;
 
     const uint32_t targetHeight = validSize
-        ? static_cast<uint32_t>(viewportSize.y * framebufferScale.y)
-        : 0;
+                                      ? static_cast<uint32_t>(viewportSize.y * framebufferScale.y)
+                                      : 0;
 
     const bool sizeChanged =
         validSize && targetWidth > 0 && targetHeight > 0 &&
@@ -106,24 +106,16 @@ void Viewport::Draw()
             viewportSize,
             ImVec2(0.0f, 1.0f),
             ImVec2(1.0f, 0.0f));
-
+            
         set_gizmo_bounds();
-        draw_selection_overlay(scene);
-
-        ImGuizmo::SetOrthographic(true);
-        ImGuizmo::SetDrawlist();
-        draw_gizmo();
-
-        if (scene)
-            pick_entity(scene);
-
+        
         if (ImGui::BeginDragDropTarget())
         {
-            if (const ImGuiPayload* payload =
+            if (const ImGuiPayload *payload =
                     ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
             {
-                const auto* pathData =
-                    static_cast<const char*>(payload->Data);
+                const auto *pathData =
+                    static_cast<const char *>(payload->Data);
                 const std::filesystem::path assetPath(
                     pathData ? pathData : "");
 
@@ -139,7 +131,7 @@ void Viewport::Draw()
                         const entt::entity entity =
                             scene->CreateEntity(assetPath.stem().string());
 
-                        auto& sprite =
+                        auto &sprite =
                             scene->AddComponent<
                                 anv::Component::SpriteRenderer>(entity);
 
@@ -152,15 +144,23 @@ void Viewport::Draw()
             ImGui::EndDragDropTarget();
         }
     }
+    
+    draw_selection_overlay(scene);
+
+    ImGuizmo::SetOrthographic(true);
+    ImGuizmo::SetDrawlist();
+    draw_gizmo();
+
+    if (scene)
+        pick_entity(scene);
 
     ImGui::End();
     ImGui::PopStyleVar();
 }
 
 bool Viewport::world_to_viewport(
-    const glm::vec3& worldPosition,
-    ImVec2& screenPosition
-) const
+    const glm::vec3 &worldPosition,
+    ImVec2 &screenPosition) const
 {
     if (!m_EditorCamera ||
         m_ViewportSize.x <= 0.0f ||
@@ -194,8 +194,7 @@ bool Viewport::world_to_viewport(
 }
 
 void Viewport::draw_selection_overlay(
-    const anv::Ref<anv::Scene>& scene
-)
+    const anv::Ref<anv::Scene> &scene)
 {
     if (!scene || !m_EditorCamera)
         return;
@@ -210,10 +209,10 @@ void Viewport::draw_selection_overlay(
         return;
     }
 
-    const auto& transform =
+    const auto &transform =
         scene->GetComponent<anv::Component::Transform2d>(entity);
 
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    ImDrawList *drawList = ImGui::GetWindowDrawList();
     if (!drawList)
         return;
 
@@ -240,7 +239,7 @@ void Viewport::draw_selection_overlay(
 
     if (scene->HasComponent<anv::Component::Camera2D>(entity))
     {
-        auto& cameraComponent =
+        auto &cameraComponent =
             scene->GetComponent<anv::Component::Camera2D>(entity);
 
         if (!cameraComponent.camera)
@@ -262,10 +261,9 @@ void Viewport::draw_selection_overlay(
 
         const std::array<glm::vec4, 4> localFrustumCorners = {
             glm::vec4{-halfWidth, -halfHeight, 0.0f, 1.0f},
-            glm::vec4{ halfWidth, -halfHeight, 0.0f, 1.0f},
-            glm::vec4{ halfWidth,  halfHeight, 0.0f, 1.0f},
-            glm::vec4{-halfWidth,  halfHeight, 0.0f, 1.0f}
-        };
+            glm::vec4{halfWidth, -halfHeight, 0.0f, 1.0f},
+            glm::vec4{halfWidth, halfHeight, 0.0f, 1.0f},
+            glm::vec4{-halfWidth, halfHeight, 0.0f, 1.0f}};
 
         std::array<ImVec2, 4> frustumCorners{};
         bool validFrustum = true;
@@ -287,8 +285,8 @@ void Viewport::draw_selection_overlay(
         }
 
         const ImU32 cameraColor = cameraComponent.isActive
-            ? activeCameraColor
-            : outlineColor;
+                                      ? activeCameraColor
+                                      : outlineColor;
 
         if (validFrustum)
         {
@@ -344,8 +342,7 @@ void Viewport::draw_selection_overlay(
         const std::array<ImVec2, 3> lens = {
             ImVec2{bodyMax.x, pivot.y - 5.0f},
             ImVec2{bodyMax.x + lensLength, pivot.y - 9.0f},
-            ImVec2{bodyMax.x + lensLength, pivot.y + 9.0f}
-        };
+            ImVec2{bodyMax.x + lensLength, pivot.y + 9.0f}};
 
         drawList->AddTriangleFilled(
             lens[0],
@@ -370,10 +367,9 @@ void Viewport::draw_selection_overlay(
 
         constexpr std::array<glm::vec4, 4> localCorners = {
             glm::vec4{-0.5f, -0.5f, 0.0f, 1.0f},
-            glm::vec4{ 0.5f, -0.5f, 0.0f, 1.0f},
-            glm::vec4{ 0.5f,  0.5f, 0.0f, 1.0f},
-            glm::vec4{-0.5f,  0.5f, 0.0f, 1.0f}
-        };
+            glm::vec4{0.5f, -0.5f, 0.0f, 1.0f},
+            glm::vec4{0.5f, 0.5f, 0.0f, 1.0f},
+            glm::vec4{-0.5f, 0.5f, 0.0f, 1.0f}};
 
         std::array<ImVec2, 4> screenCorners{};
         bool validOutline = true;
@@ -436,8 +432,7 @@ void Viewport::draw_selection_overlay(
 }
 
 void Viewport::pick_entity(
-    const anv::Ref<anv::Scene>& scene
-)
+    const anv::Ref<anv::Scene> &scene)
 {
     if (!scene || !m_EditorCamera)
         return;
@@ -458,8 +453,7 @@ void Viewport::pick_entity(
 
     const glm::vec2 mousePosition{
         ImGui::GetMousePos().x,
-        ImGui::GetMousePos().y
-    };
+        ImGui::GetMousePos().y};
 
     const glm::vec2 localMouse =
         mousePosition - m_ViewportBounds[0];
@@ -476,15 +470,13 @@ void Viewport::pick_entity(
 
     const glm::vec2 normalized{
         localMouse.x / m_ViewportSize.x,
-        localMouse.y / m_ViewportSize.y
-    };
+        localMouse.y / m_ViewportSize.y};
 
     const glm::vec4 clipPosition{
         normalized.x * 2.0f - 1.0f,
         1.0f - normalized.y * 2.0f,
         0.0f,
-        1.0f
-    };
+        1.0f};
 
     const glm::mat4 inverseViewProjection =
         glm::inverse(
@@ -500,16 +492,14 @@ void Viewport::pick_entity(
     entt::entity pickedEntity = entt::null;
     int highestDrawLayer = std::numeric_limits<int>::min();
 
-    auto view = scene->Registry().view<
-        anv::Component::Transform2d,
-        anv::Component::SpriteRenderer>();
+    auto view = scene->Registry().view<anv::Component::Transform2d, anv::Component::SpriteRenderer>();
 
     for (const auto entity : view)
     {
-        const auto& transform =
+        const auto &transform =
             view.get<anv::Component::Transform2d>(entity);
 
-        const auto& sprite =
+        const auto &sprite =
             view.get<anv::Component::SpriteRenderer>(entity);
 
         const glm::mat4 inverseTransform =
@@ -517,10 +507,10 @@ void Viewport::pick_entity(
 
         const glm::vec4 localPosition =
             inverseTransform * glm::vec4(
-                worldPosition.x,
-                worldPosition.y,
-                0.0f,
-                1.0f);
+                                   worldPosition.x,
+                                   worldPosition.y,
+                                   0.0f,
+                                   1.0f);
 
         const bool insideQuad =
             localPosition.x >= -0.5f &&
@@ -578,8 +568,7 @@ void Viewport::set_gizmo_bounds()
 
     m_ViewportSize = {
         m_ViewportBounds[1].x - m_ViewportBounds[0].x,
-        m_ViewportBounds[1].y - m_ViewportBounds[0].y
-    };
+        m_ViewportBounds[1].y - m_ViewportBounds[0].y};
 
     ImGuizmo::SetRect(
         m_ViewportBounds[0].x,
@@ -607,13 +596,15 @@ void Viewport::draw_gizmo()
         return;
     }
 
-    auto& transform =
+    auto &transform =
         scene->GetComponent<anv::Component::Transform2d>(entity);
 
     glm::mat4 transformMatrix = transform.GetTransform();
 
     const glm::mat4 view = m_EditorCamera->GetView();
     const glm::mat4 projection = m_EditorCamera->GetProjection();
+
+    //ImGuizmo::BeginFrame();
 
     ImGuizmo::Manipulate(
         glm::value_ptr(view),

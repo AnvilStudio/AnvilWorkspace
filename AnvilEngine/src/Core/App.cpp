@@ -307,9 +307,10 @@ namespace anv
 			m_Settings.projectPath = prjPath;
 
 			std::string win_name = m_Settings.projectName;
-			win_name.append(" | ver ");
+			win_name.append(" | ");
 			win_name.append(ANV_ENGINE_VERSION);
-			win_name.append(" | Anvil Engine");
+			win_name.append(" | Anvil Engine | ");
+			win_name.append(ANV_API_VER);
 			m_Settings.WindowCreateInfo.name = win_name;
 		}
 		catch (const std::exception &e)

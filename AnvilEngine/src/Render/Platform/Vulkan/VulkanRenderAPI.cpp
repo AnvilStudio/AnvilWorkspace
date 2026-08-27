@@ -14,6 +14,8 @@
 #include "imgui/backends/imgui_impl_glfw.h"
 #include "imgui/backends/imgui_impl_vulkan.h"
 
+#include "ImGuizmo.h"
+
 #include <Util/Time/Time.h>
 #include <glm/ext/matrix_transform.hpp>
 
@@ -480,6 +482,7 @@ namespace anv
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
+		ImGuizmo::BeginFrame();
 	}
 
 	void VulkanRenderAPI::end_imgui(Ref<CommandBuffer> cmd)
