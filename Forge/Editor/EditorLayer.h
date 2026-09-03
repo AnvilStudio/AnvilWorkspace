@@ -1,43 +1,67 @@
 #pragma once
+
 #include <Anvil.h>
+
+#include "Windows/AssetRegistry.h"
+#include "Windows/CodeEditor.h"
+#include "Windows/ConsolePanel.h"
+#include "Windows/FileBrowser.h"
+#include "Windows/GameViewport.h"
+#include "Windows/InspectorLayer.h"
+#include "Windows/SceneHierarchy.h"
 #include "Windows/Viewport.h"
-#include "Windows/DevNotes.h"
+
+struct Windows
+{
+    bool showAssetRegistry = true;
+    bool showStats = true;
+    bool showCodeEditor = true;
+    bool showConsole = true;
+};
 
 class EditorLayer : public anv::Layer
 {
 public:
+    enum class SceneState
+    {
+        Edit,
+        Play,
+        Pause
+    };
 
-	enum class SceneState
-	{
-		Edit,
-		Play,
-		Pause
-	};
+    EditorLayer();
 
-	EditorLayer();
+    void OnAttach() override;
+    void OnDetach() override;
+    void OnUpdate(float dt) override;
+    void OnImGuiRender() override;
 
-	void OnAttach() override;
-	void OnUpdate(float dt) override;
-	void OnImGuiRender() override;
+    entt::entity GetSelectedEntity() const { return m_SelectedEntity; }
+    void SetSelectedEntity(entt::entity entity) { m_SelectedEntity = entity; }
+    void ClearSelection() { m_SelectedEntity = entt::null; }
+
+    static SceneState GetSceneState() { return m_SceneState; }
+    static EditorLayer* GetInstance() { return m_This; }
 
 private:
-	void begin_dock_space();
-	void draw_menu_bar();
-	void draw_viewport();
-	void draw_scene_hierarchy();
-	void draw_inspector();
-	void draw_add_component_menu(
-		anv::Ref<anv::Scene> scene,
-		entt::entity entity);
-	void draw_stats();
-	void draw_filesys();
+    void begin_dock_space();
+    void draw_menu_bar();
+    void draw_stats();
 
-	entt::entity m_SelectedEntity = entt::null;
-	entt::entity m_EntityToDelete = entt::null;
+private:
+    entt::entity m_SelectedEntity = entt::null;
 
-	SceneState m_SceneState = SceneState::Edit;
+    static SceneState m_SceneState;
+    static EditorLayer* m_This;
 
-	Viewport m_Viewport;
-	DevNotesPanel m_DevNotes;
+    Viewport m_Viewport;
+    CodeEditorPanel m_DevNotes;
+    FileBrowser m_FileBrowser;
+    AssetRegistryPanel m_AssetRegistryPanel;
+    GameViewport m_GameViewport;
+    SceneHierarchy m_SceneHierarchy;
+    InspectorLayer m_InspectorLayer;
+    anv::ConsolePanel m_Console;
+
+    Windows m_Windows{};
 };
-

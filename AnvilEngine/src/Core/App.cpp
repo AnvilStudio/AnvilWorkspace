@@ -1,12 +1,13 @@
-#include "App.h"	
+#include "App.h"
 #include <filesystem>
 #include <Util/Serialize/Serializer.h>
 #include <Util/Time/Time.h>
 #include "AppLayers/SceneLayer.h"
-//tmp
-#include "../Asset/AssetTypes/Texture.h" 
+// tmp
+#include "../Asset/AssetTypes/Texture.h"
 
-namespace anv {
+namespace anv
+{
 
 	App::App()
 	{
@@ -15,32 +16,27 @@ namespace anv {
 
 		// init logging
 		{
-			anv_log::LogCreateInfo info
-			{
+			anv_log::LogCreateInfo info{
 				.logFilePath = "logs.alog",
 				.timeFormat = "%I:%M:%S",
 				.consoleOutput = true,
 				.fileOutput = true,
-				.abortOnError = false
-			};
+				.abortOnError = false};
 
 			anv_log::AnvLog::Init(info);
 		}
 
 		ANV_PROFILE_SCOPE()
 
-
 		WindowCreateInfo i{
-		.width = 800,
-		.height = 500,
-		.name = "My Window"
-		};
+			.width = 800,
+			.height = 500,
+			.name = "My Window"};
 
 		m_AppWin = Window::Create(i);
-
 	}
 
-	App::App(int arg_c, char* arg_v[])
+	App::App(int arg_c, char *arg_v[])
 	{
 		ANV_PROFILE_SCOPE()
 		if (s_This == nullptr)
@@ -57,7 +53,7 @@ namespace anv {
 		for (int i = 0; i < arg_c; i++)
 		{
 			if ((strcmp(arg_v[i], "--projectPath") == 0 ||
-				strcmp(arg_v[i], "-prj") == 0) &&
+				 strcmp(arg_v[i], "-prj") == 0) &&
 				i + 1 < arg_c)
 			{
 				m_Settings.projectPath = arg_v[i + 1];
@@ -65,50 +61,49 @@ namespace anv {
 			}
 		}
 
-		anv_log::LogCreateInfo info
-		{
+		anv_log::LogCreateInfo info{
 			.logFilePath = m_Settings.projectPath,
 			.logFileName = ".alog",
 			.timeFormat = "%I:%M:%S",
 			.consoleOutput = true,
 			.fileOutput = true,
-			.abortOnError = false
-		};
+			.abortOnError = false};
 
 		anv_log::AnvLog::Init(info);
-
 
 		PopulateSettings(m_Settings.projectPath);
 		InitializeFileSys();
 
-		// Window first
+		// 1. Window
 		m_AppWin = Window::Create(m_Settings.WindowCreateInfo);
 
-		// Core systems
-		m_AssetManager = std::make_shared<AssetManager>();
+		// 2. Input and time
 		m_InputSystem = InputSystem::Create(m_AppWin);
-
 		Time::Init();
 
-		// Renderer before scene layer/camera binding
-		Render2DCreateInfo r_info{};
-		r_info.pTarget = m_AppWin;
-		Renderer2D::Init(r_info);
+		// 3. Renderer selects Metal
+		Render2DCreateInfo renderInfo{};
+		renderInfo.pTarget = m_AppWin;
+		renderInfo.imguiIniPath =
+			(m_FileSystem->GetKeyVal("Settings") / "EditorConfig" / "EditorLayout.ini").string();
+		Renderer2D::Init(renderInfo);
 
-		// Scene manager after renderer exists
+		// 4. Restore assets, including Metal textures
+		m_AssetManager = std::make_shared<AssetManager>();
+
+		// 5. Restore scene and its texture UUID references
 		m_ScnMngr = std::make_shared<SceneManager>();
 		m_ScnMngr->Register(m_Settings.startScene);
 
-		// Layer last
+		// 6. Editor/game layers
 		PushLayer(new SceneLayer(m_ScnMngr));
 	}
 
-	App::~App()
+	App::~App() noexcept
 	{
-		ANV_PROFILE_SCOPE()
 		SaveStates();
 
-		for (Layer* layer : m_LayerStack)
+		for (Layer *layer : m_LayerStack)
 		{
 			layer->OnDetach();
 		}
@@ -133,20 +128,21 @@ namespace anv {
 
 			// Poll input/events
 			m_AppWin->OnUpdate();
-			
+			m_InputSystem->Update();
+
 			// Update engine/game layers
-			for (Layer* layer : m_LayerStack)
+			for (Layer *layer : m_LayerStack)
 				layer->OnUpdate(Time::DeltaTime());
 
 			Renderer2D::BeginScene();
 			s_This->OnUpdate();
 
 			// Render layers
-			for (Layer* layer : m_LayerStack)
+			for (Layer *layer : m_LayerStack)
 				layer->OnRender();
 
 			// Render UI
-			for (Layer* layer : m_LayerStack)
+			for (Layer *layer : m_LayerStack)
 				layer->OnImGuiRender();
 
 			Renderer2D::EndScene();
@@ -155,7 +151,7 @@ namespace anv {
 		s_This->OnDestroy();
 	}
 
-	App* App::GetInstance()
+	App *App::GetInstance()
 	{
 		return s_This;
 	}
@@ -180,24 +176,24 @@ namespace anv {
 		return m_InputSystem;
 	}
 
-	void App::PushLayer(Layer * layer)
+	void App::PushLayer(Layer *layer)
 	{
 		m_LayerStack.PushLayer(layer);
 		layer->OnAttach();
 	}
 
-	void App::PopLayer(Layer* layer)
+	void App::PopLayer(Layer *layer)
 	{
 		m_LayerStack.PushLayer(layer);
 		layer->OnDetach();
 	}
-	void App::PushOverlay(Layer* overlay)
+	void App::PushOverlay(Layer *overlay)
 	{
 		m_LayerStack.PushOverlay(overlay);
 		overlay->OnAttach();
 	}
 
-	void App::PopOverlay(Layer* overlay)
+	void App::PopOverlay(Layer *overlay)
 	{
 		m_LayerStack.PushOverlay(overlay);
 		overlay->OnDetach();
@@ -211,12 +207,12 @@ namespace anv {
 	// Serialize all settings
 	void App::SaveStates()
 	{
-		Serializer ser(s_This->m_Settings.projectPath, 
-			Serializer::Mode::SER_MODE_TOML, 
-			Serializer::Direction::Write);
+		Serializer ser(s_This->m_Settings.projectPath,
+					   Serializer::Mode::SER_MODE_TOML,
+					   Serializer::Direction::Write);
 
 		ser.Object("Settings", [&]
-			{
+				   {
 				ser.Field("ProjName", m_Settings.projectName);
 				ser.Field("ProjDir", m_Settings.projectDir);
 				ser.Field("Version", m_Settings.version);
@@ -262,8 +258,8 @@ namespace anv {
 					ser.FieldOr<std::string>("Cache", cache, "Assets/com.anvstu.engine/Cache/");
 					ser.FieldOr<std::string>("AssetMeta", ameta, "Assets/com.anvstu.engine/AssetMeta");
 					ser.FieldOr<std::string>("Settings", settings, "Assets/com.anvstu.engine/Settings");
-				});
-			});
+
+				}); });
 
 		ser.Close();
 	}
@@ -275,7 +271,7 @@ namespace anv {
 			Serializer ser(prjPath, Serializer::Mode::SER_MODE_TOML, Serializer::Direction::Read);
 
 			ser.ObjectStrict("Settings", [&]
-				{
+							 {
 					// --- Basic metadata ---
 					ser.FieldOr<std::string>("ProjName", m_Settings.projectName, "");
 					ser.FieldOr<std::string>("ProjDir", m_Settings.projectDir, "");
@@ -306,41 +302,44 @@ namespace anv {
 
 							ser.FieldOr<std::string>("Path", path, "");
 							m_Settings.startScene = path;
-						});
-				});
+						}); });
 
 			ser.Close();
 
 			m_Settings.projectPath = prjPath;
 
 			std::string win_name = m_Settings.projectName;
-			win_name.append(" | ver ");
-			win_name.append(m_Settings.version);
-			win_name.append(" | Anvil Engine");
+			win_name.append(" | ");
+			win_name.append(ANV_ENGINE_VERSION);
+			win_name.append(" | Anvil Engine | ");
+			win_name.append(ANV_API_VER);
 			m_Settings.WindowCreateInfo.name = win_name;
 		}
-		catch (const std::exception& e)
+		catch (const std::exception &e)
 		{
 			ANV_LOG_FATAL("Failed to load project settings: %s", e.what());
 		}
 	}
 
-	FileSystem& App::GetFS() 
-	{ 
-		ANV_ASSERT(m_FileSystem, "Cannot retrieve file system when app is not initialized!"); 
-		return *m_FileSystem; 
+	FileSystem &App::GetFS()
+	{
+		ANV_ASSERT(m_FileSystem, "Cannot retrieve file system when app is not initialized!");
+		return *m_FileSystem;
 	}
-
 
 	void App::InitializeFileSys()
 	{
 		m_FileSystem = std::make_unique<FileSystem>(m_Settings.projectDir);
-		m_FileSystem->MountKey("Assets", m_Settings.assetDir);
+
+		// Get Asset dir
+		std::filesystem::path assetPath(m_Settings.projectDir);
+		
+		m_FileSystem->MountKey("Assets", (assetPath / "Assets").c_str());
 		m_FileSystem->MountKey("Res", "@Assets/com.anvstu.engine");
 		m_FileSystem->MountKey("Cache", "@Res/Cache");
 		m_FileSystem->MountKey("ShaderCache", "@Cache/ShaderCache");
 		m_FileSystem->MountKey("ShaderLib", "@Res/ShaderLib");
 		m_FileSystem->MountKey("AssetMeta", "@Res/AssetMeta");
-		m_FileSystem->MountKey("Setting", "@Res/Settings");
+		m_FileSystem->MountKey("Settings", "@Res/Settings");
 	}
 }

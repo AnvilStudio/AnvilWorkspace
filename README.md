@@ -235,3 +235,5 @@ Architecture flexibility for future platforms
 ### Head Dev: Cayden "CJ" Jordan
 - email: @caydenjordan05@gmail.com 
 - instagram: @cj.cpp
+
+export VK_DRIVER_FILES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"  

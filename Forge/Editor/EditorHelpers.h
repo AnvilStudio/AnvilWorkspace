@@ -54,6 +54,7 @@ void draw_component(
 
 static void property_label(const char* label, float width = 90.0f)
 {
+    (void)width;
     ImGui::TableSetColumnIndex(0);
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted(label);
@@ -78,6 +79,12 @@ static bool property_int(const char* label, int* value)
 {
     property_label(label);
     return ImGui::DragInt(("##" + std::string(label)).c_str(), value);
+}
+
+static bool property_bool(const char* label, bool* value)
+{
+    property_label(label);
+    return ImGui::Checkbox(("##" + std::string(label)).c_str(), value);
 }
 
 static bool property_color4(const char* label, float* value)

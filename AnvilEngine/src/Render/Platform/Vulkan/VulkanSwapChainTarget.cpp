@@ -20,11 +20,18 @@ namespace anv
 			.As<VulkanSwapchain>()->Present(presentQueue, m_ImageIndex, renderFinished, recreate);
 	}
 
+	void VulkanSwapchainRenderTarget::ReleaseFramebuffers()
+	{
+		m_Framebuffers.clear();
+		m_ImageIndex = 0;
+	}
+
 	void VulkanSwapchainRenderTarget::Resize(uint32_t _width, uint32_t _height)
 	{
 		m_Width = _width;
 		m_Height = _height;
 
+		ReleaseFramebuffers();
 		create_framebuffers();
 	}
 

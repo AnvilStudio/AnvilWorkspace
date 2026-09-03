@@ -22,11 +22,9 @@ namespace anv
 		{
 			img->OnDestroy();
 		}
-		//vkDeviceWaitIdle(m_Context->GetAs<VulkanContext>()->GetDevice());
 		auto dev = m_Context->GetAs<VulkanContext>()->GetDevice();
 		vkDestroySwapchainKHR(dev, m_Swapchain, nullptr);
 	}
-
 
 	void VulkanSwapchain::ResetSwap()
 	{
@@ -38,6 +36,7 @@ namespace anv
 		for (auto& img : m_ImageViews)
 			img->OnDestroy();
 		m_ImageViews.clear();
+		m_Images.clear();
 
 		vkDestroySwapchainKHR(dev, m_Swapchain, nullptr);
 		m_Swapchain = VK_NULL_HANDLE;
@@ -47,7 +46,6 @@ namespace anv
 		create_vk_img_views();
 	}
 
-
 	void VulkanSwapchain::OnDestroy(VkDevice _dev)
 	{
 		ANV_PROFILE_SCOPE()
@@ -55,6 +53,8 @@ namespace anv
 		{
 			img->OnDestroy();
 		}
+		m_ImageViews.clear();
+		m_Images.clear();
 		vkDeviceWaitIdle(m_Context->GetAs<VulkanContext>()->GetDevice());
 		vkDestroySwapchainKHR(m_Context->GetAs<VulkanContext>()->GetDevice(), m_Swapchain, nullptr);
 	}
@@ -70,7 +70,32 @@ namespace anv
 	void VulkanSwapchain::create_vk_swapchain()
 	{
 		VkSurfaceFormatKHR surfaceFormat = vk_util::vku_ChooseSwapSurfaceFormat(m_SupportDetails.formats);
-		VkPresentModeKHR presentMode = vk_util::vku_ChooseSwapPresentMode(m_SupportDetails.presentModes);
+
+		VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
+		bool mailboxSupported = false;
+
+		for (const auto& mode : m_SupportDetails.presentModes)
+		{
+			if (mode == VK_PRESENT_MODE_IMMEDIATE_KHR)
+			{
+				presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+				break;
+			}
+
+			if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
+				mailboxSupported = true;
+		}
+
+		if (presentMode != VK_PRESENT_MODE_IMMEDIATE_KHR && mailboxSupported)
+			presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+
+		ANV_LOG_INFO(
+			"Vulkan present mode: %s",
+			presentMode == VK_PRESENT_MODE_IMMEDIATE_KHR ? "IMMEDIATE (VSync off)" :
+			presentMode == VK_PRESENT_MODE_MAILBOX_KHR ? "MAILBOX" :
+			"FIFO (platform-required fallback)"
+		);
+
 		VkExtent2D extent = vk_util::vku_ChooseSwapExtent(
 			m_SupportDetails.capabilities,
 			m_Context->GetAs<VulkanContext>()->GetWinHandle()
@@ -84,7 +109,6 @@ namespace anv
 		VkSwapchainCreateInfoKHR createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 		createInfo.surface = m_Context->GetAs<VulkanContext>()->GetSurface();
-
 		createInfo.minImageCount = imageCount;
 		createInfo.imageFormat = surfaceFormat.format;
 		createInfo.imageColorSpace = surfaceFormat.colorSpace;
@@ -97,7 +121,7 @@ namespace anv
 			m_Context->GetAs<VulkanContext>()->GetSurface()
 		);
 
-		uint32_t queueFamilyIndices[] = { 
+		uint32_t queueFamilyIndices[] = {
 			indices.graphicsFamily.value(), indices.presentFamily.value()
 		};
 
@@ -108,8 +132,8 @@ namespace anv
 		}
 		else {
 			createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-			createInfo.queueFamilyIndexCount = 0; // Optional
-			createInfo.pQueueFamilyIndices = nullptr; // Optional
+			createInfo.queueFamilyIndexCount = 0;
+			createInfo.pQueueFamilyIndices = nullptr;
 		}
 		createInfo.preTransform = m_SupportDetails.capabilities.currentTransform;
 		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -121,17 +145,18 @@ namespace anv
 			"Failed to create Swapchain!"
 		)
 
+		m_ImageFormat = surfaceFormat.format;
+		m_Extent = extent;
+
 		m_Images.resize(imageCount);
 		_vec<VkImage> imgs(imageCount);
 
-		// Retrieve the swapchain images
 		vkGetSwapchainImagesKHR(
 			m_Context->GetAs<VulkanContext>()->GetDevice(), 
 			m_Swapchain, &imageCount, imgs.data()
 		);
 
-		// Create the image2D objects
-		for (int i = 0; i < m_Images.size(); i++)
+		for (size_t i = 0; i < m_Images.size(); i++)
 		{
 			m_Images[i] = Ref<VulkanImage2D>::Create(
 				m_Context, 
@@ -141,9 +166,6 @@ namespace anv
 				m_Extent.height
 			);
 		}
-
-		m_ImageFormat = surfaceFormat.format;
-		m_Extent = extent;
 	}
 
 	uint32_t anv::VulkanSwapchain::AcquireNextImage(VkSemaphore _imageAvailable, bool& _swapRecreate, VkFence _fence)
@@ -160,7 +182,6 @@ namespace anv
 			&imageIndex
 		);
 
-		// Simple now: treat out-of-date as "needs reset" and bail
 		if (r == VK_ERROR_OUT_OF_DATE_KHR || r == VK_SUBOPTIMAL_KHR) {
 			_swapRecreate = true;
 			return 0;
@@ -194,7 +215,6 @@ namespace anv
 
 		for (size_t i = 0; i < m_Images.size(); i++)
 		{
-			// VulkanImage2D::MakeImageView() returns Ref<ImageView>
 			m_ImageViews[i] = m_Images[i].As<VulkanImage2D>()->MakeImageView();
 		}
 	}

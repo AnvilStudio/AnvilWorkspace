@@ -40,13 +40,33 @@ extern anv::App* CreateApp(int arg_c = 0, char* arg_v[] = nullptr);
     #endif // RELEASE
 #endif
 
-//#else // Platform ?
-//int main(int arg_c, char* arg_v[])
-//{
-//    anv::App* app = CreateApp(arg_c, arg_v);
-//
-//    app->Run();
-//
-//    delete app;
-//}
-//#endif
+#ifdef PLATFORM_APPLE
+int main(int arg_c, char* arg_v[])
+{
+    std::fprintf(stderr, "MAIN: creating app\n");
+    std::fflush(stderr);
+
+    std::unique_ptr<anv::App> app(CreateApp(arg_c, arg_v));
+
+    if (!app)
+    {
+        std::fprintf(stderr, "MAIN: CreateApp returned nullptr\n");
+        return 1;
+    }
+
+    std::fprintf(stderr, "MAIN: entering Run\n");
+    std::fflush(stderr);
+
+    app->Run();
+
+    std::fprintf(stderr, "MAIN: Run returned\n");
+    std::fflush(stderr);
+
+    app.reset();
+
+    std::fprintf(stderr, "MAIN: app destroyed\n");
+    std::fflush(stderr);
+
+    return 0;
+}
+#endif

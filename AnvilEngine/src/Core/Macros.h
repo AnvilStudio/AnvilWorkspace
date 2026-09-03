@@ -7,6 +7,8 @@
 
 #pragma once
 
+#define ANV_ENGINE_VERSION "ver. dev2026.0.1"
+
 /// OS detection
 # ifdef _WIN32
 	# ifdef _WIN64
@@ -25,4 +27,22 @@
 	#endif
 # endif
 
-// TODO (Alba): Impl Apple platform detection. (Follow a similar format of windows)
+#if defined(PLATFORM_MACOS) && defined(PLATFORM_APPLE_VK)
+
+    #define ANV_API_VER "Vulkan 1.4"
+
+#elif defined(PLATFORM_MACOS)
+
+    #define ANV_API_VER "Metal"
+
+#elif defined(PLATFORM_WIN64)
+
+    #define ANV_API_VER "Vulkan 1.4"
+
+#else
+
+    #error "Unsupported platform or graphics API configuration"
+
+#endif
+
+

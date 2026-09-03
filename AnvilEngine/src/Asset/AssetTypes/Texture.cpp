@@ -1,77 +1,134 @@
 #include "Texture.h"
 #include "Util/Serialize/Serializer.h"
+#include "Render/RenderAPI.h"
+
+#if defined(PLATFORM_APPLE) && !defined(PLATFORM_APPLE_VK)
+#include "Render/Platform/Metal/MtlTexture.h"
+#endif
+
+#if defined(PLATFORM_WIN64) || defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE_VK)
+#include "Render/Platform/Vulkan/VulkanTexture.h"
+#endif
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 
 namespace anv
 {
+    Texture::Texture(const std::filesystem::path& path)
+        : Asset(path)
+    {
+        m_Type = "Texture";
+        Load();
+    }
 
-	Texture::Texture(const std::filesystem::path& _path)
-		: Asset(_path)
-	{
-		Load();
-	}
+    Texture::Texture(Deserialized& deserialized)
+        : Asset(deserialized)
+    {
+        Load();
+    }
 
-	Texture::Texture(Deserialized& _dser)
-		: Asset(_dser.resource)
-	{
-		Load();
-	}
+    Texture::Texture(const std::string& internalName)
+        : Asset(internalName)
+    {
+        m_Type = "Texture";
+    }
 
-	Texture::~Texture()
-	{
-		if (m_Data)
-			stbi_image_free(m_Data);
-	}
+    Texture::~Texture()
+    {
+        Unload();
+    }
 
-	void Texture::Load()
-	{
-		stbi_set_flip_vertically_on_load(true);
-		m_Data = stbi_load(m_ResourcePath.string().c_str(), 
-			&m_Width, &m_Height, &m_Channels, 0);
+    Ref<Texture> Texture::Create(const std::filesystem::path& path)
+    {
+        switch (RenderAPI::GetAPI())
+        {
+        case GraphicsAPI::MTL:
+#if defined(PLATFORM_APPLE) && !defined(PLATFORM_APPLE_VK)
+            return Ref<MetalTexture>::Create(path);
+#else
+            break;
+#endif
+        case GraphicsAPI::VK:
+#if defined(PLATFORM_WIN64) || defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE_VK)
+            return Ref<VulkanTexture>::Create(path);
+#else
+            break;
+#endif
+        default:
+            break;
+        }
 
-		if (!m_Data)
-		{
-			const char* failure_reason = stbi_failure_reason();
-			ANV_LOG_ERROR("Failed to load texture: %s\nReason: %s", m_ResourcePath.c_str(), failure_reason);
-		}
+        ANV_LOG_ERROR("Texture backend is unavailable for the active graphics API");
+        return nullptr;
+    }
 
-		ANV_LOG_DEBUG("Loaded Text: " + m_Name)
-	}
-	
-	void Texture::Unload()
-	{
-		if (m_Data)
-			stbi_image_free(m_Data);
-	}
+    Ref<Texture> Texture::Create(Deserialized& deserialized)
+    {
+        switch (RenderAPI::GetAPI())
+        {
+        case GraphicsAPI::MTL:
+#if defined(PLATFORM_APPLE) && !defined(PLATFORM_APPLE_VK)
+            return Ref<MetalTexture>::Create(deserialized).As<Texture>();
+#else
+            break;
+#endif
+        case GraphicsAPI::VK:
+#if defined(PLATFORM_WIN64) || defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE_VK)
+            return Ref<VulkanTexture>::Create(deserialized).As<Texture>();
+#else
+            break;
+#endif
+        default:
+            break;
+        }
 
-	int Texture::Width()
-	{
-		return m_Width;
-	}
+        ANV_LOG_ERROR("Texture backend is unavailable for the active graphics API");
+        return nullptr;
+    }
 
-	int Texture::Height()
-	{
-		return m_Height;
-	}
+    void Texture::Load()
+    {
+        Unload();
 
-	int Texture::Channels()
-	{
-		return m_Channels;
-	}
+        stbi_set_flip_vertically_on_load(true);
+        m_Data = stbi_load(
+            m_ResourcePath.string().c_str(),
+            &m_Width,
+            &m_Height,
+            &m_Channels,
+            STBI_rgb_alpha);
 
-	unsigned char* Texture::Data()
-	{
-		return m_Data;
-	}
+        if (!m_Data)
+        {
+            ANV_LOG_ERROR(
+                "Failed to load texture: %s\nReason: %s",
+                m_ResourcePath.string().c_str(),
+                stbi_failure_reason());
+            return;
+        }
 
-	void Texture::OnSave(Serializer& _ser)
-	{
-		_ser.Object("Spec", [&] {
-			_ser.Field("Type", "Texture");
-			_ser.Field("Width", m_Width);
-			_ser.Field("Height", m_Height);
-			_ser.Field("Channels", m_Channels);
-		});
-	}
+        m_Channels = 4;
+        ANV_LOG_DEBUG("Loaded texture: " + m_Name)
+    }
+
+    void Texture::Unload()
+    {
+        if (m_Data)
+        {
+            stbi_image_free(m_Data);
+            m_Data = nullptr;
+        }
+    }
+
+    void Texture::OnSave(Serializer& serializer)
+    {
+        serializer.Object("Spec", [&]
+        {
+            serializer.Field("Type", "Texture");
+            serializer.Field("Width", m_Width);
+            serializer.Field("Height", m_Height);
+            serializer.Field("Channels", m_Channels);
+        });
+    }
 }

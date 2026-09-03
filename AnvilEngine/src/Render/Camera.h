@@ -1,19 +1,17 @@
 #pragma once
+
+#include "../Scene/Components/Transform2d.h"
+
 #include <glm/glm.hpp>
-#include "../Scene/Component.h"
 
 namespace anv
 {
-
-    // class Camera3D;
-
-    // CameraUBO is used to store camera matrices for rendering
-    // It contains the model, view, and projection matrices
+    // CameraUBO is used to store camera matrices for rendering.
     struct CameraUBO
     {
-        glm::mat4 View{ 1.0f };
-        glm::mat4 Projection{ 1.0f };
-        glm::mat4 ViewProjection{ 1.0f };
+        glm::mat4 View{1.0f};
+        glm::mat4 Projection{1.0f};
+        glm::mat4 ViewProjection{1.0f};
     };
 
     enum class CameraProjection
@@ -21,7 +19,7 @@ namespace anv
         Perspective,
         Orthographic
     };
-    
+
     class Camera2D
     {
     public:
@@ -29,19 +27,22 @@ namespace anv
         ~Camera2D() = default;
 
         void Update(float _deltaTime);
-        
-        
 
         CameraUBO& GetCameraUBO() { return m_CameraUBO; }
         Component::Transform2d& GetTransform() { return m_Transform; }
         float GetAspectRatio() { return m_AspectRatio; }
         float GetZoom() { return m_ZoomLevel; }
+        glm::mat4 GetView() {return m_CameraUBO.View;};
+        glm::mat4 GetProjection() { return m_CameraUBO.Projection; }
+
+        // will always return true for a 2d camera
+        bool IsOrtho() {return true;}
 
         void SetTransform(Component::Transform2d _transform) { m_Transform = _transform; }
         void SetZoom(float _zoom);
-        void SetProjection(float left, float right, float bottom, float top);
+        void SetProjection(float _left, float _right, float _bottom, float _top);
         void SetAspectRatio(float _ratio);
-        void Move(glm::vec2 _dir);
+        void Move(glm::vec2 _direction);
 
     private:
         void calc_view();

@@ -1,100 +1,88 @@
+from __future__ import annotations
+
+import shutil
 from pathlib import Path
-import sys
 
-def write(path: Path, text: str):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
 
-def create_project(name: str, root: str):
-    project_dir = Path(root).resolve()
-    project_dir = project_dir / name # Create a subdirectory for the project
-    assets = project_dir / "Assets"
-    engine = assets / "com.anvstu.engine"
+PROJECT_CREATOR_DIR = Path(__file__).resolve().parent
+WORKSPACE_ROOT = PROJECT_CREATOR_DIR.parent
+TEMPLATE_DIR = PROJECT_CREATOR_DIR / "Template"
+FONT_SOURCE = PROJECT_CREATOR_DIR / "JetBrainsMono-Bold.ttf"
+ICONS_SOURCE = WORKSPACE_ROOT / "AnvilEngine" / "Resources" / "Icons"
 
-    dirs = [
-        assets / "Scenes",
-        engine / "ShaderLib",
-        engine / "Settings"
-    ]
-
-    for d in dirs:
-        d.mkdir(parents=True, exist_ok=True)
-
-    write(project_dir / f"{name}.anv", f"""[Settings]
-Description = 'Anvil Project'
-ProjDir = '{project_dir.as_posix()}'
-ProjName = '{name}'
-Version = '0.0.0'
-
-[Settings.StartScene]
-Name = 'Default'
-Path = '@Assets/Scenes/Default.ascn'
-
-[Settings.WindowInfo]
-Height = 720
-Width = 1280
-
-[Settings.Directories]
-Assets = 'Assets'
-EngineRes = '@Assets/com.anvstu.engine'
-Cache = '@Res/Cache'
-AssetMeta = '@Res/AssetMeta'
-Settings = '@Res/Settings'
-""")
-
-    write(assets / "Scenes" / "Default.ascn", """[Scene]
-Context = '2D'
-Name = 'Default'
-Path = '@Assets/Scenes/Default.ascn'
-""")
-
-    write(engine / "ShaderLib" / "sprite.glsl", """#type vert
-#version 450
-
-layout(push_constant)
-uniform PushData
-{
-    mat4 model;
-    vec4 color;
-} push_data;
-
-layout(set = 0, binding = 0) uniform Camera
-{
-    mat4 View;
-    mat4 Projection;
-    mat4 ViewProjection;
-} camera;
-
-layout(location = 0) in vec2 inPosition;
-layout(location = 1) in vec4 inColor;
-
-layout(location = 0) out vec4 fragColor;
-
-void main()
-{
-	gl_Position = camera.ViewProjection * 
-    push_data.model * 
-    vec4(inPosition, 0.0, 1.0);
-
-	fragColor = push_data.color;
+PROJECT_FILE_TEMPLATE = "Project.anv"
+TEXT_TEMPLATE_SUFFIXES = {
+    ".anv",
+    ".ascn",
+    ".glsl",
+    ".py",
+    ".toml",
+    ".json",
+    ".txt",
+    ".md",
 }
- 
-#type frag
-#version 450
 
-layout(location = 0) out vec4 outColor;
-layout(location = 0) in vec4 fragColor;
 
-void main() {
-    outColor = fragColor;
-}
-""")
+def _replace_template_tokens(
+    project_dir: Path,
+    project_name: str,
+) -> None:
+    replacements = {
+        "{{PROJECT_NAME}}": project_name,
+        "{{PROJECT_DIR}}": project_dir.as_posix(),
+    }
 
-    print(f"Created Anvil project: {project_dir}")
+    for path in project_dir.rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in TEXT_TEMPLATE_SUFFIXES:
+            continue
 
-if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python create_project.py <ProjectName> <ProjectDir>")
-        sys.exit(1)
+        content = path.read_text(encoding="utf-8")
+        for token, value in replacements.items():
+            content = content.replace(token, value)
+        path.write_text(content, encoding="utf-8")
 
-    create_project(sys.argv[1], sys.argv[2])
+
+def create_project_from_template(
+    project_path: Path,
+    project_name: str,
+) -> Path:
+    project_dir = Path(project_path).expanduser().resolve()
+
+    if project_dir.exists():
+        raise FileExistsError(f"Project directory already exists: {project_dir}")
+
+    if not TEMPLATE_DIR.is_dir():
+        raise FileNotFoundError(f"Project template was not found: {TEMPLATE_DIR}")
+
+    shutil.copytree(TEMPLATE_DIR, project_dir)
+
+    template_project_file = project_dir / PROJECT_FILE_TEMPLATE
+    project_file = project_dir / f"{project_name}.anv"
+
+    if not template_project_file.is_file():
+        shutil.rmtree(project_dir, ignore_errors=True)
+        raise FileNotFoundError(
+            f"Project file template was not found: {template_project_file}"
+        )
+
+    template_project_file.rename(project_file)
+
+    fonts_dir = project_dir / "Assets" / "Fonts"
+    fonts_dir.mkdir(parents=True, exist_ok=True)
+    if FONT_SOURCE.is_file():
+        shutil.copy2(FONT_SOURCE, fonts_dir / FONT_SOURCE.name)
+    else:
+        shutil.rmtree(project_dir, ignore_errors=True)
+        raise FileNotFoundError(f"Default font was not found: {FONT_SOURCE}")
+
+    icons_destination = (
+        project_dir / "Assets" / "com.anvstu.engine" / "Icons"
+    )
+    if ICONS_SOURCE.is_dir():
+        shutil.copytree(ICONS_SOURCE, icons_destination, dirs_exist_ok=True)
+    else:
+        shutil.rmtree(project_dir, ignore_errors=True)
+        raise FileNotFoundError(f"Engine icons were not found: {ICONS_SOURCE}")
+
+    _replace_template_tokens(project_dir, project_name)
+    return project_file

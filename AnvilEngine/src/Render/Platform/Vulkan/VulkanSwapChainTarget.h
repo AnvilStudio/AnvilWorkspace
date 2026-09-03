@@ -20,6 +20,7 @@ namespace anv
 
         uint32_t AcquireNextImage(VkSemaphore imageAvailable, bool& recreate);
         void Present(VkQueue presentQueue, VkSemaphore renderFinished, bool& recreate);
+        void ReleaseFramebuffers();
 
        RenderTargetType GetType() override { return m_Type; }
        uint32_t GetWidth() override { return m_Width; }

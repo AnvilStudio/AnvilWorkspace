@@ -1,0 +1,4 @@
+import _anvil
+
+def lerp(a, b, t):
+    return a + (b - a) * t

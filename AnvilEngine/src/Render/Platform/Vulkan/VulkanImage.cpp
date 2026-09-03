@@ -63,15 +63,28 @@ namespace anv
 	}
 
 	VulkanImage2D::VulkanImage2D(_shared<Context> _ctx, VkImage _img, Format _fmt, uint32_t _width, uint32_t _height)
-		: Image2D(_ctx, _width, _height), m_Image(_img), m_Format(vk_util::vku_ToImageFormat(_fmt))
+		: Image2D(_ctx, _width, _height), m_Image(_img), m_Format(vk_util::vku_ToImageFormat(_fmt)), m_OwnsImage(false)
 	{
-
 	}
 
 	VulkanImage2D::~VulkanImage2D()
 	{
-		vkDestroyImage(m_Context->GetAs<VulkanContext>()->GetDevice(), m_Image, nullptr);
-		vkFreeMemory(m_Context->GetAs<VulkanContext>()->GetDevice(), m_Memory, nullptr);
+		if (!m_OwnsImage)
+			return;
+
+		auto device = m_Context->GetAs<VulkanContext>()->GetDevice();
+
+		if (m_Image != VK_NULL_HANDLE)
+		{
+			vkDestroyImage(device, m_Image, nullptr);
+			m_Image = VK_NULL_HANDLE;
+		}
+
+		if (m_Memory != VK_NULL_HANDLE)
+		{
+			vkFreeMemory(device, m_Memory, nullptr);
+			m_Memory = VK_NULL_HANDLE;
+		}
 	}
 
 	Ref<ImageView> VulkanImage2D::MakeImageView()

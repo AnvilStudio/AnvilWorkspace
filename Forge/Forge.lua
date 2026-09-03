@@ -25,40 +25,86 @@ project "Forge"
         "%{ROOTDIR}AnvilEngine/vendor/glm", -- TODO: Remove
     }
 
-    libdirs 
-    {
-        "%{ROOTDIR}AnvilEngine/" .. outdir .. "/AnvilEngine"
-    }
-
     links
     {
-        "AnvilEngine"
+        "AnvilEngine",
+        "Box2D"
+    }
+
+    postbuildcommands
+    {
+        '{MKDIR} "%{cfg.targetdir}/Anvil"',
+        '{COPYDIR} "%{wks.location}/AnvilEngine/Resources" "%{cfg.targetdir}/Anvil"'
     }
 
 filter "system:macosx"
+    architecture "arm64"
+
+    local pythonLinkFlags = os.outputof("python3-config --embed --ldflags")
+
+    defines
+    {
+        "PLATFORM_APPLE",
+        "PLATFORM_MACOS"
+    }
+
     libdirs
     {
-        "%{ROOTDIR}AnvilEngine/vendor/GLFW/" .. outdir .. "/GLFW",
-        "%{VULKAN_LIB}"
+        "%{ROOTDIR}AnvilEngine/bin/" .. outdir .. "/AnvilEngine",
+        "%{ROOTDIR}AnvilEngine/vendor/GLFW/bin/" .. outdir .. "/GLFW",
+        "%{ROOTDIR}AnvilEngine/vendor/Box2d/bin/" .. outdir .. "/Box2D",
     }
 
     links
     {
         "GLFW",
-        "vulkan",
-        "shaderc_combined",
-
-        -- Required by MoltenVK
         "Cocoa.framework",
         "QuartzCore.framework",
         "IOKit.framework",
-        "Metal.framework",      
+        "CoreVideo.framework",
         "CoreFoundation.framework"
     }
 
-    postbuildcommands {
-        "install_name_tool -add_rpath " .. "\"%{VULKAN_LIB}\"" .. " %{cfg.targetdir}/%{cfg.buildtarget.name}"
-    }
+    if MACOS_RENDERER == "vulkan" then
+        defines
+        {
+            "ANV_RENDERER_VULKAN",
+            "PLATFORM_APPLE_VK"
+        }
+        includedirs { "%{VULKAN_SDK}" }
+        libdirs { "%{VULKAN_LIB}" }
+
+        links
+        {
+            "vulkan",
+            "shaderc_combined"
+        }
+
+        -- The LunarG Vulkan loader is installed with an @rpath install name.
+        -- Add the selected SDK's lib directory so dyld can resolve
+        -- libvulkan.1.dylib when Forge is launched outside the SDK shell.
+        linkoptions
+        {
+            "-Wl,-rpath," .. VULKAN_LIB
+        }
+    else
+        defines { "ANV_RENDERER_METAL" }
+
+        links
+        {
+            "Metal.framework",
+            "MetalKit.framework"
+        }
+
+        buildoptions { "-fobjc-arc" }
+    end
+
+    if pythonLinkFlags ~= nil and pythonLinkFlags ~= "" then
+        linkoptions
+        {
+            pythonLinkFlags
+        }
+    end
 
 filter "system:windows"
     libdirs

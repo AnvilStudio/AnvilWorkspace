@@ -2,6 +2,7 @@
 
 #include "../UMacros.h"
 #include "../../Core/Reference.h"
+#include "../../Core/Macros.h"
 #include "../Serialize/Serializer.h"
 #include "File.h"
 
@@ -20,9 +21,13 @@
 
 namespace anv
 {
+    // needed to find engine resources like the python package and shaders
+    static std::filesystem::path s_ExecDir = std::filesystem::path();
+    
     class FileSystem
     {
     public:
+
         using _ForEachFn = std::function<void(Ref<File>)>;
 
         // Root directory for this sandbox FS (will be created if missing)
@@ -34,6 +39,9 @@ namespace anv
 
         // Sets sandbox root. Resets working dir to root and clears dir stack.
         bool SetRoot(const std::string & _newRoot);
+
+        // Platform specific, retrieves the current executables path
+        std::filesystem::path GetExecDir();
 
         // Working-directory helpers (logical, NOT OS CWD)
         std::string GetCwd() const;
@@ -56,7 +64,7 @@ namespace anv
 
         void ForEach(const std::filesystem::path _dirRelOrAbs, _ForEachFn _Fn);
 
-        // If you don’t want a background thread, you can stop it and call this manually.
+        // If you donï¿½t want a background thread, you can stop it and call this manually.
         void PumpDeletes();
 
         std::filesystem::path ResolveKey(const std::string& _key);

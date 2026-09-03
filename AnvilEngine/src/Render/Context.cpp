@@ -1,7 +1,13 @@
 #include "Context.h"
 #include "Core/Window.h"
 #include "Renderer.h"
-#include "Render/Platform/Vulkan/VulkanContext.h"
+
+#if defined(PLATFORM_WIN64) || defined(PLATFORM_APPLE_VK)
+ #include "Render/Platform/Vulkan/VulkanContext.h"
+#endif
+#if defined(PLATFORM_APPLE) && !defined(PLATFORM_APPLE_VK)
+ #include "Render/Platform/Metal/MtlContext.h"
+#endif
 #include "RenderAPI.h"
 #include <GLFW/glfw3.h>
 
@@ -11,13 +17,26 @@ namespace anv {
 		switch (RenderAPI::GetAPI())
 		{
 		case GraphicsAPI::VK:
-			return std::make_shared<VulkanContext>(_win);
+			#if defined(PLATFORM_WIN64) || defined(PLATFORM_APPLE_VK)
+				return std::make_shared<VulkanContext>(_win);
+			#else
+				ANV_LOG_FATAL("Vulkan was set as the Graphics API, but this machine is not supported!")
+				return nullptr;
+			#endif
 			break;
+
 		case GraphicsAPI::MTL:
-			ANV_LOG_ERROR("Graphics API not supported! Using Vulkan")
+			#if defined(PLATFORM_APPLE) && !defined(PLATFORM_APPLE_VK)
+				return std::make_shared<MetalContext>(_win);
+			#else
+				ANV_LOG_FATAL("Metal was set as the Graphics API, but this machine is not supported!")
+				return nullptr;
+			#endif
 			break;
+
 		default:
-			ANV_LOG_ERROR("Graphics API not supported! Using Vulkan")
+			ANV_LOG_FATAL("No Graphics API set or API is unknown!")
+			return nullptr;
 			break;
 		}
     }

@@ -1,11 +1,22 @@
 #pragma once
 
-#include "../src/Core/App.h"
+
 #include "../vendor/imgui/imgui.h"
 #include "../vendor/glm/glm/glm.hpp"
+#include "../vendor/ImGuizmo/src/ImGuizmo.h"
+
+#include "../src/Core/App.h"
 #include "../src/Render/Renderer.h"
 #include "../src/Render/RenderTarget.h"
 #include "../src/Render/Camera.h"
+#include "../src/Render/CameraController.h"
+#include "../src/Asset/AssetManager.h"
+#include "../src/Asset/AssetTypes/Texture.h"
 #include "../src/Scene/Component.h"
 #include "../src/Scene/Scene.h"
+#include "../src/Scripting/PythonScriptEngine.h"
 #include "../vendor/imgui/misc/cpp/imgui_stdlib.h"
+#include "../src/Util/AnvLog/AnvLog.h"
+#include "../src/Util/Time/Time.h"
+
+#include "../vendor/ImGuiTextEdit/TextEditor.h"

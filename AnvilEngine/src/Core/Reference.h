@@ -1,228 +1,297 @@
 #pragma once
-/**
- * @file Reference.h
- * @brief Smart reference counting utility for managing shared object lifetimes.
- *
- * This file provides two classes, `RefCounter` and `Ref<T>`, for implementing
- * reference counting in C++ to manage object lifetimes dynamically and efficiently.
- *
- * @namespace anv
- * The `anv` namespace encapsulates the reference counting utilities.
- *
- * @details
- * - `RefCounter`: A base class that provides atomic reference counting methods.
- * - `Ref<T>`: A templated smart pointer class that manages objects derived from `RefCounter`.
- *   It ensures automatic memory management with reference counting.
- * - Supports copy, move, and conversion semantics.
- * - Thread-safe via `std::atomic` for managing reference counts.
- *
- * Usage:
- * - Any class that needs to be reference-counted should derive from `RefCounter`.
- * - Use `Ref<T>` for managing instances of such classes.
- *
- * Key Features:
- * - Automatic memory management using reference counting.
- * - Safe handling of `nullptr`.
- * - Conversion between compatible types.
- * - Supports `operator->`, `operator*`, and comparison operators.
- * - Thread-safe reference count management.
- */
-#include "../Util/UMacros.h"
-#include <memory>
 
-namespace anv{
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <type_traits>
+#include <utility>
 
-	class RefCounter {
-	public:
-		virtual ~RefCounter() = default;
+namespace anv
+{
+    /**
+     * @brief Base class for objects managed by Ref.
+     *
+     * RefCounter implements intrusive reference counting: the reference count is
+     * stored inside the managed object instead of in a separate control block.
+     * Classes owned by Ref<T> must derive from RefCounter.
+     *
+     * The counter is atomic so references may be copied between threads. This
+     * does not make the managed object itself thread-safe.
+     */
+    class RefCounter
+    {
+    public:
+        virtual ~RefCounter() = default;
 
-		uint32_t IncRef() const {
-			return m_RefCount.fetch_add(1, std::memory_order_acq_rel) + 1;
-		}
-		uint32_t DecRef() const {
-			return m_RefCount.fetch_sub(1, std::memory_order_acq_rel) - 1;
-		}
-		uint32_t GetRefCount() const { return m_RefCount.load(std::memory_order_acquire); }
+        /** @return The reference count after incrementing it. */
+        std::uint32_t IncRef() const
+        {
+            return m_RefCount.fetch_add(1, std::memory_order_acq_rel) + 1;
+        }
 
-	private:
-		mutable std::atomic<uint32_t> m_RefCount{0};
-	};
+        /** @return The reference count after decrementing it. */
+        std::uint32_t DecRef() const
+        {
+            return m_RefCount.fetch_sub(1, std::memory_order_acq_rel) - 1;
+        }
 
-	template<typename T>
-	class Ref
-	{
-	public:
-		Ref()
-			: m_Instance(nullptr)
-		{
-		}
+        /** @return The object's current reference count. */
+        std::uint32_t GetRefCount() const
+        {
+            return m_RefCount.load(std::memory_order_acquire);
+        }
 
-		Ref(std::nullptr_t n)
-			: m_Instance(nullptr)
-		{
-		}
+    private:
+        mutable std::atomic<std::uint32_t> m_RefCount{0};
+    };
 
-		Ref(T* instance)
-			: m_Instance(instance)
-		{
-			static_assert(std::is_base_of<RefCounter, T>::value, "Class is not RefCounted!");
+    /**
+     * @brief Intrusive smart pointer for RefCounter-derived objects.
+     *
+     * Ref owns one intrusive reference to its object. Copying a Ref increments
+     * the object's counter, moving transfers ownership, and destruction releases
+     * the reference. The object is deleted when the final Ref is released.
+     *
+     * @tparam T RefCounter-derived object type.
+     */
+    template<typename T>
+    class Ref
+    {
+    public:
+        Ref() = default;
+        Ref(std::nullptr_t) {}
 
-			IncRef();
-		}
+        /**
+         * @brief Takes shared ownership of an intrusive reference-counted object.
+         * @param _instance Object to retain. May be null.
+         */
+        Ref(T* _instance)
+            : m_Instance(_instance)
+        {
+            static_assert(std::is_base_of_v<RefCounter, T>,
+                          "Ref<T> requires T to derive from RefCounter");
+            inc_ref();
+        }
 
-		template<typename T2>
-		Ref(const Ref<T2>& other)
-		{
-			m_Instance = (T*)other.m_Instance;
-			IncRef();
-		}
+        Ref(const Ref& _other)
+            : m_Instance(_other.m_Instance)
+        {
+            inc_ref();
+        }
 
-		template<typename T2>
-		Ref(Ref<T2>&& other)
-		{
-			m_Instance = (T*)other.m_Instance;
-			other.m_Instance = nullptr;
-		}
+        Ref(Ref&& _other) noexcept
+            : m_Instance(_other.m_Instance)
+        {
+            _other.m_Instance = nullptr;
+        }
 
-		static Ref<T> CopyWithoutIncrement(const Ref<T>& other)
-		{
-			Ref<T> result;
-			result.m_Instance = other.m_Instance; // no IncRef
-			return result;
-		}
+        template<typename T2>
+        Ref(const Ref<T2>& _other)
+            : m_Instance(static_cast<T*>(_other.m_Instance))
+        {
+            static_assert(std::is_convertible_v<T2*, T*>,
+                          "Ref conversion requires compatible pointer types");
+            inc_ref();
+        }
 
-		~Ref()
-		{
-			DecRef();
-		}
+        template<typename T2>
+        Ref(Ref<T2>&& _other) noexcept
+            : m_Instance(static_cast<T*>(_other.m_Instance))
+        {
+            static_assert(std::is_convertible_v<T2*, T*>,
+                          "Ref conversion requires compatible pointer types");
+            _other.m_Instance = nullptr;
+        }
 
-		Ref(const Ref<T>& other)
-			: m_Instance(other.m_Instance)
-		{
-			IncRef();
-		}
+        /**
+         * @brief Creates a non-retaining alias to an existing Ref.
+         *
+         * @warning This helper intentionally does not increment the object's
+         * reference count. The returned Ref must never outlive an owning Ref.
+         */
+        static Ref CopyWithoutIncrement(const Ref& _other)
+        {
+            Ref result;
+            result.m_Instance = _other.m_Instance;
+            return result;
+        }
 
-		Ref& operator=(std::nullptr_t)
-		{
-			DecRef();
-			m_Instance = nullptr;
-			return *this;
-		}
+        ~Ref()
+        {
+            dec_ref();
+        }
 
-		Ref& operator=(const Ref<T>& other)
-		{
-			if (this == &other)
-				return *this;
+        Ref& operator=(std::nullptr_t)
+        {
+            dec_ref();
+            m_Instance = nullptr;
+            return *this;
+        }
 
-			other.IncRef();
-			DecRef();
+        Ref& operator=(const Ref& _other)
+        {
+            if (this == &_other)
+                return *this;
 
-			m_Instance = other.m_Instance;
-			return *this;
-		}
+            _other.inc_ref();
+            dec_ref();
+            m_Instance = _other.m_Instance;
+            return *this;
+        }
 
-		template<typename T2>
-		Ref& operator=(const Ref<T2>& other)
-		{
-			other.IncRef();
-			DecRef();
+        Ref& operator=(Ref&& _other) noexcept
+        {
+            if (this == &_other)
+                return *this;
 
-			m_Instance = other.m_Instance;
-			return *this;
-		}
+            dec_ref();
+            m_Instance = _other.m_Instance;
+            _other.m_Instance = nullptr;
+            return *this;
+        }
 
-		template<typename T2>
-		Ref& operator=(Ref<T2>&& other)
-		{
-			DecRef();
+        template<typename T2>
+        Ref& operator=(const Ref<T2>& _other)
+        {
+            static_assert(std::is_convertible_v<T2*, T*>,
+                          "Ref conversion requires compatible pointer types");
 
-			m_Instance = other.m_Instance;
-			other.m_Instance = nullptr;
-			return *this;
-		}
+            _other.inc_ref();
+            dec_ref();
+            m_Instance = static_cast<T*>(_other.m_Instance);
+            return *this;
+        }
 
-		operator bool() { return m_Instance != nullptr; }
-		operator bool() const { return m_Instance != nullptr; }
+        template<typename T2>
+        Ref& operator=(Ref<T2>&& _other) noexcept
+        {
+            static_assert(std::is_convertible_v<T2*, T*>,
+                          "Ref conversion requires compatible pointer types");
 
-		T* operator->() { return m_Instance; }
-		const T* operator->() const { return m_Instance; }
+            dec_ref();
+            m_Instance = static_cast<T*>(_other.m_Instance);
+            _other.m_Instance = nullptr;
+            return *this;
+        }
 
-		T& operator*() { return *m_Instance; }
-		const T& operator*() const { return *m_Instance; }
+        operator bool() const { return m_Instance != nullptr; }
 
-		T* Raw() { return  m_Instance; }
-		const T* Raw() const { return  m_Instance; }
+        T* operator->() { return m_Instance; }
+        const T* operator->() const { return m_Instance; }
 
-		void Reset(T* instance = nullptr)
-		{
-			DecRef();
-			m_Instance = instance;
-			IncRef();
-		}
+        T& operator*() { return *m_Instance; }
+        const T& operator*() const { return *m_Instance; }
 
-		template<typename T2>
-		Ref<T2> As() const
-		{
-			return Ref<T2>(*this);
-		}
+        T* Raw() { return m_Instance; }
+        const T* Raw() const { return m_Instance; }
 
-		template<typename T2>
-		Ref<T2> Cast() const
-		{
-			static_assert(std::is_base_of_v<RefCounter, T2>);
-			if (!m_Instance) return nullptr;
+        /**
+         * @brief Replaces the managed object.
+         * @param _instance New object to retain. May be null.
+         */
+        void Reset(T* _instance = nullptr)
+        {
+            if (m_Instance == _instance)
+                return;
 
-			T2* p = dynamic_cast<T2*>(m_Instance);
-			return p ? Ref<T2>(p) : Ref<T2>(nullptr);
-		}
+            dec_ref();
+            m_Instance = _instance;
+            inc_ref();
+        }
 
-		template<typename... Args>
-		static Ref<T> Create(Args&&... args)
-		{
-			return Ref<T>(new T(std::forward<Args>(args)...));
-		}
+        /**
+         * @brief Converts this reference to a related reference type.
+         *
+         * Upcasts are resolved at compile time. Downcasts between polymorphic
+         * related types are checked at runtime and return a null Ref on failure.
+         */
+        template<typename T2>
+        Ref<T2> As() const
+        {
+            static_assert(std::is_base_of_v<RefCounter, T2>,
+                          "Ref::As requires a RefCounter-derived target type");
 
-		bool operator==(const Ref<T>& other) const
-		{
-			return m_Instance == other.m_Instance;
-		}
+            if (!m_Instance)
+                return nullptr;
 
-		bool operator!=(const Ref<T>& other) const
-		{
-			return !(*this == other);
-		}
+            if constexpr (std::is_convertible_v<T*, T2*>)
+            {
+                return Ref<T2>(static_cast<T2*>(m_Instance));
+            }
+            else
+            {
+                static_assert(std::is_polymorphic_v<T>,
+                              "Ref::As downcasts require a polymorphic source type");
+                T2* castInstance = dynamic_cast<T2*>(m_Instance);
+                return castInstance ? Ref<T2>(castInstance) : Ref<T2>(nullptr);
+            }
+        }
 
-		bool EqualsObject(const Ref<T>& other)
-		{
-			if (!m_Instance || !other.m_Instance)
-				return false;
+        /** @brief Performs a runtime-checked polymorphic cast. */
+        template<typename T2>
+        Ref<T2> Cast() const
+        {
+            static_assert(std::is_base_of_v<RefCounter, T2>);
 
-			return *m_Instance == *other.m_Instance;
-		}
-	private:
-		void IncRef() const
-		{
-			if (m_Instance)
-			{
-				m_Instance->IncRef();
-			}
-		}
+            if (!m_Instance)
+                return nullptr;
 
-		void DecRef() const
-		{
-			if (m_Instance) {
-				// if refcount becomes zero after this call, delete
-				if (m_Instance->DecRef() == 0) {
-					// DO NOT LOG HERE
-					auto* p = m_Instance;
-					m_Instance = nullptr; // this Ref no longer owns it
-					delete p;
-				}
-			}
-		}
+            T2* castInstance = dynamic_cast<T2*>(m_Instance);
+            return castInstance ? Ref<T2>(castInstance) : Ref<T2>(nullptr);
+        }
 
-		template<class T2>
-		friend class Ref;
-		mutable T* m_Instance;
-	};
+        /** @brief Constructs a reference-counted object and returns its first owner. */
+        template<typename... Args>
+        static Ref Create(Args&&... _args)
+        {
+            return Ref(new T(std::forward<Args>(_args)...));
+        }
+
+        bool operator==(const Ref& _other) const
+        {
+            return m_Instance == _other.m_Instance;
+        }
+
+        bool operator!=(const Ref& _other) const
+        {
+            return !(*this == _other);
+        }
+
+        /**
+         * @brief Compares the values of two managed objects.
+         * @return False when either reference is null; otherwise the result of T::operator==.
+         */
+        bool EqualsObject(const Ref& _other) const
+        {
+            if (!m_Instance || !_other.m_Instance)
+                return false;
+
+            return *m_Instance == *_other.m_Instance;
+        }
+
+    private:
+        void inc_ref() const
+        {
+            if (m_Instance)
+                m_Instance->IncRef();
+        }
+
+        void dec_ref() const
+        {
+            if (!m_Instance)
+                return;
+
+            if (m_Instance->DecRef() == 0)
+            {
+                T* instance = m_Instance;
+                m_Instance = nullptr;
+                delete instance;
+            }
+        }
+
+        template<class T2>
+        friend class Ref;
+
+        mutable T* m_Instance = nullptr;
+    };
 }
