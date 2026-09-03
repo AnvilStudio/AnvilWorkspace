@@ -67,21 +67,12 @@ void GameViewport::Draw()
 
     if (validSize && m_GameViewportTarget && sceneCamera)
     {
-#ifdef PLATFORM_MACOS
         anv::Renderer2D::DrawScene(m_GameViewportTarget, sceneCamera);
         ImGui::Image(
             m_GameViewportTarget->GetImGuiTextureID(),
             viewportSize,
             ImVec2(1.0f, 0.0f),
             ImVec2(0.0f, 1.0f));
-#elif defined(PLATFORM_MACOS_VK) || defined(PLATFORM_WIN64)
-        anv::Renderer2D::DrawScene(m_GameViewportTarget, sceneCamera);
-        ImGui::Image(
-            m_GameViewportTarget->GetImGuiTextureID(),
-            viewportSize,
-            ImVec2(1.0f, 0.0f),
-            ImVec2(0.0f, 1.0f));
-#endif
     }
     else if (validSize && !sceneCamera)
     {
