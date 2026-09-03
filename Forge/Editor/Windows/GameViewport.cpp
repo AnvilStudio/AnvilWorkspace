@@ -39,12 +39,12 @@ void GameViewport::Draw()
     const ImVec2 framebufferScale = ImGui::GetIO().DisplayFramebufferScale;
 
     const uint32_t targetWidth = validSize
-        ? static_cast<uint32_t>(viewportSize.x * framebufferScale.x)
-        : 0;
+                                     ? static_cast<uint32_t>(viewportSize.x * framebufferScale.x)
+                                     : 0;
 
     const uint32_t targetHeight = validSize
-        ? static_cast<uint32_t>(viewportSize.y * framebufferScale.y)
-        : 0;
+                                      ? static_cast<uint32_t>(viewportSize.y * framebufferScale.y)
+                                      : 0;
 
     const bool sizeChanged =
         validSize && targetWidth > 0 && targetHeight > 0 &&
@@ -67,16 +67,25 @@ void GameViewport::Draw()
 
     if (validSize && m_GameViewportTarget && sceneCamera)
     {
+#ifdef PLATFORM_MACOS
         anv::Renderer2D::DrawScene(m_GameViewportTarget, sceneCamera);
         ImGui::Image(
             m_GameViewportTarget->GetImGuiTextureID(),
             viewportSize,
-            ImVec2(0.0f, 1.0f),
-            ImVec2(1.0f, 0.0f));
+            ImVec2(1.0f, 0.0f),
+            ImVec2(0.0f, 1.0f));
+#elif defined(PLATFORM_MACOS_VK) || defined(PLATFORM_WIN64)
+        anv::Renderer2D::DrawScene(m_GameViewportTarget, sceneCamera);
+        ImGui::Image(
+            m_GameViewportTarget->GetImGuiTextureID(),
+            viewportSize,
+            ImVec2(1.0f, 0.0f),
+            ImVec2(0.0f, 1.0f));
+#endif
     }
     else if (validSize && !sceneCamera)
     {
-        const char* message = "No active Camera2D in scene";
+        const char *message = "No active Camera2D in scene";
         const ImVec2 textSize = ImGui::CalcTextSize(message);
         ImGui::SetCursorPos(ImVec2(
             (viewportSize.x - textSize.x) * 0.5f,

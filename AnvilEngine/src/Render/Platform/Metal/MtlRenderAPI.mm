@@ -4,6 +4,7 @@
 
 #include <Render/Renderer.h>
 #include <Core/Window.h>
+#include <Core/App.h>
 #include <Util/Time/Time.h>
 
 #include <algorithm>
@@ -167,7 +168,12 @@ namespace anv
     {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
+
         ImGuiIO& io = ImGui::GetIO();
+        auto& fs = App::GetInstance()->GetFS();
+        // set the ini path
+        io.IniFilename = (fs.GetKeyVal("Settings") / "EditorConfig" / "EditorLayout.ini").string().c_str();
+        
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         ImGui::StyleColorsDark();

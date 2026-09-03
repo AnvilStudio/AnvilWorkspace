@@ -28,22 +28,23 @@ namespace anv
 		}
 		case GraphicsAPI::MTL:
 		{
-			#if defined(PLATFORM_APPLE) && !defined(PLATFORM_APPLE_VK)
+			#if defined(PLATFORM_APPLE)
 			// TODO: IMPL
 			//auto shader = Ref<MetalShader>::Create(_shaderPath, _ctx);
 			//shader->GenMetaFile();
 			//return shader;
 			return nullptr;
+
 			#else
 			ANV_LOG_FATAL("Graphics API missmatch!")
 			return nullptr;
 			#endif
 			break;
 		}
-		default:
-			ANV_LOG_FATAL("GraphicsAPI missmatch!")
-			return nullptr;
-			break;
+		// default:
+		// 	ANV_LOG_FATAL("GraphicsAPI missmatch!")
+		// 	return nullptr;
+		// 	break;
 		}
 	}
 
@@ -58,6 +59,12 @@ namespace anv
 			ANV_LOG_FATAL("Vulkan shader backend is unavailable on this platform!")
 			return nullptr;
 			#endif
+		}
+
+		if (api == GraphicsAPI::MTL)
+		{
+			// TODO: Impl
+			return nullptr;
 		}
 		else
 		{

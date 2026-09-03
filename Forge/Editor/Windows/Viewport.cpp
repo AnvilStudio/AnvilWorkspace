@@ -101,11 +101,21 @@ void Viewport::Draw()
     if (validSize && m_ViewportTarget)
     {
         anv::Renderer2D::DrawScene(m_ViewportTarget, m_EditorCamera);
+
+        #ifdef PLATFORM_MACOS
         ImGui::Image(
+            m_ViewportTarget->GetImGuiTextureID(),
+            viewportSize,
+            ImVec2(1.0f, 0.0f),
+            ImVec2(0.0f, 1.0f));
+        #elif defined(PLATFORM_MACOS_VK) || defined(PLATFORM_WIN64)
+            ImGui::Image(
             m_ViewportTarget->GetImGuiTextureID(),
             viewportSize,
             ImVec2(0.0f, 1.0f),
             ImVec2(1.0f, 0.0f));
+        #endif
+        
             
         set_gizmo_bounds();
         

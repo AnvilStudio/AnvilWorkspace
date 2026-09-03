@@ -19,6 +19,7 @@ void EditorLayer::OnAttach()
     ImGuiIO& io = ImGui::GetIO();
 
     auto& fs = App::GetInstance()->GetFS();
+    io.IniFilename = (fs.GetKeyVal("Settings") / "EditorConfig" / "EditorLayout.ini").string().c_str();
     auto path = fs.GetKeyVal("Assets") / "Fonts" / "JetBrainsMono-Bold.ttf";
 
     io.Fonts->AddFontFromFileTTF(path.string().c_str(), 18.0f);
@@ -105,11 +106,17 @@ void EditorLayer::OnImGuiRender()
     m_Console.Draw(&m_Windows.showConsole);
     m_GameViewport.Draw();
     m_Viewport.Draw();
+
 }
 
 void EditorLayer::OnDetach()
 {
     anv_log::AnvLog::ClearCallback();
+
+    // Save ImGui Layout
+    // auto& fs = App::GetInstance()->GetFS();
+    // auto IniPath = fs.GetKeyVal("Settings") / "EditorConfig" / "EditorLayout.ini"; 
+    // ImGui::SaveIniSettingsToDisk(IniPath.string().c_str());
 }
 
 void EditorLayer::draw_stats()

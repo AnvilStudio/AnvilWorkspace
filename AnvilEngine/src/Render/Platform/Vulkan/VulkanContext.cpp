@@ -5,6 +5,12 @@
 
 #include <set>
 
+// IMPORTANT: 
+// New vulkan version has 2 drivers for MacOS
+// use this command to select MoltenVK (for now)
+// TODO: Impl a better way to select drivers.
+// export VK_DRIVER_FILES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"
+
 namespace anv {
 	VulkanContext::VulkanContext(Window* _win)
 		: Context(_win)
