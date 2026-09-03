@@ -10,12 +10,6 @@
 #include "Render/RenderData.h"
 #include "VulkanPipeline.h"
 
-#include "imgui/imgui.h"
-#include "imgui/backends/imgui_impl_glfw.h"
-#include "imgui/backends/imgui_impl_vulkan.h"
-
-#include "ImGuizmo.h"
-
 #include <Util/Time/Time.h>
 #include <glm/ext/matrix_transform.hpp>
 
@@ -38,7 +32,6 @@ namespace anv
 		load_shader_lib();
 		create_quad_buffers();
 
-		create_imgui_descriptor_pool();
 		create_descriptor_set_layout();
 		create_white_texture();
 
@@ -46,7 +39,8 @@ namespace anv
 		m_CurrentTarget = m_SwapchainTarget;
 		build_2D_pipelines();
 		create_frames();
-		init_imgui();
+		m_ImGuiLayer = ImGuiLayer::Create(m_Context, m_SwapchainTarget, m_CreateInfo.imguiIniPath);
+		ANV_ASSERT(m_ImGuiLayer, "Failed to initialize ImGui layer");
 	}
 
 	void VulkanRenderAPI::DrawFrame()
@@ -89,19 +83,14 @@ namespace anv
 		m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext& frame)
 		{
 			m_SwapchainTarget->Begin(cmd);
-			end_imgui(cmd);
+			m_ImGuiLayer->Render({.commandBuffer = cmd});
 			m_SwapchainTarget->End(cmd);
 		});
 
 		m_RenderCmdChain->Swap();
 		m_RenderCmdChain->WaitForProcessComplete();
 
-		ImGuiIO &io = ImGui::GetIO();
-		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-		{
-			ImGui::UpdatePlatformWindows();
-			ImGui::RenderPlatformWindowsDefault();
-		}
+		m_ImGuiLayer->FinishFrame();
 
 		m_SwapchainTarget->Present(vkCtx->GetPresentQueue(), fr.sync.renderFinished, m_SwapRecreateFlag);
 		if (m_SwapRecreateFlag)
@@ -129,7 +118,7 @@ namespace anv
 		m_WhiteTexture = nullptr;
 		destroy_descriptor_resources();
 		destroy_frames();
-		shutdown_imgui();
+		m_ImGuiLayer.reset();
 	}
 
 	void anv::VulkanRenderAPI::BeginScene(Ref<RenderTarget> _renderTarget)
@@ -138,7 +127,7 @@ namespace anv
 		m_RenderStats.QuadCount = 0;
 		ANV_ASSERT(_renderTarget, "No RenderTarget specified for Renderer2D!");
 		m_CurrentTarget = _renderTarget;
-		begin_imgui();
+		m_ImGuiLayer->BeginFrame();
 	}
 
 	void VulkanRenderAPI::BeginScene()
@@ -253,8 +242,7 @@ namespace anv
 
 	void VulkanRenderAPI::EndScene()
 	{
-		if (ImGui::GetCurrentContext())
-			ImGui::Render();
+		m_ImGuiLayer->EndFrame();
 	}
 
 	void VulkanRenderAPI::SetMainCamera(_shared<Camera2D> camera)
@@ -404,92 +392,6 @@ namespace anv
 
 	void VulkanRenderAPI::begin_batch() {}
 	void VulkanRenderAPI::end_batch() {}
-
-	void VulkanRenderAPI::create_imgui_descriptor_pool()
-	{
-		VkDescriptorPoolSize poolSizes[] = {
-			{VK_DESCRIPTOR_TYPE_SAMPLER, 1000}, {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
-			{VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
-			{VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
-			{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
-			{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000}, {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
-			{VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}
-		};
-		VkDescriptorPoolCreateInfo poolInfo{};
-		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-		poolInfo.maxSets = 1000 * std::size(poolSizes);
-		poolInfo.poolSizeCount = static_cast<uint32_t>(std::size(poolSizes));
-		poolInfo.pPoolSizes = poolSizes;
-		ANV_VK_CHECK_RESULT(vkCreateDescriptorPool(m_Context->GetAs<VulkanContext>()->GetDevice(), &poolInfo, nullptr, &m_ImGuiDescriptorPool), "Failed to create ImGui descriptor pool!");
-	}
-
-	void VulkanRenderAPI::init_imgui()
-	{
-		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
-		ImGuiIO& io = ImGui::GetIO();
-		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-#if !defined(PLATFORM_APPLE_VK)
-		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-#else
-		ANV_LOG_INFO("ImGui platform viewports disabled on macOS Vulkan")
-#endif
-		ImGui::StyleColorsDark();
-		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-		{
-			ImGuiStyle& style = ImGui::GetStyle();
-			style.WindowRounding = 0.0f;
-			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-		}
-		auto vkCtx = m_Context->GetAs<VulkanContext>();
-		ImGui_ImplGlfw_InitForVulkan(App::GetInstance()->GetMainWindow()->GetNativeWindow(), true);
-		ImGui_ImplVulkan_InitInfo init{};
-		init.ApiVersion = VK_API_VERSION_1_3;
-		init.Instance = vkCtx->GetInstance();
-		init.PhysicalDevice = vkCtx->GetPhysicalDevice();
-		init.Device = vkCtx->GetDevice();
-		init.QueueFamily = vkCtx->GetQueueFamilies().graphicsFamily.value();
-		init.Queue = vkCtx->GetGraphicsQueue();
-		init.DescriptorPool = m_ImGuiDescriptorPool;
-		init.MinImageCount = vkCtx->GetSwapchain()->GetImageCount();
-		init.ImageCount = vkCtx->GetSwapchain()->GetImageCount();
-		init.PipelineCache = VK_NULL_HANDLE;
-		init.PipelineInfoMain.RenderPass = m_SwapchainTarget->GetRenderPass().As<VulkanRenderPass>()->Get();
-		init.PipelineInfoMain.Subpass = 0;
-		init.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-		init.UseDynamicRendering = false;
-		init.Allocator = nullptr;
-		init.CheckVkResultFn = nullptr;
-		init.MinAllocationSize = 1024 * 1024;
-		ImGui_ImplVulkan_Init(&init);
-		ANV_LOG_INFO("Initialized ImGui");
-	}
-
-	void VulkanRenderAPI::shutdown_imgui()
-	{
-		auto vkCtx = m_Context->GetAs<VulkanContext>();
-		vkCtx->IdleDevice();
-		ImGui_ImplVulkan_Shutdown();
-		ImGui_ImplGlfw_Shutdown();
-		ImGui::DestroyContext();
-		vkDestroyDescriptorPool(m_Context->GetAs<VulkanContext>()->GetDevice(), m_ImGuiDescriptorPool, nullptr);
-		ANV_LOG_INFO("Shutdown ImGui");
-	}
-
-	void VulkanRenderAPI::begin_imgui()
-	{
-		ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-		ImGuizmo::BeginFrame();
-	}
-
-	void VulkanRenderAPI::end_imgui(Ref<CommandBuffer> cmd)
-	{
-		auto vkCmd = cmd.As<VulkanCommandBuffer>();
-		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkCmd->Get());
-	}
 
 	Ref<GraphicsPipeline> VulkanRenderAPI::build_sprite_pipeline(Ref<RenderPass> renderPass)
 	{

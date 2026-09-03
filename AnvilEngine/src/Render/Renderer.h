@@ -70,6 +70,7 @@ namespace anv
         bool offscreenRendering = false;
         bool enableDebugMode = false;
         std::string assetPath = "Assets";
+        std::string imguiIniPath = "imgui.ini";
         int shadowMapResolution = 1024;
         float fov = 45.0f;
     };

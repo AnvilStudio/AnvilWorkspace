@@ -3,6 +3,7 @@
 #include <Render/RenderAPI.h>
 #include <Render/RenderData.h>
 #include "MtlContext.h"
+#include "Layer/ImGuiLayer.h"
 
 namespace anv
 {
@@ -32,8 +33,6 @@ namespace anv
 
     private:
         void create_sprite_pipeline();
-        void initialize_imgui();
-        void shutdown_imgui();
         void encode_quads(void* encoder, _shared<Camera2D> camera);
 
     private:
@@ -42,8 +41,7 @@ namespace anv
         void* m_Sampler = nullptr;
         _vec<QuadSubmission> m_QuadQueue{};
         RendererStats m_Stats{};
-        bool m_ImGuiGlfwInitialized = false;
-        bool m_ImGuiMetalInitialized = false;
+        std::unique_ptr<ImGuiLayer> m_ImGuiLayer;
         bool m_HasShutdown = false;
         void* m_CurrentDrawable = nullptr;
         void* m_CurrentCommandBuffer = nullptr;

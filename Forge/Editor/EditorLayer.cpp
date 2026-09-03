@@ -19,7 +19,6 @@ void EditorLayer::OnAttach()
     ImGuiIO& io = ImGui::GetIO();
 
     auto& fs = App::GetInstance()->GetFS();
-    io.IniFilename = (fs.GetKeyVal("Settings") / "EditorConfig" / "EditorLayout.ini").string().c_str();
     auto path = fs.GetKeyVal("Assets") / "Fonts" / "JetBrainsMono-Bold.ttf";
 
     io.Fonts->AddFontFromFileTTF(path.string().c_str(), 18.0f);

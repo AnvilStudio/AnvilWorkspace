@@ -84,6 +84,8 @@ namespace anv
 		// 3. Renderer selects Metal
 		Render2DCreateInfo renderInfo{};
 		renderInfo.pTarget = m_AppWin;
+		renderInfo.imguiIniPath =
+			(m_FileSystem->GetKeyVal("Settings") / "EditorConfig" / "EditorLayout.ini").string();
 		Renderer2D::Init(renderInfo);
 
 		// 4. Restore assets, including Metal textures
@@ -338,6 +340,6 @@ namespace anv
 		m_FileSystem->MountKey("ShaderCache", "@Cache/ShaderCache");
 		m_FileSystem->MountKey("ShaderLib", "@Res/ShaderLib");
 		m_FileSystem->MountKey("AssetMeta", "@Res/AssetMeta");
-		m_FileSystem->MountKey("Setting", "@Res/Settings");
+		m_FileSystem->MountKey("Settings", "@Res/Settings");
 	}
 }

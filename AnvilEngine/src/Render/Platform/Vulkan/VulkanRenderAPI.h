@@ -7,6 +7,7 @@
 #include "VulkanFrameResources.h"
 #include "VulkanSwapChainTarget.h"
 #include "VulkanTexture.h"
+#include "Layer/ImGuiLayer.h"
 
 #include <Scene/SceneData.h>
 #include <Render/RenderData.h>
@@ -55,13 +56,6 @@ namespace anv
 		void begin_batch();
 		void end_batch();
 
-		// ImGui //
-		void create_imgui_descriptor_pool();
-		void init_imgui();
-		void shutdown_imgui();
-		void begin_imgui();
-		void end_imgui(Ref<CommandBuffer> cmd);
-
 		Ref<GraphicsPipeline> build_sprite_pipeline(Ref<RenderPass> renderPass);
 
 	private:
@@ -87,7 +81,7 @@ namespace anv
 		VkDescriptorSetLayout m_ReservedDescriptorSetLayout = VK_NULL_HANDLE;
 		VkDescriptorSetLayout m_TextureDescriptorSetLayout = VK_NULL_HANDLE;
 
-		VkDescriptorPool m_ImGuiDescriptorPool = VK_NULL_HANDLE;
+		std::unique_ptr<ImGuiLayer> m_ImGuiLayer;
 
 		// sync //
 		std::vector<VulkanFrameResources> m_Frames;

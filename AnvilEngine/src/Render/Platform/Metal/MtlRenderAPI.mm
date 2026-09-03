@@ -11,12 +11,6 @@
 #include <cstdint>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <imgui.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_metal.h>
-
-#import <ImGuizmo.h>
-
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 
@@ -110,7 +104,8 @@ namespace anv
         }
 
         create_sprite_pipeline();
-        initialize_imgui();
+        m_ImGuiLayer = ImGuiLayer::Create(m_Context, nullptr, info.imguiIniPath);
+        ANV_ASSERT(m_ImGuiLayer, "Failed to initialize ImGui layer");
     }
 
     MetalRenderAPI::~MetalRenderAPI()
@@ -162,40 +157,6 @@ namespace anv
         id<MTLSamplerState> sampler = [device newSamplerStateWithDescriptor:samplerDescriptor];
         m_SpritePipeline = (__bridge_retained void*)pipeline;
         m_Sampler = (__bridge_retained void*)sampler;
-    }
-
-    void MetalRenderAPI::initialize_imgui()
-    {
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-
-        ImGuiIO& io = ImGui::GetIO();
-        auto& fs = App::GetInstance()->GetFS();
-        // set the ini path
-        io.IniFilename = (fs.GetKeyVal("Settings") / "EditorConfig" / "EditorLayout.ini").string().c_str();
-        
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        ImGui::StyleColorsDark();
-
-        GLFWwindow* window = m_MetalContext->GetWindowHandle();
-        id<MTLDevice> device = (__bridge id<MTLDevice>)m_MetalContext->GetDevice();
-
-        m_ImGuiGlfwInitialized = ImGui_ImplGlfw_InitForOther(window, true);
-        m_ImGuiMetalInitialized = m_ImGuiGlfwInitialized && ImGui_ImplMetal_Init(device);
-    }
-
-    void MetalRenderAPI::shutdown_imgui()
-    {
-        if (m_ImGuiMetalInitialized)
-            ImGui_ImplMetal_Shutdown();
-        if (m_ImGuiGlfwInitialized)
-            ImGui_ImplGlfw_Shutdown();
-        if (ImGui::GetCurrentContext())
-            ImGui::DestroyContext();
-
-        m_ImGuiMetalInitialized = false;
-        m_ImGuiGlfwInitialized = false;
     }
 
     RendererStats MetalRenderAPI::GetStats()
@@ -256,7 +217,10 @@ namespace anv
         id<MTLRenderCommandEncoder> encoder = (__bridge id<MTLRenderCommandEncoder>)m_CurrentEncoder;
 
         encode_quads(m_CurrentEncoder, m_Camera);
-        ImGui_ImplMetal_RenderDrawData(ImGui::GetDrawData(), commandBuffer, encoder);
+        m_ImGuiLayer->Render({
+            .nativeCommandBuffer = (__bridge void*)commandBuffer,
+            .nativeRenderEncoder = (__bridge void*)encoder
+        });
         [encoder endEncoding];
         [commandBuffer presentDrawable:drawable];
         [commandBuffer commit];
@@ -282,7 +246,7 @@ namespace anv
         if (m_MetalContext)
             m_MetalContext->WaitIdle();
 
-        shutdown_imgui();
+        m_ImGuiLayer.reset();
 
         if (m_Sampler)
             CFBridgingRelease(m_Sampler);
@@ -326,10 +290,7 @@ namespace anv
         m_CurrentRenderPass = (__bridge_retained void*)renderPass;
         m_CurrentEncoder = (__bridge_retained void*)encoder;
 
-        ImGui_ImplMetal_NewFrame(renderPass);
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        ImGuizmo::BeginFrame();
+        m_ImGuiLayer->BeginFrame((__bridge void*)renderPass);
     }
 
     void MetalRenderAPI::BeginScene(Ref<RenderTarget> renderTarget)
@@ -381,7 +342,7 @@ namespace anv
 
     void MetalRenderAPI::EndScene()
     {
-        ImGui::Render();
+        m_ImGuiLayer->EndFrame();
     }
 
     void MetalRenderAPI::SetMainCamera(_shared<Camera2D> camera)
