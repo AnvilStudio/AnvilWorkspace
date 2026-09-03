@@ -103,8 +103,8 @@ void Viewport::Draw()
         anv::Renderer2D::DrawScene(m_ViewportTarget, m_EditorCamera);
 
 #if defined(PLATFORM_APPLE_VK) || defined(PLATFORM_WIN64)
-        const ImVec2 uv0(0.0f, 1.0f);
-        const ImVec2 uv1(1.0f, 0.0f);
+        const ImVec2 uv0(1.0f, 1.0f);
+        const ImVec2 uv1(0.0f, 0.0f);
 #else
         const ImVec2 uv0(1.0f, 0.0f);
         const ImVec2 uv1(0.0f, 1.0f);
