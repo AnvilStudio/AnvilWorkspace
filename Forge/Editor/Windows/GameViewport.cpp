@@ -68,11 +68,20 @@ void GameViewport::Draw()
     if (validSize && m_GameViewportTarget && sceneCamera)
     {
         anv::Renderer2D::DrawScene(m_GameViewportTarget, sceneCamera);
+
+#if defined(PLATFORM_APPLE_VK) || defined(PLATFORM_WIN64)
+        const ImVec2 uv0(0.0f, 1.0f);
+        const ImVec2 uv1(1.0f, 0.0f);
+#else
+        const ImVec2 uv0(1.0f, 0.0f);
+        const ImVec2 uv1(0.0f, 1.0f);
+#endif
+
         ImGui::Image(
             m_GameViewportTarget->GetImGuiTextureID(),
             viewportSize,
-            ImVec2(1.0f, 0.0f),
-            ImVec2(0.0f, 1.0f));
+            uv0,
+            uv1);
     }
     else if (validSize && !sceneCamera)
     {
