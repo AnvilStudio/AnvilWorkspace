@@ -35,6 +35,13 @@ namespace anv
 	{
 		float frameTime = 0.f;
 		FPSCounter fps;
+		
+	};
+
+	struct EngineInfo
+	{
+		std::string version = ANV_ENGINE_VERSION;
+		std::string graphicsAPI = ANV_API_VER;
 	};
 
 	class App
@@ -53,6 +60,7 @@ namespace anv
 		_shared<SceneManager> GetSceneManager();
 		_shared<InputSystem>   GetInputSystem();
 		AppStats& GetStats() { return m_Stats; }
+		EngineInfo& GetEngineInfo() {return m_EngineInfo;}
 
 		void PushLayer(Layer* layer);
 		void PopLayer(Layer* layer);
@@ -75,6 +83,7 @@ namespace anv
 		inline static App*   s_This  = nullptr;
 
 		AppSettings           m_Settings;
+		EngineInfo            m_EngineInfo;
 		LayerStack             m_LayerStack;
 		_unique<FileSystem>        m_FileSystem    = nullptr;
 		_shared<SceneManager>  m_ScnMngr = nullptr;

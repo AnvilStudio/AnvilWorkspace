@@ -33,7 +33,7 @@
 
 #elif defined(PLATFORM_MACOS)
 
-    #define ANV_API_VER "Metal"
+    #define ANV_API_VER "MacOS Metal"
 
 #elif defined(PLATFORM_WIN64)
 
