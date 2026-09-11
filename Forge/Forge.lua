@@ -87,6 +87,12 @@ filter "system:macosx"
         {
             "-Wl,-rpath," .. VULKAN_LIB
         }
+
+        -- TODO: Needs to get working.
+        postbuildcommands
+        {
+            "export VK_DRIVER_FILES=\"$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json\"" -- we use MoltenVK
+        }
     else
         defines { "ANV_RENDERER_METAL" }
 

@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Anvil.h>
 
 #include "Windows/AssetRegistry.h"
@@ -10,6 +9,7 @@
 #include "Windows/InspectorLayer.h"
 #include "Windows/SceneHierarchy.h"
 #include "Windows/Viewport.h"
+#include "MainMenu.h"
 
 struct Windows
 {
@@ -41,7 +41,10 @@ public:
     void ClearSelection() { m_SelectedEntity = entt::null; }
 
     static SceneState GetSceneState() { return m_SceneState; }
-    static EditorLayer* GetInstance() { return m_This; }
+    void SetSceneState(SceneState state) { m_SceneState = state; }
+    static EditorLayer *GetInstance() { return m_This; }
+
+    Windows& GetWindowSettings() {return m_Windows;}
 
 private:
     void begin_dock_space();
@@ -52,8 +55,9 @@ private:
     entt::entity m_SelectedEntity = entt::null;
 
     static SceneState m_SceneState;
-    static EditorLayer* m_This;
+    static EditorLayer *m_This;
 
+    MainMenu m_MainMenu;
     Viewport m_Viewport;
     CodeEditorPanel m_DevNotes;
     FileBrowser m_FileBrowser;

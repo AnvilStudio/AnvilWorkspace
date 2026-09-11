@@ -1,9 +1,10 @@
 ﻿#include "EditorLayer.h"
+#include "MainMenu.h"
 
 using namespace anv;
 
 EditorLayer::SceneState EditorLayer::m_SceneState = SceneState::Edit;
-EditorLayer* EditorLayer::m_This = nullptr;
+EditorLayer *EditorLayer::m_This = nullptr;
 
 EditorLayer::EditorLayer()
     : anv::Layer("Editor Layer"),
@@ -16,15 +17,16 @@ EditorLayer::EditorLayer()
 
 void EditorLayer::OnAttach()
 {
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO &io = ImGui::GetIO();
 
-    auto& fs = App::GetInstance()->GetFS();
+    auto &fs = App::GetInstance()->GetFS();
+    io.IniFilename = (fs.GetKeyVal("Settings") / "EditorConfig" / "EditorLayout.ini").string().c_str();
     auto path = fs.GetKeyVal("Assets") / "Fonts" / "JetBrainsMono-Bold.ttf";
 
     io.Fonts->AddFontFromFileTTF(path.string().c_str(), 18.0f);
     io.ConfigDpiScaleFonts = true;
 
-    ImGuiStyle& style = ImGui::GetStyle();
+    ImGuiStyle &style = ImGui::GetStyle();
 
     style.WindowRounding = 3.0f;
     style.ChildRounding = 3.0f;
@@ -41,7 +43,7 @@ void EditorLayer::OnAttach()
     style.ScrollbarSize = 13.0f;
     style.GrabMinSize = 10.0f;
 
-    ImVec4* colors = style.Colors;
+    ImVec4 *colors = style.Colors;
 
     colors[ImGuiCol_WindowBg] = ImVec4(0.118f, 0.118f, 0.118f, 1.0f);
     colors[ImGuiCol_ChildBg] = ImVec4(0.145f, 0.145f, 0.149f, 1.0f);
@@ -75,7 +77,7 @@ void EditorLayer::OnAttach()
     colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.208f, 0.478f, 0.741f, 1.0f);
 
     anv_log::AnvLog::SetCallback(
-        [this](const anv_log::LogRecord& record)
+        [this](const anv_log::LogRecord &record)
         {
             m_Console.AddLogRecord(record);
         });
@@ -91,7 +93,7 @@ void EditorLayer::OnUpdate(float dt)
 void EditorLayer::OnImGuiRender()
 {
     begin_dock_space();
-    draw_menu_bar();
+    m_MainMenu.Draw();
 
     auto sceneManager = App::GetInstance()->GetSceneManager();
     auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
@@ -105,7 +107,6 @@ void EditorLayer::OnImGuiRender()
     m_Console.Draw(&m_Windows.showConsole);
     m_GameViewport.Draw();
     m_Viewport.Draw();
-
 }
 
 void EditorLayer::OnDetach()
@@ -114,7 +115,7 @@ void EditorLayer::OnDetach()
 
     // Save ImGui Layout
     // auto& fs = App::GetInstance()->GetFS();
-    // auto IniPath = fs.GetKeyVal("Settings") / "EditorConfig" / "EditorLayout.ini"; 
+    // auto IniPath = fs.GetKeyVal("Settings") / "EditorConfig" / "EditorLayout.ini";
     // ImGui::SaveIniSettingsToDisk(IniPath.string().c_str());
 }
 
@@ -124,7 +125,7 @@ void EditorLayer::draw_stats()
         return;
 
     ImGui::Begin("Stats");
-    auto& stats = App::GetInstance()->GetStats();
+    auto &stats = App::GetInstance()->GetStats();
     ImGui::Text("FPS: %u", stats.fps.GetFPS());
     ImGui::Text("Frame Time: %.3f ms", stats.frameTime);
     ImGui::End();
@@ -132,7 +133,7 @@ void EditorLayer::draw_stats()
 
 void EditorLayer::begin_dock_space()
 {
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGuiViewport *viewport = ImGui::GetMainViewport();
 
     ImGui::SetNextWindowPos(viewport->WorkPos);
     ImGui::SetNextWindowSize(viewport->WorkSize);
@@ -161,62 +162,4 @@ void EditorLayer::begin_dock_space()
         ImGuiDockNodeFlags_PassthruCentralNode);
 
     ImGui::End();
-}
-
-void EditorLayer::draw_menu_bar()
-{
-    if (!ImGui::BeginMainMenuBar())
-        return;
-
-    if (ImGui::BeginMenu("File"))
-    {
-        if (ImGui::MenuItem("Save Scene", "Ctrl+S"))
-        {
-            auto sceneManager = App::GetInstance()->GetSceneManager();
-            auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
-            if (scene)
-                scene->Save();
-        }
-
-        ImGui::Separator();
-
-        if (ImGui::MenuItem("Reload Scene"))
-            App::GetInstance()->GetSceneManager()->ReloadActive();
-
-        ImGui::Separator();
-
-        if (ImGui::MenuItem("Exit"))
-            App::GetInstance()->Close();
-
-        ImGui::EndMenu();
-    }
-
-    if (ImGui::BeginMenu("Window"))
-    {
-        ImGui::MenuItem("Asset Registry", nullptr, &m_Windows.showAssetRegistry);
-        ImGui::MenuItem("Dev Notes", nullptr, &m_Windows.showCodeEditor);
-        ImGui::MenuItem("Stats", nullptr, &m_Windows.showStats);
-        ImGui::MenuItem("Console", nullptr, &m_Windows.showConsole);
-        ImGui::EndMenu();
-    }
-
-    ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 80.0f) * 0.5f);
-
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.18f, 0.45f, 0.22f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.22f, 0.55f, 0.27f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.35f, 0.18f, 1.0f));
-
-    if (m_SceneState == SceneState::Edit)
-    {
-        if (ImGui::Button("Play"))
-            m_SceneState = SceneState::Play;
-    }
-    else
-    {
-        if (ImGui::Button("Stop"))
-            m_SceneState = SceneState::Edit;
-    }
-
-    ImGui::PopStyleColor(3);
-    ImGui::EndMainMenuBar();
 }
