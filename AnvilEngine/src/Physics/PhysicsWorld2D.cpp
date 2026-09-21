@@ -1,5 +1,7 @@
 #include "PhysicsWorld2D.h"
 
+#include <utility>
+
 namespace anv
 {
     PhysicsWorld2D::~PhysicsWorld2D()
@@ -20,6 +22,7 @@ namespace anv
 
     void PhysicsWorld2D::Destroy()
     {
+        m_CollisionEvents.clear();
         if (!IsValid())
             return;
 
@@ -33,6 +36,53 @@ namespace anv
             return;
 
         b2World_Step(m_World, timeStep, subStepCount);
+
+        // Copy immediately: Box2D event buffers are only valid until the next step.
+        const b2ContactEvents contacts = b2World_GetContactEvents(m_World);
+        for (int i = 0; i < contacts.beginCount; ++i)
+        {
+            const auto& event = contacts.beginEvents[i];
+            if (!b2Shape_IsValid(event.shapeIdA) || !b2Shape_IsValid(event.shapeIdB))
+                continue;
+            m_CollisionEvents.push_back({
+                b2Shape_GetBody(event.shapeIdA), b2Shape_GetBody(event.shapeIdB),
+                CollisionEventPhase2D::Begin, CollisionEventKind2D::Contact});
+        }
+        for (int i = 0; i < contacts.endCount; ++i)
+        {
+            const auto& event = contacts.endEvents[i];
+            // Box2D can report an end event for a shape destroyed during the step.
+            if (!b2Shape_IsValid(event.shapeIdA) || !b2Shape_IsValid(event.shapeIdB))
+                continue;
+            m_CollisionEvents.push_back({
+                b2Shape_GetBody(event.shapeIdA), b2Shape_GetBody(event.shapeIdB),
+                CollisionEventPhase2D::End, CollisionEventKind2D::Contact});
+        }
+
+        const b2SensorEvents sensors = b2World_GetSensorEvents(m_World);
+        for (int i = 0; i < sensors.beginCount; ++i)
+        {
+            const auto& event = sensors.beginEvents[i];
+            if (!b2Shape_IsValid(event.sensorShapeId) || !b2Shape_IsValid(event.visitorShapeId))
+                continue;
+            m_CollisionEvents.push_back({
+                b2Shape_GetBody(event.sensorShapeId), b2Shape_GetBody(event.visitorShapeId),
+                CollisionEventPhase2D::Begin, CollisionEventKind2D::Sensor});
+        }
+        for (int i = 0; i < sensors.endCount; ++i)
+        {
+            const auto& event = sensors.endEvents[i];
+            if (!b2Shape_IsValid(event.sensorShapeId) || !b2Shape_IsValid(event.visitorShapeId))
+                continue;
+            m_CollisionEvents.push_back({
+                b2Shape_GetBody(event.sensorShapeId), b2Shape_GetBody(event.visitorShapeId),
+                CollisionEventPhase2D::End, CollisionEventKind2D::Sensor});
+        }
+    }
+
+    std::vector<PhysicsCollisionEvent2D> PhysicsWorld2D::ConsumeCollisionEvents()
+    {
+        return std::exchange(m_CollisionEvents, {});
     }
 
     PhysicsBody2D PhysicsWorld2D::CreateBody(
