@@ -2,8 +2,10 @@
 
 #include "PhysicsBody2D.h"
 #include "PhysicsTypes.h"
+#include "CollisionEvents2D.h"
 
 #include <box2d/box2d.h>
+#include <vector>
 
 namespace anv
 {
@@ -20,6 +22,9 @@ namespace anv
         void Destroy();
         void Step(float timeStep, int subStepCount);
 
+        // Drain after each fixed step; events are not preserved by Box2D across steps.
+        std::vector<PhysicsCollisionEvent2D> ConsumeCollisionEvents();
+
         PhysicsBody2D CreateBody(const PhysicsBodyDefinition2D& definition);
         void DestroyBody(PhysicsBody2D& body);
 
@@ -31,5 +36,6 @@ namespace anv
 
     private:
         b2WorldId m_World = b2_nullWorldId;
+        std::vector<PhysicsCollisionEvent2D> m_CollisionEvents;
     };
 }
