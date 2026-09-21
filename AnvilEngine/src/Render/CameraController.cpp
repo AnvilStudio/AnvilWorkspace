@@ -68,7 +68,7 @@ namespace anv
         const auto [mouseX, mouseY] = m_InputSystem->GetMousePos();
         const glm::vec2 mousePosition(mouseX, mouseY);
         const bool isPanning =
-            m_InputSystem->IsMouseButtonPressed(ANV_MOUSE_BUTTON_MIDDLE);
+            (m_InputSystem->IsMouseButtonPressed(ANV_MOUSE_BUTTON_1) && m_InputSystem->IsKeyHeld(ANV_KEY_LEFT_SHIFT));
 
         if (isPanning && m_WasPanning)
         {
