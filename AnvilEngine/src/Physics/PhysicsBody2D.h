@@ -30,7 +30,11 @@ namespace anv
         void SetTransform(float x, float y, float rotationRadians);
         void SetAwake(bool awake);
 
+        void SetUserData(void* _data);
+        void* GetUserData();
+
     private:
         b2BodyId m_Body = b2_nullBodyId;
+        void* m_UserData = nullptr;
     };
 }
