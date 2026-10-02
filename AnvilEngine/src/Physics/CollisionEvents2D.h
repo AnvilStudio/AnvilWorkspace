@@ -5,13 +5,13 @@
 
 namespace anv
 {
-    enum class CollisionEventPhase2D
+    enum class CollisionEventPhase2D : uint8_t
     {
         Begin,
         End
     };
 
-    enum class CollisionEventKind2D
+    enum class CollisionEventKind2D : uint8_t
     {
         Contact,
         Sensor
@@ -21,8 +21,8 @@ namespace anv
     // Consumers should resolve these to stable scene entity IDs before dispatch.
     struct PhysicsCollisionEvent2D
     {
-        b2BodyId bodyA = b2_nullBodyId;
-        b2BodyId bodyB = b2_nullBodyId;
+        b2ShapeId shapeA = b2_nullShapeId;
+        b2ShapeId shapeB = b2_nullShapeId;
         CollisionEventPhase2D phase = CollisionEventPhase2D::Begin;
         CollisionEventKind2D kind = CollisionEventKind2D::Contact;
     };
