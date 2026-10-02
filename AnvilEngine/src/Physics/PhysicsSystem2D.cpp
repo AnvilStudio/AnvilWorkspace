@@ -160,6 +160,7 @@ namespace anv
             CapturePreStepTransforms(scene);
             m_World.Step(m_FixedTimeStep, m_SubStepCount);
             CapturePostStepTransforms(scene);
+            // Collision Event Listener
             m_Accumulator -= m_FixedTimeStep;
         }
 
@@ -227,6 +228,12 @@ namespace anv
         }
 
         PhysicsBody2D body = m_World.CreateBody(bodyDefinition);
+        body.SetUserData(
+            reinterpret_cast<void*>(
+                static_cast<uintptr_t>(entt::to_integral(entity))
+            )
+        ); // tie body to the entity
+
         if (!body.IsValid())
         {
             ANV_LOG_ERROR(
@@ -235,6 +242,7 @@ namespace anv
             return;
         }
 
+        // with B2D user data, this may not be needed
         RuntimeBody2D runtimeBody;
         runtimeBody.body = body;
         runtimeBody.currentTransform = body.GetTransform();
