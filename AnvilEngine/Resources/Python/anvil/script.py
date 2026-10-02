@@ -1,5 +1,5 @@
 from .entity import Entity
-
+from .physics import PhysicsCollisionEvent2D
 
 class Script(Entity):
     def __init__(self):
@@ -29,4 +29,7 @@ class Script(Entity):
         pass
 
     def on_destroy(self):
+        pass
+
+    def on_collision(self, Event: PhysicsCollisionEvent2D):
         pass

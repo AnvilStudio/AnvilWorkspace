@@ -1,4 +1,13 @@
+from __future__ import annotations
+
 import _anvil
+from dataclasses import dataclass
+from enum import Enum, auto
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .entity import Entity
 
 
 class RigidBody2D:
@@ -50,3 +59,21 @@ class RigidBody2D:
             float(x),
             float(y)
         )
+
+class CollisionEventKind2D(Enum):
+    CONTACT = auto()
+    SENSOR = auto()
+
+
+class CollisionEventPhase2D(Enum):
+    BEGIN = auto()
+    END = auto()
+
+
+@dataclass
+class PhysicsCollisionEvent2D:
+    """Entity: Other entity Kind: Either a Hit, Collision, or Sensor Phase: Begin, End. 
+    """
+    entity: Entity
+    kind: CollisionEventKind2D
+    phase: CollisionEventPhase2D
