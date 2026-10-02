@@ -135,6 +135,10 @@ workspace "AnvilWorkspace"
         include "Forge/Forge.lua"
     group ""
 
+    -- group "Runtime Player"
+        -- include "AnvRuntime/AnvRuntime.lua"
+    -- group ""
+
     filter "system:windows"
         VULKAN_SDK = os.getenv("VULKAN_SDK") .. "/include"
         VULKAN_LIB = os.getenv("VULKAN_SDK") .. "/Lib"
