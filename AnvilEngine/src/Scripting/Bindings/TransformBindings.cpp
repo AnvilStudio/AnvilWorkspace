@@ -2,8 +2,8 @@
 
 #ifdef ANV_ENABLE_PYTHON
 #include "../ScriptEntityContext.h"
-#include "../../Scene/Component.h"
-#include "../../Scene/Scene.h"
+#include <Scene/Component.h>
+#include <Scene/Scene.h>
 
 namespace anv::python
 {
