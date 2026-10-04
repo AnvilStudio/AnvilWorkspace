@@ -30,6 +30,13 @@ class RigidBody2D:
         )
 
     def add_force(self, x: float, y: float):
+        """
+        Apply force to the rigid body.
+
+        Args:
+            x: Force on the X axis.
+            y: Force on the Y axis.
+        """
         _anvil._rigid_body_add_force(
             self._entity_id,
             float(x),
@@ -39,23 +46,6 @@ class RigidBody2D:
     def apply_impulse(self, x: float, y: float):
         _anvil._rigid_body_apply_impulse(
             self._entity_id,
-            float(x),
-            float(y)
-        )
-
-    # Temporary compatibility API. Prefer the entity-bound instance methods.
-    @staticmethod
-    def AddForce(entity_id: str, x: float, y: float):
-        _anvil._rigid_body_add_force(
-            entity_id,
-            float(x),
-            float(y)
-        )
-
-    @staticmethod
-    def ApplyImpulse(entity_id: str, x: float, y: float):
-        _anvil._rigid_body_apply_impulse(
-            entity_id,
             float(x),
             float(y)
         )
@@ -72,7 +62,13 @@ class CollisionEventPhase2D(Enum):
 
 @dataclass
 class PhysicsCollisionEvent2D:
-    """Entity: Other entity Kind: Either a Hit, Collision, or Sensor Phase: Begin, End. 
+    """
+        Dispatched to an entities on_collision method after a collision happens.
+        
+        Args:
+            Entity: Other entity collided with
+            Kind: Either a Collision, or Sensor 
+            Phase: Begin, End. 
     """
     entity: Entity
     kind: CollisionEventKind2D
