@@ -23,7 +23,7 @@ namespace anv
         void Step(float timeStep, int subStepCount);
 
         // Drain after each fixed step; events are not preserved by Box2D across steps.
-        std::vector<PhysicsCollisionEvent2D> ConsumeCollisionEvents();
+        //std::vector<PhysicsCollisionEvent2D> ConsumeCollisionEvents();
 
         PhysicsBody2D CreateBody(const PhysicsBodyDefinition2D& definition);
         void DestroyBody(PhysicsBody2D& body);
@@ -36,6 +36,6 @@ namespace anv
 
     private:
         b2WorldId m_World = b2_nullWorldId;
-        std::vector<PhysicsCollisionEvent2D> m_CollisionEvents;
+        //std::vector<PhysicsCollisionEvent2D> m_CollisionEvents;
     };
 }
