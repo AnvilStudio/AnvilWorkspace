@@ -73,7 +73,7 @@ Installation is a little more involved.
 - `Microsoft Visual Studio 2022 (Windows) or Visual Studio Code (Recommended for MacOS)`
 - `Premake5 build system`
     
-Read the official Getting Started guide ![here](https://anvil-software.com)
+Read the official Getting Started guide [here](https://anvil-software.com)
 
 ## Structure
 
