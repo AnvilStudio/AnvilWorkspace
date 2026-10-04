@@ -10,6 +10,19 @@ class Entity:
         self.entity_id = entity_id
 
     def has_component(self, component_type) -> bool:
+        """
+        Checks if an entity has a specific component
+        
+        Args:
+            component_type: type of component
+            
+        Returns:
+            Bool
+            
+        Example:
+            if self.has_component(TagComponent): return True
+        """
+        
         component_name = getattr(component_type, "_component_name", None)
         if component_name is None:
             raise TypeError("component_type must be an Anvil component type")
@@ -22,6 +35,19 @@ class Entity:
         )
 
     def get_component(self, component_type):
+        """
+        Retrieves a known component from an entity. will throw a key error if component not present.
+        
+        Args:
+            component_type: type of component
+        
+        Returns:
+            new Python wrapper from the components pointer.
+            
+        Examples:
+            RigidBody = self.get_component(RigidBody2D)
+        """
+        
         component_name = getattr(component_type, "_component_name", None)
         if component_name is None:
             raise TypeError("component_type must be an Anvil component type")
@@ -47,6 +73,18 @@ class Entity:
 
 
 def find_entity(name: str):
+    """
+        Helper method that finds an entity by its name
+        
+        Args:
+            name: string
+            
+        Returns: Python wrapper of the Entities pointer
+            
+        Examples:
+            waypoint = find_entity("Waypoint1")
+    """
+    
     entity_id = _anvil._find_entity_by_name(str(name))
     if entity_id is None:
         return None
