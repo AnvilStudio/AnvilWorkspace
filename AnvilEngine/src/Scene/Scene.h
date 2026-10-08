@@ -8,6 +8,14 @@ namespace anv
 {
     class PhysicsSystem2D;
 
+    struct Entity
+    {
+        entt::entity entt_id;
+
+        bool has_parent = false;
+        entt::entity parent;
+    };
+
     class Scene : public RefCounter
     {
     public:
