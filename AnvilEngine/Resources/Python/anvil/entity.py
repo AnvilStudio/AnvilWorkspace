@@ -87,6 +87,6 @@ def find_entity(name: str):
     
     entity_id = _anvil._find_entity_by_name(str(name))
     if entity_id is None:
-        return None
+        raise RuntimeError(f"Entity {name} was not found in the scene!")
 
     return Entity(entity_id)
