@@ -1,6 +1,6 @@
 ![Anvil Banner](AnvilEngine/AnvilBanner.png "Anvil Banner")
 
->                         !! WARNING !!
+>                                 !! WARNING !!
 > Anvil is currently in **heavy active development** and undergoing rapid architectural changes. With one active developer
 >
 > Core systems such as rendering, assets, scene management, and editor tooling are actively being built and refactored.
@@ -13,7 +13,7 @@
 >
 > The project is being developed in the open as both an engine and a learning journey. Contributions, feedback, issue reports, and curious visitors are welcome.
 
----
+
 
 # Anvil Engine 
 - `Anvil Engine` is built with a powerful, flexible toolset designed to empower developers in creating immersive experiences, whether you're building games, interactive simulations, or lightweight applications. <br> 
@@ -28,12 +28,13 @@ Thank you for choosing Anvil Engine—let’s get started building something inc
 ## Table of contents
 1. [Overview](#overview)    
 2. [About](#about)
-2. [Installation](#installation)
+2. [Building](#building)
 3. [Structure](#structure)
 4. [Naming Convention](#naming-convention)
 5. [API Documentation](#api-documentation)
 6. [Future Plans](#future-plans)
 7. [Contact](#contact-us)
+8. [Important Notices](#important-notices)
 
 ---
 
@@ -43,11 +44,10 @@ Anvil Engine is a modular, developer-friendly engine built for flexibility, offe
 
 ### Key Features
 
-- **Multi-Window Support**: Manage multiple windows seamlessly for complex applications and dynamic interfaces.
 - **Customizable Renderer**: Choose between an optimized hardware renderer for performance-driven applications and a stripped-down version for lightweight projects.
 - **Component-Based Architecture**: A library of components provides bare-bones elements for app development without the overhead of a full game-driven renderer.
-- **High-Level and Low-Level Access**: High-level tools accelerate your workflow, while lower-level API-specific access gives you the freedom to customize as needed.
-- **Built-In GLFW Support**: Integrated GLFW ensures cross-platform compatibility and handles system-level details, so you can focus on what matters most—your application’s functionality and experience.
+- **High-Level and Low-Level Access**: High-level tools like Python scripting accelerate your workflow, while lower-level API-specific access gives you the freedom to customize as needed.
+- **Cross Platform**: Integrated GLFW ensures cross-platform compatibility and handles system-level details, so you can focus on what matters most—your application’s functionality and experience.
 
 Anvil Engine is built to serve as a comprehensive toolset that grows with your project. Whether you’re building a game or a simple app, Anvil has the flexibility and power to bring your ideas to life.
 
@@ -64,25 +64,16 @@ The engine is being developed openly and iteratively. Much of the work happens i
 Anvil is still in heavy development, and many systems are unfinished or rapidly changing. But every renderer rewrite, bug hunt, and late-night debugging session pushes the project forward.
 
 ---
-## Installation
-Installation is meant to be as simple as possible. 
+## Building
+Installation is a little more involved.
 
 ### Prereq
 - `c++20`
-- `python 3`
-- `Microsoft Visual Studio 2022`
-- `Premake5`
-
-1. Clone the dev repository.<br>
-```git clone --recursive -b dev https://github.com/AnvilStudio/AnvilWorkspace.git```
-2. Navigate to `AnvilWorkspace/ProjectCreator` and run `python3 project_creator.py <Prj Name> <Prj Dir>`.
-3. In the root folder (AnvilWorksapce), run in your terminal... <br>
-```<your premake installation> vs2022```
-4. Open the `AnvilWorkspace.sln` file
-5. In Visual Studio, set the `Forge` projects command line arguments to `-prj <path to your project>` (right click the project > Debug > command arguments)
-6. Build and run!
+- `python 3 and its development tools`
+- `Microsoft Visual Studio 2022 (Windows) or Visual Studio Code (Recommended for MacOS)`
+- `Premake5 build system`
     
----
+Read the official Getting Started guide [here](https://anvil-software.com)
 
 ## Structure
 
@@ -236,4 +227,12 @@ Architecture flexibility for future platforms
 - email: @caydenjordan05@gmail.com 
 - instagram: @cj.cpp
 
-export VK_DRIVER_FILES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"  
+## Important Notices
+
+MacOS
+---
+as of Vulkan SDK version 1.4.335.0. A new driver for Vulkan-on-Metal has came out ("KosmicKrisp"). 
+
+This driver is missing some featurs and is (not yet) developed like MoltenVK is. to ensure you build with MoltenVK, run this in the terminal, then run the forge launcher inside of that terminal.
+
+``` export VK_DRIVER_FILES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json" ```
