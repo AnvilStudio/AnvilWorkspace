@@ -14,13 +14,13 @@ namespace anv::python
             return nullptr;
 
         const auto context = ResolveScriptEntity(entityID ? entityID : "");
-        if (!context || !context.scene->HasComponent<Component::Transform2d>(context.entity))
+        if (!context || !context.scene->HasComponent<Component::Transform2D>(context.entity))
         {
-            PyErr_SetString(PyExc_KeyError, "Entity or Transform2d component was not found");
+            PyErr_SetString(PyExc_KeyError, "Entity or Transform2D component was not found");
             return nullptr;
         }
 
-        const auto& transform = context.scene->GetComponent<Component::Transform2d>(context.entity);
+        const auto& transform = context.scene->GetComponent<Component::Transform2D>(context.entity);
         return Py_BuildValue("(ff)", transform.position.x, transform.position.y);
     }
 
@@ -34,13 +34,13 @@ namespace anv::python
             return nullptr;
 
         const auto context = ResolveScriptEntity(entityID ? entityID : "");
-        if (!context || !context.scene->HasComponent<Component::Transform2d>(context.entity))
+        if (!context || !context.scene->HasComponent<Component::Transform2D>(context.entity))
         {
-            PyErr_SetString(PyExc_KeyError, "Entity or Transform2d component was not found");
+            PyErr_SetString(PyExc_KeyError, "Entity or Transform2D component was not found");
             return nullptr;
         }
 
-        context.scene->GetComponent<Component::Transform2d>(context.entity).position = {x, y};
+        context.scene->GetComponent<Component::Transform2D>(context.entity).position = {x, y};
         Py_RETURN_NONE;
     }
 
@@ -51,14 +51,14 @@ namespace anv::python
             return nullptr;
 
         const auto context = ResolveScriptEntity(entityID ? entityID : "");
-        if (!context || !context.scene->HasComponent<Component::Transform2d>(context.entity))
+        if (!context || !context.scene->HasComponent<Component::Transform2D>(context.entity))
         {
-            PyErr_SetString(PyExc_KeyError, "Entity or Transform2d component was not found");
+            PyErr_SetString(PyExc_KeyError, "Entity or Transform2D component was not found");
             return nullptr;
         }
 
         return PyFloat_FromDouble(
-            context.scene->GetComponent<Component::Transform2d>(context.entity).rotation);
+            context.scene->GetComponent<Component::Transform2D>(context.entity).rotation);
     }
 
     PyObject* SetRotation(PyObject*, PyObject* args)
@@ -70,13 +70,13 @@ namespace anv::python
             return nullptr;
 
         const auto context = ResolveScriptEntity(entityID ? entityID : "");
-        if (!context || !context.scene->HasComponent<Component::Transform2d>(context.entity))
+        if (!context || !context.scene->HasComponent<Component::Transform2D>(context.entity))
         {
-            PyErr_SetString(PyExc_KeyError, "Entity or Transform2d component was not found");
+            PyErr_SetString(PyExc_KeyError, "Entity or Transform2D component was not found");
             return nullptr;
         }
 
-        context.scene->GetComponent<Component::Transform2d>(context.entity).rotation = rotation;
+        context.scene->GetComponent<Component::Transform2D>(context.entity).rotation = rotation;
         Py_RETURN_NONE;
     }
 }

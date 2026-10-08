@@ -300,10 +300,10 @@ void InspectorExtensionLayer::draw_add_component_menu(
     if (!ImGui::BeginPopup("InspectorExtensionAddComponentPopup"))
         return;
 
-    if (!_scene->HasComponent<Component::Transform2d>(_entity) &&
+    if (!_scene->HasComponent<Component::Transform2D>(_entity) &&
         ImGui::MenuItem("Transform 2D"))
     {
-        _scene->AddComponent<Component::Transform2d>(_entity);
+        _scene->AddComponent<Component::Transform2D>(_entity);
         _scene->Save();
         ImGui::CloseCurrentPopup();
     }

@@ -75,7 +75,7 @@ namespace anv
         m_Running = true;
         m_Accumulator = 0.0f;
 
-        auto view = scene.Registry().view<Component::Transform2d>();
+        auto view = scene.Registry().view<Component::Transform2D>();
         std::size_t dynamicBodyCount = 0;
         std::size_t colliderOnlyBodyCount = 0;
 
@@ -138,7 +138,7 @@ namespace anv
         if (!m_Running)
             return;
 
-        auto view = scene.Registry().view<Component::Transform2d>();
+        auto view = scene.Registry().view<Component::Transform2D>();
 
         for (const auto entity : view)
         {
@@ -182,7 +182,7 @@ namespace anv
         if (!m_Running ||
             !scene.Registry().valid(entity) ||
             m_Bodies.contains(entity) ||
-            !scene.HasComponent<Component::Transform2d>(entity))
+            !scene.HasComponent<Component::Transform2D>(entity))
         {
             return;
         }
@@ -196,7 +196,7 @@ namespace anv
             return;
 
         const auto& transform =
-            scene.GetComponent<Component::Transform2d>(entity);
+            scene.GetComponent<Component::Transform2D>(entity);
 
         PhysicsBodyDefinition2D bodyDefinition;
         bodyDefinition.positionX = transform.position.x;
@@ -321,7 +321,7 @@ namespace anv
 
             const bool stillParticipates =
                 scene.Registry().valid(entity) &&
-                scene.HasComponent<Component::Transform2d>(entity) &&
+                scene.HasComponent<Component::Transform2D>(entity) &&
                 (scene.HasComponent<Component::Rigidbody2D>(entity) ||
                  scene.HasComponent<Component::BoxCollider2D>(entity));
 
@@ -341,7 +341,7 @@ namespace anv
 
             if (!body.IsValid() ||
                 !scene.Registry().valid(entity) ||
-                !scene.HasComponent<Component::Transform2d>(entity))
+                !scene.HasComponent<Component::Transform2D>(entity))
             {
                 continue;
             }
@@ -356,7 +356,7 @@ namespace anv
             }
 
             const auto& transform =
-                scene.GetComponent<Component::Transform2d>(entity);
+                scene.GetComponent<Component::Transform2D>(entity);
 
             const PhysicsTransform2D bodyTransform = body.GetTransform();
             const float bodyRotation = glm::degrees(bodyTransform.rotationRadians);
@@ -435,7 +435,7 @@ namespace anv
 
             if (!body.IsValid() ||
                 !scene.Registry().valid(entity) ||
-                !scene.HasComponent<Component::Transform2d>(entity) ||
+                !scene.HasComponent<Component::Transform2D>(entity) ||
                 !scene.HasComponent<Component::Rigidbody2D>(entity))
             {
                 continue;
@@ -448,7 +448,7 @@ namespace anv
                 continue;
 
             auto& transform =
-                scene.GetComponent<Component::Transform2d>(entity);
+                scene.GetComponent<Component::Transform2D>(entity);
 
             if (rigidbody.type == Component::Rigidbody2DType::Dynamic)
             {

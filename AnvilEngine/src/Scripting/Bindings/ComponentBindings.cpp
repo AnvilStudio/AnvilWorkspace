@@ -25,7 +25,7 @@ namespace anv::python
         bool hasComponent = false;
 
         if (name == "Transform2D")
-            hasComponent = context.scene->HasComponent<Component::Transform2d>(context.entity);
+            hasComponent = context.scene->HasComponent<Component::Transform2D>(context.entity);
         else if (name == "RigidBody2D")
             hasComponent = context.scene->HasComponent<Component::Rigidbody2D>(context.entity);
         else if (name == "BoxCollider2D")
