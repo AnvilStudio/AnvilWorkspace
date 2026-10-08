@@ -16,7 +16,7 @@ __all__ = [
     "RigidBody2D",
     "CollisionEventKind2D",
     "CollisionEventPhase2D",
-    "PhysicsCollisionEvent2D"
+    "PhysicsCollisionEvent2D",
     "BoxCollider2D",
     "Key",
     "input",
