@@ -32,7 +32,7 @@ namespace anv
     }
 
     bool PhysicsBody2D::CreateBoxCollider(
-        const PhysicsBoxColliderDefinition2D& definition)
+        const PhysicsBoxColliderDefinition2D &definition)
     {
         if (!IsValid())
             return false;
@@ -44,7 +44,7 @@ namespace anv
             std::clamp(definition.restitution, 0.0f, 1.0f);
         shapeDef.isSensor = definition.sensor;
         shapeDef.enableContactEvents = true;
-        shapeDef.enableSensorEvents = definition.sensor;
+        shapeDef.enableSensorEvents = true;
 
         const b2Polygon box = b2MakeOffsetBox(
             std::max(0.001f, definition.halfWidth),
@@ -107,5 +107,15 @@ namespace anv
             return;
 
         b2Body_SetAwake(m_Body, awake);
+    }
+
+    void PhysicsBody2D::SetUserData(void *_data)
+    {
+        b2Body_SetUserData(m_Body, _data);
+    }
+
+    void* PhysicsBody2D::GetUserData()
+    {
+        return b2Body_GetUserData(m_Body);
     }
 }

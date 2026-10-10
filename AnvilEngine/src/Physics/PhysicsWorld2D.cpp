@@ -1,4 +1,6 @@
 #include "PhysicsWorld2D.h"
+#include "CollisionListener.h"
+#include <utility>
 
 namespace anv
 {
@@ -20,6 +22,7 @@ namespace anv
 
     void PhysicsWorld2D::Destroy()
     {
+        // m_CollisionEvents.clear();
         if (!IsValid())
             return;
 
@@ -33,7 +36,13 @@ namespace anv
             return;
 
         b2World_Step(m_World, timeStep, subStepCount);
+        CollisionListener::PollCollision(m_World);
     }
+
+    // std::vector<PhysicsCollisionEvent2D> PhysicsWorld2D::ConsumeCollisionEvents()
+    // {
+    //     return std::exchange(m_CollisionEvents, {});
+    // }
 
     PhysicsBody2D PhysicsWorld2D::CreateBody(
         const PhysicsBodyDefinition2D& definition)

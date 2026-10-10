@@ -12,7 +12,7 @@ namespace anv
     void SceneRenderer2D::Render(Ref<Scene> scene)
     {
         auto view = scene->m_Registry.view<
-            Component::Transform2d,
+            Component::Transform2D,
             Component::SpriteRenderer>();
 
         std::vector<entt::entity> drawOrder;
@@ -34,7 +34,7 @@ namespace anv
 
         for (auto entity : drawOrder)
         {
-            auto& transform = view.get<Component::Transform2d>(entity);
+            auto& transform = view.get<Component::Transform2D>(entity);
             auto& sprite = view.get<Component::SpriteRenderer>(entity);
             Ref<Texture> texture = assetManager->GetAs<Texture>(sprite.texture);
 

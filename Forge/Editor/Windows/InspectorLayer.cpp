@@ -44,11 +44,11 @@ void InspectorLayer::Draw(
                 }
             });
 
-        draw_component<Component::Transform2d>(
+        draw_component<Component::Transform2D>(
             "Transform2D",
             selectedEntity,
             scene,
-            [&](Component::Transform2d &transform)
+            [&](Component::Transform2D &transform)
             {
                 if (ImGui::BeginTable("Transform2DProps", 2, ImGuiTableFlags_SizingStretchProp))
                 {
@@ -348,10 +348,10 @@ void InspectorLayer::draw_add_component_menu(
             ImGui::CloseCurrentPopup();
         }
 
-        if (!scene->HasComponent<Component::Transform2d>(entity) &&
+        if (!scene->HasComponent<Component::Transform2D>(entity) &&
             ImGui::MenuItem("Transform 2D"))
         {
-            scene->AddComponent<Component::Transform2d>(entity);
+            scene->AddComponent<Component::Transform2D>(entity);
             ImGui::CloseCurrentPopup();
         }
 

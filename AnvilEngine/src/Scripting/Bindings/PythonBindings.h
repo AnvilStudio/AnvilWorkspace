@@ -24,5 +24,8 @@ namespace anv::python
     PyObject* RigidBodyApplyImpulse(PyObject* self, PyObject* args);
     PyObject* RigidBodyGetLinearVelocity(PyObject* self, PyObject* args);
     PyObject* RigidBodySetLinearVelocity(PyObject* self, PyObject* args);
+
+    PyObject* GetTag(PyObject* self, PyObject* args);
+    PyObject* SetTag(PyObject* self, PyObject* args);
 }
 #endif

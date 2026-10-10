@@ -4,6 +4,7 @@
 #include "PhysicsWorld2D.h"
 #include "../Core/Reference.h"
 #include "../vendor/entt/single_include/entt/entt.hpp"
+#include "CollisionListener.h"
 
 #include <unordered_map>
 

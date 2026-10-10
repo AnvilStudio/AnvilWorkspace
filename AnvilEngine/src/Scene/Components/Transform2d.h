@@ -13,15 +13,15 @@ namespace anv::Component
      * Kept in a standalone header so rendering types such as Camera2D can use
      * transforms without including the complete scene component collection.
      */
-    struct Transform2d
+    struct Transform2D
     {
         glm::vec2 position{0.0f};
         glm::vec2 scale{1.0f};
         float rotation = 0.0f;
 
-        Transform2d() = default;
+        Transform2D() = default;
 
-        Transform2d(glm::vec2 _position, float _rotation, glm::vec2 _scale)
+        Transform2D(glm::vec2 _position, float _rotation, glm::vec2 _scale)
             : position(_position),
               scale(_scale),
               rotation(_rotation)

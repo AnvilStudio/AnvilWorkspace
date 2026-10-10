@@ -67,7 +67,7 @@ namespace anv
         });
 
         bool hasLegacyCamera = false;
-        Component::Transform2d legacyCameraTransform{};
+        Component::Transform2D legacyCameraTransform{};
         float legacyCameraZoom = 1.0f;
 
         ser.ObjectIf("Camera", [&]()
@@ -98,7 +98,7 @@ namespace anv
                     id.uuid = entityUUID;
 
                     DeserializeIfPresent<Component::Tag>(m_Registry, entity, ser, "Tag");
-                    DeserializeIfPresent<Component::Transform2d>(m_Registry, entity, ser, "Transform2d");
+                    DeserializeIfPresent<Component::Transform2D>(m_Registry, entity, ser, "Transform2d");
                     DeserializeIfPresent<Component::Camera2D>(m_Registry, entity, ser, "Camera2D");
                     DeserializeIfPresent<Component::SpriteRenderer>(m_Registry, entity, ser, "SpriteRenderer");
                     DeserializeIfPresent<Component::Rigidbody2D>(m_Registry, entity, ser, "Rigidbody2D");
@@ -113,7 +113,7 @@ namespace anv
         if (hasLegacyCamera && GetActiveCameraEntity() == entt::null)
         {
             const entt::entity cameraEntity = CreateEntity("Game Camera");
-            GetComponent<Component::Transform2d>(cameraEntity) = legacyCameraTransform;
+            GetComponent<Component::Transform2D>(cameraEntity) = legacyCameraTransform;
 
             auto& cameraComponent = AddComponent<Component::Camera2D>(cameraEntity);
             cameraComponent.isActive = true;
@@ -158,7 +158,7 @@ namespace anv
             ser.ObjectKeyed("Entities", id.uuid, [&]()
             {
                 SerializeIfPresent<Component::Tag>(m_Registry, entity, ser, "Tag");
-                SerializeIfPresent<Component::Transform2d>(m_Registry, entity, ser, "Transform2d");
+                SerializeIfPresent<Component::Transform2D>(m_Registry, entity, ser, "Transform2d");
                 SerializeIfPresent<Component::Camera2D>(m_Registry, entity, ser, "Camera2D");
                 SerializeIfPresent<Component::SpriteRenderer>(m_Registry, entity, ser, "SpriteRenderer");
                 SerializeIfPresent<Component::Rigidbody2D>(m_Registry, entity, ser, "Rigidbody2D");
@@ -172,11 +172,11 @@ namespace anv
 
     _shared<Camera2D> Scene::GetActiveCamera()
     {
-        auto view = m_Registry.view<Component::Transform2d, Component::Camera2D>();
+        auto view = m_Registry.view<Component::Transform2D, Component::Camera2D>();
 
         for (const auto entity : view)
         {
-            auto& transform = view.get<Component::Transform2d>(entity);
+            auto& transform = view.get<Component::Transform2D>(entity);
             auto& cameraComponent = view.get<Component::Camera2D>(entity);
 
             if (!cameraComponent.isActive)
@@ -326,10 +326,10 @@ namespace anv
 
     void Scene::Render()
     {
-        auto view = m_Registry.view<Component::Transform2d, Component::SpriteRenderer>();
+        auto view = m_Registry.view<Component::Transform2D, Component::SpriteRenderer>();
         auto assetManager = App::GetInstance()->GetAssetManager();
 
-        view.each([&](auto, Component::Transform2d& transform,
+        view.each([&](auto, Component::Transform2D& transform,
                       Component::SpriteRenderer& sprite)
         {
             if (!sprite.visibleInGame)
@@ -348,7 +348,7 @@ namespace anv
     {
         const entt::entity entity = m_Registry.create();
         m_Registry.emplace<uuid::EntityUUID>(entity) = uuid::uuid_GenEntID();
-        m_Registry.emplace<Component::Transform2d>(entity);
+        m_Registry.emplace<Component::Transform2D>(entity);
         m_Registry.emplace<Component::Tag>(entity, std::move(tag));
         return entity;
     }
