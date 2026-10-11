@@ -21,14 +21,15 @@
 
 namespace anv
 {
-    // needed to find engine resources like the python package and shaders
-    static std::filesystem::path s_ExecDir = std::filesystem::path();
+
     
     class FileSystem
     {
     public:
 
         using _ForEachFn = std::function<void(Ref<File>)>;
+        // needed to find engine resources like the python package and shaders
+        static std::filesystem::path s_ExecDir;
 
         // Root directory for this sandbox FS (will be created if missing)
         explicit FileSystem(std::string _rootDir);
@@ -68,6 +69,13 @@ namespace anv
         void PumpDeletes();
 
         std::filesystem::path ResolveKey(const std::string& _key);
+
+        // Turn windows backslashes into forward slashes for consistency. backslashes will freak TOML out.
+        inline static std::string NormalizePath(std::string path)
+        {
+            std::replace(path.begin(), path.end(), '\\', '/');
+            return path;
+        }
     private:
         // Resolve a path against working directory, normalize, and enforce sandbox.
         bool ResolveSandboxed_(const std::string & _relOrAbs, std::filesystem::path & _outAbs) const;

@@ -9,7 +9,7 @@
 #include "../Util/FileSys/FileSystem.h"
 
 #ifdef ANV_ENABLE_PYTHON
-#include <Python.h>
+#include "include_python.h"
 #endif
 
 #include <algorithm>
@@ -299,7 +299,8 @@ namespace anv
 
         s_ProjectDirectory = _projectDirectory;
         s_ScriptsDirectory = s_ProjectDirectory / "Scripts";
-        s_PythonModuleDirectory = s_ExecDir / "Anvil" / "Resources" / "Python";
+        ANV_LOG_DEBUG("[Python] Execution Dir: %s", FileSystem::s_ExecDir.string().c_str());
+        s_PythonModuleDirectory = FileSystem::s_ExecDir / "Anvil" /  "Python";
 
         if (!std::filesystem::exists(s_PythonModuleDirectory))
         {
@@ -358,8 +359,8 @@ namespace anv
         }
         Py_DECREF(anvilModule);
 
-        ANV_LOG_INFO("Anvil Python API: '%s'", s_PythonModuleDirectory.string().c_str());
-        ANV_LOG_INFO("Project Scripts: '%s'", s_ScriptsDirectory.string().c_str());
+        ANV_LOG_DEBUG("Anvil Python API: '%s'", s_PythonModuleDirectory.string().c_str());
+        ANV_LOG_DEBUG("Project Scripts: '%s'", s_ScriptsDirectory.string().c_str());
         return true;
 #endif
     }

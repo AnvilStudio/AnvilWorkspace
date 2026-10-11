@@ -57,6 +57,8 @@ private:
     static SceneState m_SceneState;
     static EditorLayer *m_This;
 
+    std::string m_EditorLayoutIni;
+
     MainMenu m_MainMenu;
     Viewport m_Viewport;
     CodeEditorPanel m_DevNotes;

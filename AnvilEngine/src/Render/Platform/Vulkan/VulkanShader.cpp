@@ -214,7 +214,7 @@ namespace anv
 		auto& fs = App::GetInstance()->GetFS();
 		auto file = fs.CreateFile(m_Cache.string());
 		Serializer ser(file, Serializer::Mode::SER_MODE_TOML, Serializer::Direction::Write);
-		ser.Object(m_Name, [&]()
+		ser.Object(FileSystem::NormalizePath(m_Name), [&]() // Fix for TOML cross plat shader loading issues, normalize the path to use forward slashes
 			{
 				ser.Field("Magic", kShaderCacheMagic);
 				ser.Field("Version", kShaderCacheVersion);

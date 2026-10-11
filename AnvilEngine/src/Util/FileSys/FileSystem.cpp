@@ -8,8 +8,25 @@
 #include <mach-o/dyld.h>
 #endif
 
+#ifdef PLATFORM_WIN64
+#include <Windows.h>
+#ifdef CreateFile
+#undef CreateFile
+#endif
+#ifdef DeleteFile
+#undef DeleteFile
+#endif
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
+#endif
+
 namespace anv
 {
+    std::filesystem::path FileSystem::s_ExecDir = std::filesystem::path();
 
     anv::FileSystem::FileSystem(std::string _rootDir)
         : m_RootDir(std::move(_rootDir)), m_WorkDir(m_RootDir)
@@ -98,12 +115,59 @@ namespace anv
 
         return executable.parent_path();
     }
+#endif
+
+#ifdef PLATFORM_WIN64
+    std::filesystem::path FileSystem::GetExecDir()
+    {
+        std::vector<wchar_t> buffer(MAX_PATH);
+
+        DWORD length = 0;
+
+        while (true)
+        {
+            length = GetModuleFileNameW(
+                nullptr,
+                buffer.data(),
+                static_cast<DWORD>(buffer.size())
+            );
+
+            if (length == 0)
+            {
+                ANV_LOG_ERROR("Failed to retrieve Windows Exec path!");
+                return {};
+            }
+
+            if (length < buffer.size())
+                break;
+
+            // Buffer was too small; increase its capacity.
+            if (buffer.size() >= 32768)
+            {
+                ANV_LOG_ERROR("Windows Exec path exceeds maximum length!");
+                return {};
+            }
+
+            buffer.resize(std::min(buffer.size() * 2, size_t(32768)));
+        }
+
+        std::filesystem::path executable(buffer.data());
+
+        std::error_code ec;
+        auto canonicalPath = std::filesystem::canonical(executable, ec);
+
+        if (ec)
+            return executable.parent_path();
+
+        return canonicalPath.parent_path();
+    }
 #else
     std::filesystem::path FileSystem::GetExecDir()
     {
         ANV_LOG_FATAL("Failed to retrieve exec path, Platform unknown");
     }
 #endif
+
 
     std::string FileSystem::GetCwd() const
     {

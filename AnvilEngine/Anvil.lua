@@ -52,6 +52,46 @@ project "AnvilEngine"
         includedirs { "%{VULKAN_SDK}" }
         libdirs { "%{VULKAN_LIB}" }
 
+        -- Helper function to strip trailing newlines safely from terminal output
+        local function strip_newline(str)
+            if str == nil then return "" end
+            return string.gsub(str, "[\r\n]+$", "")
+        end
+
+        -- Retrieve paths via Python sysconfig
+        local rawIncludes = os.outputof("python -c \"import sysconfig; print(sysconfig.get_path('include'))\"")
+        -- On Windows, Python libraries live in the standard installation scheme prefix / 'libs'
+        local rawLibDir   = os.outputof("python -c \"import sysconfig; print(sysconfig.get_config_var('installed_base') + '\\\\libs')\"")
+        -- Querying the exact library name dynamically matching the python version (e.g., python312)
+        local rawPyVersion = os.outputof("python -c \"import sys; print(f'python{sys.version_info.major}{sys.version_info.minor}')\"")
+
+        local pythonIncludes = strip_newline(rawIncludes)
+        local pythonLibDir   = strip_newline(rawLibDir)
+        local pythonLibName  = strip_newline(rawPyVersion)
+
+        print("Python Include Dir: " .. pythonIncludes)
+        print("Python Lib Dir: " .. pythonLibDir)
+        print("Python Link Target: " .. pythonLibName)
+
+        if pythonIncludes ~= "" and pythonLibDir ~= "" then
+            defines
+            {
+                "PLATFORM_WIN64",
+                "ANV_ENABLE_PYTHON"
+            }
+
+            -- Use native Premake API arrays instead of raw buildoptions/linkoptions
+            includedirs { pythonIncludes }
+            libdirs     { pythonLibDir }
+            links       { pythonLibName }
+        else
+            print("Warning: Python configuration could not be detected; Python scripting will be disabled.")
+            defines
+            {
+                "PLATFORM_WIN64"
+            }
+        end
+
         links
         {
             "GLFW",
@@ -59,8 +99,8 @@ project "AnvilEngine"
             "shaderc_combinedd"
         }
 
-    filter "system:macosx"
-        architecture "arm64"
+--[[ filter "system:macosx"
+        architecture "arm64" -- new macs only!
 
         local pythonIncludes = os.outputof("python3-config --includes")
         local pythonLinkFlags = os.outputof("python3-config --embed --ldflags")
@@ -150,6 +190,7 @@ project "AnvilEngine"
                 "CoreFoundation.framework"
             }
         end
+]]
 
     filter "configurations:DebugG"
         defines { "DEBUG", "DEBUG_G" }

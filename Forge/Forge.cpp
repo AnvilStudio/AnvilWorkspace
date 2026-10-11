@@ -16,8 +16,7 @@ public:
 
     inline void OnSetup() override
     {
-        ANV_LOG_INFO("hello from forge!");
-
+        ANV_PROFILE_SCOPE("Forge::OnSetup")
         const std::filesystem::path projectDirectory =
             m_Settings.projectDir.empty()
                 ? std::filesystem::path(m_Settings.projectPath).parent_path()

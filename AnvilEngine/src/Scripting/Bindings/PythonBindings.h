@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef ANV_ENABLE_PYTHON
-#include <Python.h>
+#include "../include_python.h"
 
 namespace anv::python
 {

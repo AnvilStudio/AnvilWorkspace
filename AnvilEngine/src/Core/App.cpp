@@ -334,7 +334,7 @@ namespace anv
 		// Get Asset dir
 		std::filesystem::path assetPath(m_Settings.projectDir);
 		
-		m_FileSystem->MountKey("Assets", (assetPath / "Assets").c_str());
+		m_FileSystem->MountKey("Assets", (assetPath / "Assets").string().c_str());
 		m_FileSystem->MountKey("Res", "@Assets/com.anvstu.engine");
 		m_FileSystem->MountKey("Cache", "@Res/Cache");
 		m_FileSystem->MountKey("ShaderCache", "@Cache/ShaderCache");
