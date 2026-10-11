@@ -8,6 +8,8 @@
 
 #include "../Util/FileSys/FileSystem.h"
 
+#include <Physics/CollisionEvents2D.h>
+
 #ifdef ANV_ENABLE_PYTHON
 #include <Python.h>
 #endif
@@ -81,6 +83,8 @@ namespace anv
             {"_set_position", python::SetPosition, METH_VARARGS, nullptr},
             {"_get_rotation", python::GetRotation, METH_VARARGS, nullptr},
             {"_set_rotation", python::SetRotation, METH_VARARGS, nullptr},
+            {"_get_tag", python::GetTag, METH_VARARGS, nullptr},
+            {"_set_tag", python::SetTag, METH_VARARGS, nullptr},
             {"_is_key_pressed", python::IsKeyPressed, METH_VARARGS, nullptr},
             {"_is_key_just_pressed", python::IsKeyJustPressed, METH_VARARGS, nullptr},
             {"_rigid_body_add_force", python::RigidBodyAddForce, METH_VARARGS, nullptr},
@@ -145,19 +149,28 @@ namespace anv
             if (!_annotation)
                 return ScriptFieldType::None;
 
-            if (_annotation == reinterpret_cast<PyObject *>(&PyBool_Type)) return ScriptFieldType::Bool;
-            if (_annotation == reinterpret_cast<PyObject *>(&PyLong_Type)) return ScriptFieldType::Int;
-            if (_annotation == reinterpret_cast<PyObject *>(&PyFloat_Type)) return ScriptFieldType::Float;
-            if (_annotation == reinterpret_cast<PyObject *>(&PyUnicode_Type)) return ScriptFieldType::String;
+            if (_annotation == reinterpret_cast<PyObject *>(&PyBool_Type))
+                return ScriptFieldType::Bool;
+            if (_annotation == reinterpret_cast<PyObject *>(&PyLong_Type))
+                return ScriptFieldType::Int;
+            if (_annotation == reinterpret_cast<PyObject *>(&PyFloat_Type))
+                return ScriptFieldType::Float;
+            if (_annotation == reinterpret_cast<PyObject *>(&PyUnicode_Type))
+                return ScriptFieldType::String;
 
             if (PyUnicode_Check(_annotation))
             {
                 const char *name = PyUnicode_AsUTF8(_annotation);
-                if (!name) return ScriptFieldType::None;
-                if (std::string_view(name) == "bool") return ScriptFieldType::Bool;
-                if (std::string_view(name) == "int") return ScriptFieldType::Int;
-                if (std::string_view(name) == "float") return ScriptFieldType::Float;
-                if (std::string_view(name) == "str") return ScriptFieldType::String;
+                if (!name)
+                    return ScriptFieldType::None;
+                if (std::string_view(name) == "bool")
+                    return ScriptFieldType::Bool;
+                if (std::string_view(name) == "int")
+                    return ScriptFieldType::Int;
+                if (std::string_view(name) == "float")
+                    return ScriptFieldType::Float;
+                if (std::string_view(name) == "str")
+                    return ScriptFieldType::String;
             }
 
             return ScriptFieldType::None;
@@ -165,19 +178,24 @@ namespace anv
 
         std::string python_value_to_string(PyObject *_value, ScriptFieldType _type)
         {
-            if (!_value) return {};
+            if (!_value)
+                return {};
 
             switch (_type)
             {
-            case ScriptFieldType::Bool: return PyObject_IsTrue(_value) ? "true" : "false";
-            case ScriptFieldType::Int: return std::to_string(PyLong_AsLongLong(_value));
-            case ScriptFieldType::Float: return std::to_string(PyFloat_AsDouble(_value));
+            case ScriptFieldType::Bool:
+                return PyObject_IsTrue(_value) ? "true" : "false";
+            case ScriptFieldType::Int:
+                return std::to_string(PyLong_AsLongLong(_value));
+            case ScriptFieldType::Float:
+                return std::to_string(PyFloat_AsDouble(_value));
             case ScriptFieldType::String:
             {
                 const char *value = PyUnicode_AsUTF8(_value);
                 return value ? value : "";
             }
-            default: return {};
+            default:
+                return {};
             }
         }
 
@@ -195,8 +213,14 @@ namespace anv
             }
             case ScriptFieldType::Float:
             {
-                try { return PyFloat_FromDouble(std::stod(_field.value)); }
-                catch (...) { return PyFloat_FromDouble(0.0); }
+                try
+                {
+                    return PyFloat_FromDouble(std::stod(_field.value));
+                }
+                catch (...)
+                {
+                    return PyFloat_FromDouble(0.0);
+                }
             }
             case ScriptFieldType::String:
                 return PyUnicode_FromString(_field.value.c_str());
@@ -226,7 +250,8 @@ namespace anv
             while (PyDict_Next(annotations, &position, &key, &annotation))
             {
                 const char *fieldName = PyUnicode_Check(key) ? PyUnicode_AsUTF8(key) : nullptr;
-                if (!fieldName) continue;
+                if (!fieldName)
+                    continue;
 
                 const ScriptFieldType type = annotation_type(annotation);
                 if (type == ScriptFieldType::None)
@@ -235,7 +260,8 @@ namespace anv
                     continue;
                 }
 
-                if (_component.fields.contains(fieldName)) continue;
+                if (_component.fields.contains(fieldName))
+                    continue;
 
                 PyObject *defaultValue = PyObject_GetAttrString(_classObject, fieldName);
                 ScriptField field;
@@ -250,10 +276,12 @@ namespace anv
 
         void save_instance_fields(RuntimeInstance &_instance)
         {
-            if (!_instance.scene || !_instance.object) return;
+            if (!_instance.scene || !_instance.object)
+                return;
 
             auto &registry = _instance.scene->Registry();
-            if (!registry.valid(_instance.entity) || !registry.any_of<Component::Script>(_instance.entity)) return;
+            if (!registry.valid(_instance.entity) || !registry.any_of<Component::Script>(_instance.entity))
+                return;
 
             auto &component = registry.get<Component::Script>(_instance.entity);
             for (auto &[name, field] : component.fields)
@@ -286,7 +314,8 @@ namespace anv
 
             PyObject *result = _deltaTime ? PyObject_CallFunction(method, "f", *_deltaTime) : PyObject_CallNoArgs(method);
             Py_DECREF(method);
-            if (!result) return false;
+            if (!result)
+                return false;
             Py_DECREF(result);
             return true;
         }
@@ -295,7 +324,8 @@ namespace anv
 
     bool PythonScriptEngine::Initialize(const std::filesystem::path &_projectDirectory)
     {
-        if (s_Initialized) return true;
+        if (s_Initialized)
+            return true;
 
         s_ProjectDirectory = _projectDirectory;
         s_ScriptsDirectory = s_ProjectDirectory / "Scripts";
@@ -367,17 +397,21 @@ namespace anv
     void PythonScriptEngine::Shutdown()
     {
 #ifdef ANV_ENABLE_PYTHON
-        if (!s_Initialized) return;
+        if (!s_Initialized)
+            return;
         for (auto &[entityID, instance] : s_Instances)
         {
             save_instance_fields(instance);
-            if (!call_method(instance.object, "on_destroy")) log_python_exception("calling on_destroy during Python shutdown");
+            if (!call_method(instance.object, "on_destroy"))
+                log_python_exception("calling on_destroy during Python shutdown");
             Py_XDECREF(instance.object);
         }
         s_Instances.clear();
-        for (auto &[path, module] : s_Modules) Py_XDECREF(module.module);
+        for (auto &[path, module] : s_Modules)
+            Py_XDECREF(module.module);
         s_Modules.clear();
-        if (Py_FinalizeEx() < 0) ANV_LOG_ERROR("Python interpreter shutdown reported an error.");
+        if (Py_FinalizeEx() < 0)
+            ANV_LOG_ERROR("Python interpreter shutdown reported an error.");
 #endif
         ClearScriptScenes();
         s_ProjectDirectory.clear();
@@ -392,19 +426,25 @@ namespace anv
     void PythonScriptEngine::UpdateScene(Scene &_scene, float _deltaTime)
     {
 #ifndef ANV_ENABLE_PYTHON
-        (void)_scene; (void)_deltaTime;
+        (void)_scene;
+        (void)_deltaTime;
 #else
-        if (!s_Initialized) return;
+        if (!s_Initialized)
+            return;
         RegisterScriptScene(_scene);
         reload_changed_modules(_scene);
         auto view = _scene.Registry().view<uuid::EntityUUID, Component::Script>();
         for (auto [entity, id, script] : view.each())
         {
-            if (!script.enabled || script.modulePath.empty() || script.className.empty()) continue;
-            if (!s_Instances.contains(id.uuid) && !create_instance(_scene, entity)) continue;
+            if (!script.enabled || script.modulePath.empty() || script.className.empty())
+                continue;
+            if (!s_Instances.contains(id.uuid) && !create_instance(_scene, entity))
+                continue;
             auto instance = s_Instances.find(id.uuid);
-            if (instance == s_Instances.end() || !instance->second.object) continue;
-            if (!call_method(instance->second.object, "on_update", &_deltaTime)) log_python_exception("calling script on_update");
+            if (instance == s_Instances.end() || !instance->second.object)
+                continue;
+            if (!call_method(instance->second.object, "on_update", &_deltaTime))
+                log_python_exception("calling script on_update");
         }
 #endif
     }
@@ -414,9 +454,14 @@ namespace anv
 #ifdef ANV_ENABLE_PYTHON
         for (auto iterator = s_Instances.begin(); iterator != s_Instances.end();)
         {
-            if (iterator->second.scene != &_scene) { ++iterator; continue; }
+            if (iterator->second.scene != &_scene)
+            {
+                ++iterator;
+                continue;
+            }
             save_instance_fields(iterator->second);
-            if (!call_method(iterator->second.object, "on_destroy")) log_python_exception("calling scene script on_destroy");
+            if (!call_method(iterator->second.object, "on_destroy"))
+                log_python_exception("calling scene script on_destroy");
             Py_XDECREF(iterator->second.object);
             iterator = s_Instances.erase(iterator);
         }
@@ -428,10 +473,12 @@ namespace anv
     {
 #ifdef ANV_ENABLE_PYTHON
         std::string entityID;
-        if (!get_entity_id(_scene, _entity, entityID)) return;
+        if (!get_entity_id(_scene, _entity, entityID))
+            return;
         destroy_instance(entityID, true);
 #else
-        (void)_scene; (void)_entity;
+        (void)_scene;
+        (void)_entity;
 #endif
     }
 
@@ -446,13 +493,301 @@ namespace anv
         s_RequestedReloadPath = _modulePath.is_absolute() ? _modulePath : s_ScriptsDirectory / _modulePath;
     }
 
+    // TODO: Optimize
+    void PythonScriptEngine::InvokeOnCollision(
+        Scene &_scene,
+        entt::entity _entity,
+        entt::entity _other,
+        CollisionEventKind2D _kind,
+        CollisionEventPhase2D _phase)
+    {
+#ifdef ANV_ENABLE_PYTHON
+
+        std::string entityID;
+        std::string otherID;
+
+        if (!get_entity_id(_scene, _entity, entityID))
+        {
+            ANV_LOG_ERROR(
+                "Failed to resolve entity for on_collision invocation: %u",
+                static_cast<uint32_t>(_entity));
+
+            return;
+        }
+
+        if (!get_entity_id(_scene, _other, otherID))
+        {
+            ANV_LOG_ERROR(
+                "Failed to resolve other entity for on_collision invocation: %u",
+                static_cast<uint32_t>(_other));
+
+            return;
+        }
+
+        // Find script instance belonging to this entity.
+        auto iterator = s_Instances.find(entityID);
+
+        if (iterator == s_Instances.end())
+            return;
+
+        RuntimeInstance &instance = iterator->second;
+
+        if (!instance.object)
+            return;
+
+        // Find script's on_collision method.
+        PyObject *method =
+            PyObject_GetAttrString(instance.object, "on_collision");
+
+        if (!method)
+        {
+            PyErr_Clear();
+            return;
+        }
+
+        if (!PyCallable_Check(method))
+        {
+            Py_DECREF(method);
+            return;
+        }
+
+        // ------------------------------------------------------------
+        // Import Anvil Python API
+        // ------------------------------------------------------------
+
+        PyObject *entityModule =
+            PyImport_ImportModule("anvil.entity");
+
+        PyObject *physicsModule =
+            PyImport_ImportModule("anvil.physics");
+
+        if (!entityModule || !physicsModule)
+        {
+            Py_XDECREF(entityModule);
+            Py_XDECREF(physicsModule);
+            Py_DECREF(method);
+
+            log_python_exception(
+                "importing collision event Python API");
+
+            return;
+        }
+
+        // ------------------------------------------------------------
+        // Get Python classes
+        // ------------------------------------------------------------
+
+        PyObject *entityClass =
+            PyObject_GetAttrString(entityModule, "Entity");
+
+        PyObject *eventClass =
+            PyObject_GetAttrString(
+                physicsModule,
+                "PhysicsCollisionEvent2D");
+
+        PyObject *kindClass =
+            PyObject_GetAttrString(
+                physicsModule,
+                "CollisionEventKind2D");
+
+        PyObject *phaseClass =
+            PyObject_GetAttrString(
+                physicsModule,
+                "CollisionEventPhase2D");
+
+        if (!entityClass ||
+            !eventClass ||
+            !kindClass ||
+            !phaseClass)
+        {
+            Py_XDECREF(entityClass);
+            Py_XDECREF(eventClass);
+            Py_XDECREF(kindClass);
+            Py_XDECREF(phaseClass);
+
+            Py_DECREF(entityModule);
+            Py_DECREF(physicsModule);
+            Py_DECREF(method);
+
+            log_python_exception(
+                "resolving collision event Python types");
+
+            return;
+        }
+
+        // ------------------------------------------------------------
+        // Entity(otherID)
+        // ------------------------------------------------------------
+
+        PyObject *otherEntity =
+            PyObject_CallFunction(
+                entityClass,
+                "s",
+                otherID.c_str());
+
+        if (!otherEntity)
+        {
+            Py_DECREF(entityClass);
+            Py_DECREF(eventClass);
+            Py_DECREF(kindClass);
+            Py_DECREF(phaseClass);
+            Py_DECREF(entityModule);
+            Py_DECREF(physicsModule);
+            Py_DECREF(method);
+
+            log_python_exception(
+                "constructing collision Entity");
+
+            return;
+        }
+
+        // ------------------------------------------------------------
+        // Resolve kind enum
+        // ------------------------------------------------------------
+
+        const char *kindName =
+            (_kind == CollisionEventKind2D::Sensor)
+                ? "SENSOR"
+                : "CONTACT";
+
+        PyObject *kindObject =
+            PyObject_GetAttrString(
+                kindClass,
+                kindName);
+
+        // ------------------------------------------------------------
+        // Resolve phase enum
+        // ------------------------------------------------------------
+
+        const char *phaseName =
+            (_phase == CollisionEventPhase2D::End)
+                ? "END"
+                : "BEGIN";
+
+        PyObject *phaseObject =
+            PyObject_GetAttrString(
+                phaseClass,
+                phaseName);
+
+        if (!kindObject || !phaseObject)
+        {
+            Py_XDECREF(kindObject);
+            Py_XDECREF(phaseObject);
+
+            Py_DECREF(otherEntity);
+
+            Py_DECREF(entityClass);
+            Py_DECREF(eventClass);
+            Py_DECREF(kindClass);
+            Py_DECREF(phaseClass);
+
+            Py_DECREF(entityModule);
+            Py_DECREF(physicsModule);
+            Py_DECREF(method);
+
+            log_python_exception(
+                "resolving collision enums");
+
+            return;
+        }
+
+        // ------------------------------------------------------------
+        // PhysicsCollisionEvent2D(
+        //      otherEntity,
+        //      kind,
+        //      phase
+        // )
+        // ------------------------------------------------------------
+
+        PyObject *collisionEvent =
+            PyObject_CallFunctionObjArgs(
+                eventClass,
+                otherEntity,
+                kindObject,
+                phaseObject,
+                nullptr);
+
+        if (!collisionEvent)
+        {
+            Py_DECREF(kindObject);
+            Py_DECREF(phaseObject);
+            Py_DECREF(otherEntity);
+
+            Py_DECREF(entityClass);
+            Py_DECREF(eventClass);
+            Py_DECREF(kindClass);
+            Py_DECREF(phaseClass);
+
+            Py_DECREF(entityModule);
+            Py_DECREF(physicsModule);
+            Py_DECREF(method);
+
+            log_python_exception(
+                "constructing PhysicsCollisionEvent2D");
+
+            return;
+        }
+
+        // ------------------------------------------------------------
+        // script.on_collision(event)
+        // ------------------------------------------------------------
+
+        PyObject *result =
+            PyObject_CallFunctionObjArgs(
+                method,
+                collisionEvent,
+                nullptr);
+
+        if (!result)
+        {
+            log_python_exception(
+                "calling script on_collision");
+        }
+
+        // ------------------------------------------------------------
+        // Cleanup
+        // ------------------------------------------------------------
+
+        Py_XDECREF(result);
+
+        Py_DECREF(collisionEvent);
+
+        Py_DECREF(kindObject);
+        Py_DECREF(phaseObject);
+
+        Py_DECREF(otherEntity);
+
+        Py_DECREF(entityClass);
+        Py_DECREF(eventClass);
+        Py_DECREF(kindClass);
+        Py_DECREF(phaseClass);
+
+        Py_DECREF(entityModule);
+        Py_DECREF(physicsModule);
+
+        Py_DECREF(method);
+
+#else
+
+        (void)_scene;
+        (void)_entity;
+        (void)_other;
+        (void)_kind;
+        (void)_phase;
+
+#endif
+    }
+
     bool PythonScriptEngine::create_instance(Scene &_scene, entt::entity _entity)
     {
 #ifndef ANV_ENABLE_PYTHON
-        (void)_scene; (void)_entity; return false;
+        (void)_scene;
+        (void)_entity;
+        return false;
 #else
         auto &registry = _scene.Registry();
-        if (!registry.valid(_entity) || !registry.all_of<uuid::EntityUUID, Component::Script>(_entity)) return false;
+        if (!registry.valid(_entity) || !registry.all_of<uuid::EntityUUID, Component::Script>(_entity))
+            return false;
 
         auto &id = registry.get<uuid::EntityUUID>(_entity);
         auto &component = registry.get<Component::Script>(_entity);
@@ -465,31 +800,47 @@ namespace anv
 
         const std::string normalizedPath = normalize_path(path);
         ModuleRecord &record = s_Modules[normalizedPath];
-        if (!record.module && !load_module(path, record)) { log_python_exception("loading a script module"); return false; }
+        if (!record.module && !load_module(path, record))
+        {
+            log_python_exception("loading a script module");
+            return false;
+        }
 
         PyObject *classObject = PyObject_GetAttrString(record.module, component.className.c_str());
-        if (!classObject) { log_python_exception("resolving a script class"); return false; }
+        if (!classObject)
+        {
+            log_python_exception("resolving a script class");
+            return false;
+        }
 
         PyObject *publicModule = PyImport_ImportModule("anvil");
         PyObject *baseClass = publicModule ? PyObject_GetAttrString(publicModule, "Script") : nullptr;
         const bool validClass = PyType_Check(classObject) && baseClass && PyObject_IsSubclass(classObject, baseClass) == 1;
-        Py_XDECREF(baseClass); Py_XDECREF(publicModule);
+        Py_XDECREF(baseClass);
+        Py_XDECREF(publicModule);
         if (!validClass)
         {
             ANV_LOG_ERROR("Python class '%s' must derive from anvil.Script.", component.className.c_str());
-            Py_DECREF(classObject); return false;
+            Py_DECREF(classObject);
+            return false;
         }
 
         reflect_fields(classObject, component);
         PyObject *object = PyObject_CallNoArgs(classObject);
         Py_DECREF(classObject);
-        if (!object) { log_python_exception("constructing a script instance"); return false; }
+        if (!object)
+        {
+            log_python_exception("constructing a script instance");
+            return false;
+        }
 
         PyObject *entityID = PyUnicode_FromString(id.uuid.c_str());
         if (!entityID || PyObject_SetAttrString(object, "entity_id", entityID) != 0)
         {
-            Py_XDECREF(entityID); Py_DECREF(object);
-            log_python_exception("binding an entity to a script instance"); return false;
+            Py_XDECREF(entityID);
+            Py_DECREF(object);
+            log_python_exception("binding an entity to a script instance");
+            return false;
         }
         Py_DECREF(entityID);
 
@@ -498,20 +849,26 @@ namespace anv
             PyObject *value = string_to_python_value(field);
             if (!value || PyObject_SetAttrString(object, name.c_str(), value) != 0)
             {
-                Py_XDECREF(value); Py_DECREF(object);
-                log_python_exception("restoring a reflected script field"); return false;
+                Py_XDECREF(value);
+                Py_DECREF(object);
+                log_python_exception("restoring a reflected script field");
+                return false;
             }
             Py_DECREF(value);
         }
 
         RuntimeInstance instance;
-        instance.scene = &_scene; instance.entity = _entity; instance.modulePath = path; instance.object = object;
+        instance.scene = &_scene;
+        instance.entity = _entity;
+        instance.modulePath = path;
+        instance.object = object;
         s_Instances[id.uuid] = instance;
 
         if (!call_method(object, "on_create"))
         {
             log_python_exception("calling script on_create");
-            destroy_instance(id.uuid, false); return false;
+            destroy_instance(id.uuid, false);
+            return false;
         }
 
         ANV_LOG_INFO("Created Python script '%s.%s' for entity '%s'.", component.modulePath.c_str(), component.className.c_str(), id.uuid.c_str());
@@ -523,13 +880,16 @@ namespace anv
     {
 #ifdef ANV_ENABLE_PYTHON
         auto iterator = s_Instances.find(_entityID);
-        if (iterator == s_Instances.end()) return;
+        if (iterator == s_Instances.end())
+            return;
         save_instance_fields(iterator->second);
-        if (_invokeDestroy && !call_method(iterator->second.object, "on_destroy")) log_python_exception("calling script on_destroy");
+        if (_invokeDestroy && !call_method(iterator->second.object, "on_destroy"))
+            log_python_exception("calling script on_destroy");
         Py_XDECREF(iterator->second.object);
         s_Instances.erase(iterator);
 #else
-        (void)_entityID; (void)_invokeDestroy;
+        (void)_entityID;
+        (void)_invokeDestroy;
 #endif
     }
 
@@ -542,30 +902,42 @@ namespace anv
         auto view = _scene.Registry().view<Component::Script>();
         for (auto [entity, script] : view.each())
         {
-            if (script.modulePath.empty()) continue;
+            if (script.modulePath.empty())
+                continue;
             const std::filesystem::path path = script.modulePath.ends_with(".py") ? s_ScriptsDirectory / script.modulePath : s_ScriptsDirectory / (script.modulePath + ".py");
             const std::string normalized = normalize_path(path);
             auto module = s_Modules.find(normalized);
-            if (module == s_Modules.end() || !std::filesystem::exists(path)) continue;
+            if (module == s_Modules.end() || !std::filesystem::exists(path))
+                continue;
             std::error_code error;
             const auto writeTime = std::filesystem::last_write_time(path, error);
             const bool requested = s_ReloadAll || (!s_RequestedReloadPath.empty() && normalize_path(s_RequestedReloadPath) == normalized);
-            if (requested || (!error && writeTime != module->second.lastWriteTime)) reloadPaths.insert(normalized);
+            if (requested || (!error && writeTime != module->second.lastWriteTime))
+                reloadPaths.insert(normalized);
         }
 
         for (const std::string &path : reloadPaths)
         {
             for (auto iterator = s_Instances.begin(); iterator != s_Instances.end();)
             {
-                if (normalize_path(iterator->second.modulePath) != path) { ++iterator; continue; }
+                if (normalize_path(iterator->second.modulePath) != path)
+                {
+                    ++iterator;
+                    continue;
+                }
                 save_instance_fields(iterator->second);
-                if (!call_method(iterator->second.object, "on_destroy")) log_python_exception("calling on_destroy before hot reload");
+                if (!call_method(iterator->second.object, "on_destroy"))
+                    log_python_exception("calling on_destroy before hot reload");
                 Py_XDECREF(iterator->second.object);
                 iterator = s_Instances.erase(iterator);
             }
 
             ModuleRecord &record = s_Modules[path];
-            if (!load_module(path, record)) { log_python_exception("hot reloading a script module"); continue; }
+            if (!load_module(path, record))
+            {
+                log_python_exception("hot reloading a script module");
+                continue;
+            }
             ANV_LOG_INFO("Hot reloaded Python module '%s'.", path.c_str());
         }
         s_ReloadAll = false;
@@ -610,7 +982,7 @@ namespace anv
         }
 
         const char *message = formattedString ? PyUnicode_AsUTF8(formattedString) : nullptr;
-        if (message) 
+        if (message)
         {
             ANV_LOG_ERROR("Python exception while %s:\n%s", _context, message);
         }
@@ -622,8 +994,12 @@ namespace anv
             Py_XDECREF(valueString);
         }
 
-        Py_XDECREF(formattedString); Py_XDECREF(formattedList); Py_XDECREF(tracebackModule);
-        Py_XDECREF(exceptionType); Py_XDECREF(exceptionValue); Py_XDECREF(exceptionTraceback);
+        Py_XDECREF(formattedString);
+        Py_XDECREF(formattedList);
+        Py_XDECREF(tracebackModule);
+        Py_XDECREF(exceptionType);
+        Py_XDECREF(exceptionValue);
+        Py_XDECREF(exceptionTraceback);
         PyErr_Clear();
 #else
         (void)_context;

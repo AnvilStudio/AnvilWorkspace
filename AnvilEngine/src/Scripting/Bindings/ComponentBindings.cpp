@@ -25,11 +25,13 @@ namespace anv::python
         bool hasComponent = false;
 
         if (name == "Transform2D")
-            hasComponent = context.scene->HasComponent<Component::Transform2d>(context.entity);
+            hasComponent = context.scene->HasComponent<Component::Transform2D>(context.entity);
         else if (name == "RigidBody2D")
             hasComponent = context.scene->HasComponent<Component::Rigidbody2D>(context.entity);
         else if (name == "BoxCollider2D")
             hasComponent = context.scene->HasComponent<Component::BoxCollider2D>(context.entity);
+        else if (name == "TagComponent")
+            hasComponent = context.scene->HasComponent<Component::Tag>(context.entity);
         else
         {
             PyErr_Format(PyExc_ValueError, "Unknown Anvil component type '%s'", componentName);

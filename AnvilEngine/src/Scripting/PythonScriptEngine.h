@@ -4,12 +4,13 @@
 #include <filesystem>
 #include <string>
 #include <string_view>
-
 #include "../vendor/entt/single_include/entt/entt.hpp"
 
 namespace anv
 {
     class Scene;
+    enum class CollisionEventKind2D : uint8_t;
+    enum class CollisionEventPhase2D : uint8_t;
 
     /**
      * @brief Embedded CPython runtime for entity-attached script instances.
@@ -41,6 +42,14 @@ namespace anv
 
         /** Forces a module reload on the next scene update. */
         static void RequestReload(const std::filesystem::path& _modulePath = {});
+
+        /** Invokes the OnCollision method **/
+        static void InvokeOnCollision(
+        Scene &_scene,
+        entt::entity _entity,
+        entt::entity _other,
+        CollisionEventKind2D _kind,
+        CollisionEventPhase2D _phase);
 
     private:
         static bool create_instance(Scene& _scene, entt::entity _entity);

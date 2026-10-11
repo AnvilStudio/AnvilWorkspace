@@ -5,7 +5,7 @@ from .script import Script
 from .input import input
 from .key import Key
 from .transform import Transform2D
-from .physics import RigidBody2D
+from .physics import *
 from .collider import BoxCollider2D
 
 __all__ = [
@@ -14,6 +14,9 @@ __all__ = [
     "Script",
     "Transform2D",
     "RigidBody2D",
+    "CollisionEventKind2D",
+    "CollisionEventPhase2D",
+    "PhysicsCollisionEvent2D",
     "BoxCollider2D",
     "Key",
     "input",

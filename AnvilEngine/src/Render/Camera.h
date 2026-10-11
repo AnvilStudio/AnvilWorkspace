@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Scene/Components/Transform2d.h"
+#include "../Scene/Components/Transform2D.h"
 
 #include <glm/glm.hpp>
 
@@ -29,7 +29,7 @@ namespace anv
         void Update(float _deltaTime);
 
         CameraUBO& GetCameraUBO() { return m_CameraUBO; }
-        Component::Transform2d& GetTransform() { return m_Transform; }
+        Component::Transform2D& GetTransform() { return m_Transform; }
         float GetAspectRatio() { return m_AspectRatio; }
         float GetZoom() { return m_ZoomLevel; }
         glm::mat4 GetView() {return m_CameraUBO.View;};
@@ -38,7 +38,7 @@ namespace anv
         // will always return true for a 2d camera
         bool IsOrtho() {return true;}
 
-        void SetTransform(Component::Transform2d _transform) { m_Transform = _transform; }
+        void SetTransform(Component::Transform2D _transform) { m_Transform = _transform; }
         void SetZoom(float _zoom);
         void SetProjection(float _left, float _right, float _bottom, float _top);
         void SetAspectRatio(float _ratio);
@@ -48,7 +48,7 @@ namespace anv
         void calc_view();
 
         CameraUBO m_CameraUBO;
-        Component::Transform2d m_Transform;
+        Component::Transform2D m_Transform;
         float m_AspectRatio = 16.0f / 9.0f;
         float m_ZoomLevel = 1.0f;
     };
