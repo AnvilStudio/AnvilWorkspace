@@ -128,6 +128,7 @@ void EditorLayer::draw_stats()
     auto &stats = App::GetInstance()->GetStats();
     ImGui::Text("FPS: %u", stats.fps.GetFPS());
     ImGui::Text("Frame Time: %.3f ms", stats.frameTime);
+    ImGui::Text("Draw Calls: %i", stats.DrawCalls);
     ImGui::End();
 }
 

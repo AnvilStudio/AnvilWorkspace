@@ -34,7 +34,7 @@ namespace anv
         void ClearBack();
         void ClearAll();
 
-        // New: “hard stop” for swapchain recreation:
+        // New: hard stop for swapchain recreation:
         // - Wait for any in-flight processing
         // - Clear any queued work that might reference old swapchain
         void Flush();

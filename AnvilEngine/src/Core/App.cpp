@@ -147,6 +147,8 @@ namespace anv
 
 			Renderer2D::EndScene();
 			Renderer2D::DrawFrame();
+
+			m_Stats.DrawCalls = Renderer2D::GetStats().DrawCalls;
 		}
 		s_This->OnDestroy();
 	}

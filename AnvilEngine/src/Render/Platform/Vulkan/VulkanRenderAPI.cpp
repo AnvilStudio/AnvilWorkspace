@@ -149,6 +149,7 @@ namespace anv
 
 		m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext& frame) mutable
 		{
+			// our "G-buffer", sort what needs to be drawn first
 			std::stable_sort(sceneQuads.begin(), sceneQuads.end(), [](const QuadSubmission& a, const QuadSubmission& b)
 			{
 				return a.Layer < b.Layer;
@@ -187,6 +188,7 @@ namespace anv
 			vkCmdBindIndexBuffer(vkCmd->Get(), vkIB->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
 			m_RenderStats.DrawCalls = 0;
 
+			// this is bad. for every quad in our scene, were submitting an expensive draw call.
 			for (auto& quad : sceneQuads)
 			{
 				Ref<VulkanTexture> texture = m_WhiteTexture;

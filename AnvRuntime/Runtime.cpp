@@ -1,0 +1,104 @@
+#include "Runtime.h"
+
+using namespace anv;
+
+namespace
+{
+    std::filesystem::path resolve_scene_path(
+        const std::filesystem::path &scenePath)
+    {
+        if (scenePath.empty())
+            return {};
+
+        const std::string pathString = scenePath.string();
+        if (!pathString.empty() && pathString.front() == '@')
+            return App::GetInstance()->GetFS().ResolveKey(pathString);
+
+        return scenePath;
+    }
+
+}
+
+void AnvRuntime::discard_snapshot()
+{
+    if (!m_SnapshotPath.empty())
+    {
+        std::error_code error;
+        std::filesystem::remove(m_SnapshotPath, error);
+    }
+
+    m_OriginalScenePath.clear();
+    m_ResolvedScenePath.clear();
+    m_SnapshotPath.clear();
+}
+
+void AnvRuntime::Play()
+{
+    auto sceneManager = App::GetInstance()->GetSceneManager();
+    Ref<Scene> scene = sceneManager ? sceneManager->GetActive() : nullptr;
+    if (!scene)
+        return;
+
+    m_OriginalScenePath = scene->GetPath();
+    m_ResolvedScenePath = resolve_scene_path(m_OriginalScenePath);
+
+    if (m_OriginalScenePath.empty() || m_ResolvedScenePath.empty())
+    {
+        ANV_LOG_ERROR(
+            "Cannot start a restorable Play session: the active scene has no valid path.");
+        discard_snapshot();
+        return;
+    }
+
+    scene->Save();
+
+    std::error_code error;
+    if (!std::filesystem::is_regular_file(m_ResolvedScenePath, error))
+    {
+        ANV_LOG_ERROR(
+            "Unable to snapshot scene '%s': resolved path '%s' is not a file.",
+            m_OriginalScenePath.string().c_str(),
+            m_ResolvedScenePath.string().c_str());
+        discard_snapshot();
+        return;
+    }
+
+    error.clear();
+    const std::filesystem::path tempDirectory =
+        std::filesystem::temp_directory_path(error);
+
+    if (error)
+    {
+        ANV_LOG_ERROR(
+            "Unable to locate the temporary directory for the Play snapshot: %s",
+            error.message().c_str());
+        discard_snapshot();
+        return;
+    }
+
+    m_SnapshotPath = tempDirectory /
+                     ("anvil-play-" + scene->GetUUID().uuid + ".scene-backup");
+
+    std::filesystem::copy_file(
+        m_ResolvedScenePath,
+        m_SnapshotPath,
+        std::filesystem::copy_options::overwrite_existing,
+        error);
+
+    if (error)
+    {
+        ANV_LOG_ERROR(
+            "Unable to snapshot scene '%s' before Play: %s",
+            m_ResolvedScenePath.string().c_str(),
+            error.message().c_str());
+        discard_snapshot();
+        return;
+    }
+
+    scene->SetScriptExecutionEnabled(true);
+    scene->StartPhysics();
+
+    ANV_LOG_INFO(
+        "Created Play snapshot for '%s' and started scene runtime.",
+        m_ResolvedScenePath.string().c_str());
+}

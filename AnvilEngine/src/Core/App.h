@@ -34,8 +34,8 @@ namespace anv
 	struct AppStats
 	{
 		float frameTime = 0.f;
+		uint32_t DrawCalls = 0;
 		FPSCounter fps;
-		
 	};
 
 	struct EngineInfo
