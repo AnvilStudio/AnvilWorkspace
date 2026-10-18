@@ -127,7 +127,7 @@ void InspectorLayer::Draw(
                                                    ? currentTexture->GetName().c_str()
                                                    : "None — drop texture here";
 
-                    ImGui::Button("##TextureSlot", ImVec2(-1.0f, 0.0f));
+                    ImGui::Button(textureLabel, ImVec2(-1.0f, 0.0f));
 
                     if (ImGui::BeginDragDropTarget())
                     {
