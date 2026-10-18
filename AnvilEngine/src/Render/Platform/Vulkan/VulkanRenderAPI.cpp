@@ -53,6 +53,14 @@ namespace anv
 
 		vkWaitForFences(vkCtx->GetDevice(), 1, &fr.sync.inFlightFence, VK_TRUE, UINT64_MAX);
 
+		m_FrameVertexOffsets[m_FrameIndex] = 0;
+
+		BufferCreateInfo vbInfo{};
+		vbInfo.Usage = BufferUsage::Vertex;
+		vbInfo.Size =
+			MaxBatchQuads * 4 * sizeof(BatchVertex);
+		vbInfo.Dynamic = true;
+
 		uint32_t imageIndex = m_SwapchainTarget->AcquireNextImage(fr.sync.imageAvailable, m_SwapRecreateFlag);
 		if (m_SwapRecreateFlag)
 		{
@@ -61,6 +69,8 @@ namespace anv
 			m_SwapRecreateFlag = false;
 			return;
 		}
+
+		m_FrameVertexOffsets[m_FrameIndex] = 0;
 
 		vkResetFences(vkCtx->GetDevice(), 1, &fr.sync.inFlightFence);
 
@@ -73,19 +83,17 @@ namespace anv
 
 		uint32_t frameIdx = m_FrameIndex;
 		m_RenderCmdChain->SetSubmitFn([this, frameIdx](Ref<CommandBuffer> cmd)
-		{
+									  {
 			auto& fr2 = m_Frames[frameIdx];
 			auto vkCmd = cmd.As<VulkanCommandBuffer>();
 			ANV_ASSERT(vkCmd, "Submit: CommandBuffer cast failed!");
-			vkCmd->Submit(fr2.sync.imageAvailable, fr2.sync.renderFinished, fr2.sync.inFlightFence);
-		});
+			vkCmd->Submit(fr2.sync.imageAvailable, fr2.sync.renderFinished, fr2.sync.inFlightFence); });
 
-		m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext& frame)
-		{
+		m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext &frame)
+									  {
 			m_SwapchainTarget->Begin(cmd);
 			m_ImGuiLayer->Render({.commandBuffer = cmd});
-			m_SwapchainTarget->End(cmd);
-		});
+			m_SwapchainTarget->End(cmd); });
 
 		m_RenderCmdChain->Swap();
 		m_RenderCmdChain->WaitForProcessComplete();
@@ -135,108 +143,256 @@ namespace anv
 		BeginScene(m_SwapchainTarget);
 	}
 
-	void VulkanRenderAPI::DrawScene(Ref<RenderTarget> _renderTarget, _shared<Camera2D> camera)
+	void VulkanRenderAPI::DrawScene(
+		Ref<RenderTarget> _renderTarget,
+		_shared<Camera2D> camera)
 	{
-		ANV_ASSERT(_renderTarget, "VulkanRenderAPI::DrawScene requires a render target");
-		ANV_ASSERT(camera, "VulkanRenderAPI::DrawScene requires a camera");
+		ANV_ASSERT(_renderTarget, "DrawScene requires a render target");
+		ANV_ASSERT(camera, "DrawScene requires a camera");
 
-		// Camera state belongs to this render pass. Capture the final matrix now so
-		// later Game/Editor viewport submissions cannot overwrite one another.
 		camera->Update(Time::DeltaTime());
-		const glm::mat4 sceneViewProjection = camera->GetCameraUBO().ViewProjection;
+
+		const glm::mat4 sceneViewProjection =
+			camera->GetCameraUBO().ViewProjection;
+
 		auto sceneQuads = m_QuadQueue;
 		auto pipeline = m_PipelineLibrary.Get("Sprite", _renderTarget);
 
-		m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext& frame) mutable
-		{
-			// our "G-buffer", sort what needs to be drawn first
-			std::stable_sort(sceneQuads.begin(), sceneQuads.end(), [](const QuadSubmission& a, const QuadSubmission& b)
+		m_RenderCmdChain->WriteToBack(
+			[=, this](Ref<CommandBuffer> cmd,
+					  const RenderFrameContext &frame) mutable
 			{
-				return a.Layer < b.Layer;
-			});
+				// Preserve layer ordering and same-layer submission order.
+				std::stable_sort(
+					sceneQuads.begin(),
+					sceneQuads.end(),
+					[](const QuadSubmission &a, const QuadSubmission &b)
+					{
+						return a.Layer < b.Layer;
+					});
 
-			auto stableiz_pipeline = pipeline;
-			auto stableize_rt = _renderTarget;
-			auto vkCmd = cmd.As<VulkanCommandBuffer>();
-			stableize_rt->Begin(cmd);
-			stableiz_pipeline->Bind(cmd);
-
-			VkViewport vp{};
-			vp.x = 0.0f;
-			vp.y = 0.0f;
-			vp.width = static_cast<float>(_renderTarget->GetWidth());
-			vp.height = static_cast<float>(_renderTarget->GetHeight());
-			vp.minDepth = 0.0f;
-			vp.maxDepth = 1.0f;
-
-			vkCmdSetViewport(vkCmd->Get(), 0, 1, &vp);
-
-			VkRect2D sc{};
-			sc.offset = {0, 0};
-			sc.extent = {_renderTarget->GetWidth(), _renderTarget->GetHeight()};
-			vkCmdSetScissor(vkCmd->Get(), 0, 1, &sc);
-
-			auto vkVB = m_QuadVB.As<VulkanBuffer>();
-			auto vkIB = m_QuadIB.As<VulkanBuffer>();
-			VkBuffer vertexBuffers[] = {vkVB->GetBuffer()};
-			VkDeviceSize offsets[] = {0};
-
-			auto vkPipeline = pipeline.As<VulkanPipeline>();
-			VkPipelineLayout pipelineLayout = vkPipeline->GetPipelineLayout();
-
-			vkCmdBindVertexBuffers(vkCmd->Get(), 0, 1, vertexBuffers, offsets);
-			vkCmdBindIndexBuffer(vkCmd->Get(), vkIB->GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
-			m_RenderStats.DrawCalls = 0;
-
-			// this is bad. for every quad in our scene, were submitting an expensive draw call.
-			for (auto& quad : sceneQuads)
-			{
-				Ref<VulkanTexture> texture = m_WhiteTexture;
-				if (quad.TextureAsset)
+				struct Batch
 				{
-					auto requestedTexture = quad.TextureAsset.As<VulkanTexture>();
-					if (requestedTexture && requestedTexture->IsGPUReady())
-						texture = requestedTexture;
+					Ref<VulkanTexture> Texture;
+					uint32_t FirstQuad = 0;
+					uint32_t QuadCount = 0;
+				};
+
+				std::vector<BatchVertex> vertices;
+				std::vector<Batch> batches;
+
+				vertices.reserve(sceneQuads.size() * 4);
+				batches.reserve(sceneQuads.size());
+
+				const glm::vec4 corners[4] = {
+					{-0.5f, -0.5f, 0.0f, 1.0f},
+					{0.5f, -0.5f, 0.0f, 1.0f},
+					{0.5f, 0.5f, 0.0f, 1.0f},
+					{-0.5f, 0.5f, 0.0f, 1.0f}};
+
+				const glm::vec2 uv[4] = {
+					{0.0f, 0.0f},
+					{1.0f, 0.0f},
+					{1.0f, 1.0f},
+					{0.0f, 1.0f}};
+
+				// ---- CPU batching ----
+
+				for (const auto &quad : sceneQuads)
+				{
+					Ref<VulkanTexture> texture = m_WhiteTexture;
+
+					if (quad.TextureAsset)
+					{
+						auto requested =
+							quad.TextureAsset.As<VulkanTexture>();
+
+						if (requested && requested->IsGPUReady())
+							texture = requested;
+					}
+
+					ANV_ASSERT(
+						texture && texture->IsGPUReady(),
+						"No valid Vulkan sprite texture available");
+
+					// Only merge adjacent sprites with the same texture.
+					if (batches.empty() ||
+						batches.back().Texture != texture)
+					{
+						Batch batch{};
+						batch.Texture = texture;
+						batch.FirstQuad =
+							static_cast<uint32_t>(vertices.size() / 4);
+
+						batches.push_back(batch);
+					}
+
+					const glm::mat4 model =
+						glm::translate(
+							glm::mat4(1.0f),
+							glm::vec3(quad.Position, 0.0f)) *
+						glm::rotate(
+							glm::mat4(1.0f),
+							glm::radians(quad.Rotation),
+							glm::vec3(0, 0, 1)) *
+						glm::scale(
+							glm::mat4(1.0f),
+							glm::vec3(quad.Size, 1.0f));
+
+					for (uint32_t i = 0; i < 4; ++i)
+					{
+						BatchVertex vertex{};
+
+						vertex.Position =
+							glm::vec2(model * corners[i]);
+
+						vertex.TexCoord = uv[i];
+						vertex.Color = quad.Color;
+
+						vertices.push_back(vertex);
+					}
+
+					batches.back().QuadCount++;
 				}
 
-				ANV_ASSERT(texture && texture->IsGPUReady(), "No valid Vulkan sprite texture available");
-				VkDescriptorSet textureSet = texture->GetDescriptorSet();
-				vkCmdBindDescriptorSets(
+				// ---- Acquire space in this frame's vertex buffer ----
+
+				const uint32_t frameIndex = m_FrameIndex;
+
+				ANV_ASSERT(
+					frameIndex < m_FrameQuadVBs.size(),
+					"Invalid frame vertex buffer index!");
+
+				auto vkVB = m_FrameQuadVBs[frameIndex].As<VulkanBuffer>();
+
+				ANV_ASSERT(
+					vkVB,
+					"Frame vertex buffer is NULL!");
+
+				auto vkIB = m_QuadIB.As<VulkanBuffer>();
+
+				ANV_ASSERT(
+					vkIB,
+					"Quad index buffer is NULL!");
+
+				const VkDeviceSize uploadSize =
+					vertices.size() * sizeof(BatchVertex);
+
+				VkDeviceSize &cursor = m_FrameVertexOffsets[frameIndex];
+
+				ANV_ASSERT(
+					cursor <= vkVB->GetSize() &&
+						uploadSize <= vkVB->GetSize() - cursor,
+					"Sprite batch vertex buffer capacity exceeded");
+
+				const VkDeviceSize uploadOffset = cursor;
+
+				if (uploadSize > 0)
+				{
+					vkVB->SetData(
+						vertices.data(),
+						uploadSize,
+						uploadOffset);
+
+					cursor += uploadSize;
+				}
+
+				const int32_t baseVertex =
+					static_cast<int32_t>(
+						uploadOffset / sizeof(BatchVertex));
+
+				// ---- Record Vulkan commands ----
+
+				auto vkCmd = cmd.As<VulkanCommandBuffer>();
+
+				_renderTarget->Begin(cmd);
+				pipeline->Bind(cmd);
+
+				VkViewport vp{};
+				vp.x = 0.0f;
+				vp.y = 0.0f;
+				vp.width = static_cast<float>(_renderTarget->GetWidth());
+				vp.height = static_cast<float>(_renderTarget->GetHeight());
+				vp.minDepth = 0.0f;
+				vp.maxDepth = 1.0f;
+
+				vkCmdSetViewport(vkCmd->Get(), 0, 1, &vp);
+
+				VkRect2D sc{};
+				sc.offset = {0, 0};
+				sc.extent = {
+					_renderTarget->GetWidth(),
+					_renderTarget->GetHeight()};
+
+				vkCmdSetScissor(vkCmd->Get(), 0, 1, &sc);
+
+				VkBuffer vertexBuffer = vkVB->GetBuffer();
+				VkDeviceSize vertexOffset = 0;
+
+				vkCmdBindVertexBuffers(
 					vkCmd->Get(),
-					VK_PIPELINE_BIND_POINT_GRAPHICS,
-					pipelineLayout,
-					1,
-					1,
-					&textureSet,
 					0,
-					nullptr);
+					1,
+					&vertexBuffer,
+					&vertexOffset);
 
-				const glm::mat4 model =
-					glm::translate(glm::mat4(1.0f), glm::vec3(quad.Position, 0))
-					* glm::rotate(glm::mat4(1.f), glm::radians(quad.Rotation), {0, 0, 1})
-					* glm::scale(glm::mat4(1.0f), glm::vec3(quad.Size, 1));
+				vkCmdBindIndexBuffer(
+					vkCmd->Get(),
+					vkIB->GetBuffer(),
+					0,
+					VK_INDEX_TYPE_UINT32);
 
-				SpritePush push{};
-				push.Transform = sceneViewProjection * model;
-				push.Color = quad.Color;
+				auto vkPipeline = pipeline.As<VulkanPipeline>();
+
+				VkPipelineLayout layout =
+					vkPipeline->GetPipelineLayout();
 
 				vkCmdPushConstants(
 					vkCmd->Get(),
-					pipelineLayout,
+					layout,
 					VK_SHADER_STAGE_VERTEX_BIT,
 					0,
-					sizeof(SpritePush),
-					&push);
+					sizeof(glm::mat4),
+					&sceneViewProjection);
 
-				vkCmdDrawIndexed(vkCmd->Get(), 6, 1, 0, 0, 0);
-				m_RenderStats.DrawCalls++;
-			}
-			_renderTarget->End(cmd);
-		});
+				uint32_t drawCalls = 0;
+
+				// ---- One draw call per contiguous texture batch ----
+
+				for (const auto &batch : batches)
+				{
+					VkDescriptorSet textureSet =
+						batch.Texture->GetDescriptorSet();
+
+					vkCmdBindDescriptorSets(
+						vkCmd->Get(),
+						VK_PIPELINE_BIND_POINT_GRAPHICS,
+						layout,
+						1,
+						1,
+						&textureSet,
+						0,
+						nullptr);
+
+					vkCmdDrawIndexed(
+						vkCmd->Get(),
+						batch.QuadCount * 6,
+						1,
+						batch.FirstQuad * 6,
+						baseVertex,
+						0);
+
+					++drawCalls;
+				}
+
+				m_RenderStats.DrawCalls = drawCalls;
+
+				_renderTarget->End(cmd);
+			});
 	}
 
-	void VulkanRenderAPI::DrawQuad(const glm::vec2& position, float rotation, const glm::vec2& size,
-		glm::vec4 color, Ref<Texture> texture, int layer)
+	void VulkanRenderAPI::DrawQuad(const glm::vec2 &position, float rotation, const glm::vec2 &size,
+								   glm::vec4 color, Ref<Texture> texture, int layer)
 	{
 		m_QuadQueue.push_back({position, rotation, size, color, texture, layer});
 		m_RenderStats.QuadCount++;
@@ -265,9 +421,7 @@ namespace anv
 	void VulkanRenderAPI::build_2D_pipelines()
 	{
 		m_PipelineLibrary.Register("Sprite", [this](Ref<RenderPass> renderPass)
-		{
-			return build_sprite_pipeline(renderPass);
-		});
+								   { return build_sprite_pipeline(renderPass); });
 	}
 
 	void VulkanRenderAPI::create_frames()
@@ -275,6 +429,13 @@ namespace anv
 		auto vkCtx = m_Context->GetAs<VulkanContext>();
 		VkDevice device = vkCtx->GetDevice();
 		m_Frames.resize(m_CreateInfo.swapchainImageCount);
+
+		m_FrameQuadVBs.resize(m_CreateInfo.swapchainImageCount);
+
+		m_FrameVertexOffsets.resize(
+			m_CreateInfo.swapchainImageCount,
+			0);
+
 		VkSemaphoreCreateInfo semInfo{};
 		semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 		VkFenceCreateInfo fenceInfo{};
@@ -287,6 +448,20 @@ namespace anv
 			ANV_VK_CHECK_RESULT(vkCreateSemaphore(device, &semInfo, nullptr, &m_Frames[i].sync.renderFinished), "Failed to create renderFinished semaphore!");
 			ANV_VK_CHECK_RESULT(vkCreateFence(device, &fenceInfo, nullptr, &m_Frames[i].sync.inFlightFence), "Failed to create inFlight fence!");
 			m_Frames[i].cmd = Ref<VulkanCommandBuffer>::Create(m_Context);
+
+			// Allocate this frames VB
+			BufferCreateInfo vbInfo{};
+			vbInfo.Usage = BufferUsage::Vertex;
+			vbInfo.Size =
+				MaxBatchQuads * 4 * sizeof(BatchVertex);
+			vbInfo.Dynamic = true;
+
+			m_FrameQuadVBs[i] =
+				Buffer::Create(m_Context, vbInfo);
+
+			ANV_ASSERT(
+				m_FrameQuadVBs[i],
+				"Failed to create frame vertex buffer!");
 		}
 		m_FrameIndex = 0;
 	}
@@ -295,17 +470,22 @@ namespace anv
 	{
 		auto vkCtx = m_Context->GetAs<VulkanContext>();
 		VkDevice device = vkCtx->GetDevice();
-		for (auto& fr : m_Frames)
+		for (auto &fr : m_Frames)
 		{
-			if (fr.sync.imageAvailable) vkDestroySemaphore(device, fr.sync.imageAvailable, nullptr);
-			if (fr.sync.renderFinished) vkDestroySemaphore(device, fr.sync.renderFinished, nullptr);
-			if (fr.sync.inFlightFence) vkDestroyFence(device, fr.sync.inFlightFence, nullptr);
+			if (fr.sync.imageAvailable)
+				vkDestroySemaphore(device, fr.sync.imageAvailable, nullptr);
+			if (fr.sync.renderFinished)
+				vkDestroySemaphore(device, fr.sync.renderFinished, nullptr);
+			if (fr.sync.inFlightFence)
+				vkDestroyFence(device, fr.sync.inFlightFence, nullptr);
 			fr.sync.imageAvailable = VK_NULL_HANDLE;
 			fr.sync.renderFinished = VK_NULL_HANDLE;
 			fr.sync.inFlightFence = VK_NULL_HANDLE;
 			fr.cmd = nullptr;
 		}
 		m_Frames.clear();
+		m_FrameQuadVBs.clear();
+		m_FrameVertexOffsets.clear();
 	}
 
 	void VulkanRenderAPI::recreate_swap()
@@ -327,18 +507,27 @@ namespace anv
 
 	void VulkanRenderAPI::create_quad_buffers()
 	{
-		ANV_LOG_INFO("IB size: {}", sizeof(Quad::indices));
-		ANV_LOG_INFO("VB size: {}", sizeof(Quad::vertices));
-		BufferCreateInfo vbi{};
-		vbi.Usage = BufferUsage::Vertex;
-		vbi.Size = sizeof(Quad::vertices);
-		vbi.InitialData = Quad::vertices;
-		m_QuadVB = Buffer::Create(m_Context, vbi);
-		BufferCreateInfo ibi{};
-		ibi.Usage = BufferUsage::Index;
-		ibi.Size = sizeof(Quad::indices);
-		ibi.InitialData = Quad::indices;
-		m_QuadIB = Buffer::Create(m_Context, ibi);
+		std::vector<uint32_t> indices(MaxBatchQuads * 6);
+
+		for (uint32_t i = 0; i < MaxBatchQuads; ++i)
+		{
+			uint32_t baseVertex = i * 4;
+			uint32_t baseIndex = i * 6;
+
+			indices[baseIndex + 0] = baseVertex;
+			indices[baseIndex + 1] = baseVertex + 1;
+			indices[baseIndex + 2] = baseVertex + 2;
+			indices[baseIndex + 3] = baseVertex + 2;
+			indices[baseIndex + 4] = baseVertex + 3;
+			indices[baseIndex + 5] = baseVertex;
+		}
+
+		BufferCreateInfo info{};
+		info.Usage = BufferUsage::Index;
+		info.Size = indices.size() * sizeof(uint32_t);
+		info.InitialData = indices.data();
+
+		m_QuadIB = Buffer::Create(m_Context, info);
 	}
 
 	void VulkanRenderAPI::create_descriptor_set_layout()
@@ -398,20 +587,40 @@ namespace anv
 	Ref<GraphicsPipeline> VulkanRenderAPI::build_sprite_pipeline(Ref<RenderPass> renderPass)
 	{
 		VertexInputLayout quadLayout{};
+
 		quadLayout.binding = 0;
-		quadLayout.stride = sizeof(QuadVertex);
-		quadLayout.AddAttribute("Position", 0, offsetof(QuadVertex, Position), sizeof(glm::vec2), sizeof(QuadVertex));
-		quadLayout.AddAttribute("TexCoord", 1, offsetof(QuadVertex, TexCoord), sizeof(glm::vec2), sizeof(QuadVertex));
+		quadLayout.stride = sizeof(BatchVertex);
+
+		quadLayout.AddAttribute(
+			"Position",
+			0,
+			offsetof(BatchVertex, Position),
+			sizeof(glm::vec2),
+			sizeof(BatchVertex));
+
+		quadLayout.AddAttribute(
+			"TexCoord",
+			1,
+			offsetof(BatchVertex, TexCoord),
+			sizeof(glm::vec2),
+			sizeof(BatchVertex));
+
+		quadLayout.AddAttribute(
+			"Color",
+			2,
+			offsetof(BatchVertex, Color),
+			sizeof(glm::vec4),
+			sizeof(BatchVertex));
 
 		auto pipeline = GraphicsPipeline::CreateInternal(m_Context, "Sprite Pipeline");
 		pipeline->SetShaderStages(m_SpriteShader);
 		pipeline->SetVertexInputLayout(&quadLayout);
 		pipeline->SetRasterizationSettings(nullptr);
-		pipeline.As<VulkanPipeline>()->SetDescriptorSetLayouts({
-			m_ReservedDescriptorSetLayout,
-			m_TextureDescriptorSetLayout
-		});
-		pipeline.As<VulkanPipeline>()->SetPushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, sizeof(SpritePush));
+		pipeline.As<VulkanPipeline>()->SetDescriptorSetLayouts({m_ReservedDescriptorSetLayout,
+																m_TextureDescriptorSetLayout});
+		pipeline.As<VulkanPipeline>()->SetPushConstantRange(
+			VK_SHADER_STAGE_VERTEX_BIT,
+			sizeof(glm::mat4));
 		pipeline->SetColorBlendSettings(nullptr);
 		pipeline->SetRenderPass(renderPass);
 		pipeline->Build();
