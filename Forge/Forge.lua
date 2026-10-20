@@ -35,6 +35,7 @@ project "Forge"
     {
         '{MKDIR} "%{cfg.targetdir}/Anvil"',
         '{COPYDIR} "%{wks.location}/AnvilEngine/Resources" "%{cfg.targetdir}/Anvil/Resources"'
+        -- Windows Python runtime copying is defined in the system filter.
     }
 
 filter "system:macosx"
@@ -114,32 +115,12 @@ filter "system:macosx"
 
 
 filter "system:windows"
-        -- Helper function to strip trailing newlines safely from terminal output
-        local function strip_newline(str)
-            if str == nil then return "" end
-            return string.gsub(str, "[\r\n]+$", "")
-        end
-
-        -- Retrieve paths via Python sysconfig
-        local rawIncludes = os.outputof("python -c \"import sysconfig; print(sysconfig.get_path('include'))\"")
-        -- On Windows, Python libraries live in the standard installation scheme prefix / 'libs'
-        local rawLibDir   = os.outputof("python -c \"import sysconfig; print(sysconfig.get_config_var('installed_base') + '\\\\libs')\"")
-        -- Querying the exact library name dynamically matching the python version (e.g., python312)
-        local rawPyVersion = os.outputof("python -c \"import sys; print(f'python{sys.version_info.major}{sys.version_info.minor}')\"")
-
-        local pythonIncludes = strip_newline(rawIncludes)
-        local pythonLibDir   = strip_newline(rawLibDir)
-        local pythonLibName  = strip_newline(rawPyVersion)
-
-        print("Python Include Dir: " .. pythonIncludes)
-        print("Python Lib Dir: " .. pythonLibDir)
-        print("Python Link Target: " .. pythonLibName)
-    
+        -- Use Anvil's managed Python SDK, not the user's system Python.
     libdirs
     {
         "%{ROOTDIR}AnvilEngine/vendor/GLFW/" .. outdir .. "/GLFW",
         "%{VULKAN_LIB}",
-        pythonLibDir
+        PYTHON_LIBDIR
     }
 
     links
@@ -147,9 +128,12 @@ filter "system:windows"
         "GLFW",
         "vulkan-1",
         "shaderc_combined",
-        pythonLibName
+        PYTHON_LIBNAME
     }
 
+    postbuildcommands {
+        '{COPYDIR} "' .. PYTHON_RUNTIME .. '" "%{cfg.targetdir}"'
+    }
 
 filter "configurations:DebugG"
     defines {
