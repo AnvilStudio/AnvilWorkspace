@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstdint>
 #include <unordered_map>
+#include <algorithm>
 
 SceneHierarchy::SceneHierarchy(Ref<Scene> scene)
 {
@@ -109,23 +110,29 @@ void SceneHierarchy::Draw()
     }
 
     auto view = scene->Registry().view<Component::Tag>();
+    std::vector<entt::entity> roots;
     for (const auto entity : view)
-    {
         if (!scene->HasComponent<Component::Relationship>(entity) ||
             !byUUID.contains(scene->GetComponent<Component::Relationship>(entity).parentUUID))
-            draw_entity(scene, entity, selectedEntity, 0, children);
-    }
+            roots.push_back(entity);
+
+    m_VisibleEntities.clear();
+    for (auto entity : roots)
+        collect_visible(entity, children, 0);
+    for (auto entity : roots)
+        draw_entity(scene, entity, selectedEntity, 0, children);
 
     // Dropping on empty hierarchy space makes an entity a root.
     ImGui::Dummy(ImVec2(-1.0f, 12.0f));
     if (ImGui::BeginDragDropTarget())
     {
-        if (const auto* payload = ImGui::AcceptDragDropPayload("ANV_HIERARCHY_ENTITY"))
+        if (const auto* payload = ImGui::AcceptDragDropPayload("ANV_HIERARCHY_ENTITIES"))
         {
-            if (payload->DataSize == sizeof(entt::entity))
+            if (payload->DataSize > 0 && payload->DataSize % sizeof(entt::entity) == 0)
             {
-                const auto dragged = *static_cast<const entt::entity*>(payload->Data);
-                if (scene->SetParent(dragged, entt::null)) scene->Save();
+                auto* data = static_cast<const entt::entity*>(payload->Data);
+                std::vector<entt::entity> entities(data, data + payload->DataSize / sizeof(entt::entity));
+                if (reparent_selection(scene, entities, entt::null)) scene->Save();
             }
         }
         ImGui::EndDragDropTarget();
@@ -138,8 +145,7 @@ void SceneHierarchy::Draw()
         scene->Save();
         m_EntityToDelete = entt::null;
 
-        if (selectedEntity == deletedEntity)
-            EditorLayer::GetInstance()->ClearSelection();
+        EditorLayer::GetInstance()->RemoveFromSelection(deletedEntity);
 
         if (m_RenamedEntity == deletedEntity)
             cancel_rename();
@@ -163,7 +169,7 @@ void SceneHierarchy::draw_entity(Ref<Scene> scene,
     const bool hasChildren = foundChildren != children.end() && !foundChildren->second.empty();
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow |
         ImGuiTreeNodeFlags_SpanAvailWidth;
-    if (entity == selected) flags |= ImGuiTreeNodeFlags_Selected;
+    if (EditorLayer::GetInstance()->IsEntitySelected(entity)) flags |= ImGuiTreeNodeFlags_Selected;
     if (!hasChildren) flags |= ImGuiTreeNodeFlags_Leaf |
                                ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
@@ -179,23 +185,30 @@ void SceneHierarchy::draw_entity(Ref<Scene> scene,
     {
         open = ImGui::TreeNodeEx("##Entity", flags, "%s", tag.Get().c_str());
         if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
-            EditorLayer::GetInstance()->SetSelectedEntity(entity);
+            apply_selection(entity);
     }
 
-    if (ImGui::BeginDragDropSource())
+    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
     {
-        ImGui::SetDragDropPayload("ANV_HIERARCHY_ENTITY", &entity, sizeof(entity));
-        ImGui::TextUnformatted(tag.Get().c_str());
+        auto* editor = EditorLayer::GetInstance();
+        // Drag an existing selection as a group; an unselected row drags alone.
+        std::vector<entt::entity> dragEntities =
+            editor->IsEntitySelected(entity) ? editor->GetSelectedEntities()
+                                             : std::vector<entt::entity>{entity};
+        ImGui::SetDragDropPayload("ANV_HIERARCHY_ENTITIES",
+            dragEntities.data(), dragEntities.size() * sizeof(entt::entity));
+        ImGui::Text("%zu entities", dragEntities.size());
         ImGui::EndDragDropSource();
     }
     if (ImGui::BeginDragDropTarget())
     {
-        if (const auto* payload = ImGui::AcceptDragDropPayload("ANV_HIERARCHY_ENTITY"))
+        if (const auto* payload = ImGui::AcceptDragDropPayload("ANV_HIERARCHY_ENTITIES"))
         {
-            if (payload->DataSize == sizeof(entt::entity))
+            if (payload->DataSize > 0 && payload->DataSize % sizeof(entt::entity) == 0)
             {
-                const auto dragged = *static_cast<const entt::entity*>(payload->Data);
-                if (scene->SetParent(dragged, entity)) scene->Save();
+                auto* data = static_cast<const entt::entity*>(payload->Data);
+                std::vector<entt::entity> entities(data, data + payload->DataSize / sizeof(entt::entity));
+                if (reparent_selection(scene, entities, entity)) scene->Save();
             }
         }
         ImGui::EndDragDropTarget();
@@ -272,6 +285,67 @@ void SceneHierarchy::draw_entity(Ref<Scene> scene,
         ImGui::TreePop();
     }
     ImGui::PopID();
+}
+
+void SceneHierarchy::collect_visible(entt::entity entity, const ChildMap& children, int depth)
+{
+    if (depth > 256) return;
+    m_VisibleEntities.push_back(entity);
+    auto it = children.find(entity);
+    if (it == children.end()) return;
+    for (auto child : it->second)
+        collect_visible(child, children, depth + 1);
+}
+
+void SceneHierarchy::apply_selection(entt::entity entity)
+{
+    auto* editor = EditorLayer::GetInstance();
+    const ImGuiIO& io = ImGui::GetIO();
+    if (io.KeyShift && m_SelectionAnchor != entt::null)
+    {
+        const auto a = std::find(m_VisibleEntities.begin(), m_VisibleEntities.end(), m_SelectionAnchor);
+        const auto b = std::find(m_VisibleEntities.begin(), m_VisibleEntities.end(), entity);
+        if (a != m_VisibleEntities.end() && b != m_VisibleEntities.end())
+        {
+            auto ia = std::distance(m_VisibleEntities.begin(), a);
+            auto ib = std::distance(m_VisibleEntities.begin(), b);
+            if (ia > ib) std::swap(ia, ib);
+            editor->SetSelectedEntities({m_VisibleEntities.begin() + ia,
+                m_VisibleEntities.begin() + ib + 1});
+            return;
+        }
+    }
+    if (io.KeyCtrl || io.KeySuper)
+        editor->ToggleSelectedEntity(entity);
+    else
+        editor->SetSelectedEntity(entity);
+    m_SelectionAnchor = entity;
+}
+
+bool SceneHierarchy::reparent_selection(Ref<Scene> scene,
+    const std::vector<entt::entity>& selection, entt::entity parent)
+{
+    if (!scene || (parent != entt::null && !scene->Registry().valid(parent)))
+        return false;
+    std::vector<entt::entity> roots;
+    for (auto entity : selection)
+    {
+        if (!scene->Registry().valid(entity) || entity == parent ||
+            (parent != entt::null && scene->IsDescendant(parent, entity)))
+            return false;
+        // Moving a selected ancestor implicitly moves its descendants.
+        bool nested = false;
+        for (auto other : selection)
+            if (entity != other && scene->IsDescendant(entity, other))
+            { nested = true; break; }
+        if (!nested) roots.push_back(entity);
+    }
+    bool changed = false;
+    for (auto entity : roots)
+        if (scene->GetParent(entity) != parent &&
+            scene->SetParent(entity, parent, true))
+            changed = true;
+    return changed;
 }
 
 void SceneHierarchy::begin_rename(
