@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <vector>
+#include <unordered_map>
 
 namespace anv
 {
@@ -452,59 +453,72 @@ namespace anv
         const float interpolationAlpha =
             std::clamp(m_Accumulator / m_FixedTimeStep, 0.0f, 1.0f);
 
+        // Cache inverse parent world matrices within this synchronization pass.
+        // Particularly important for large groups sharing one parent.
+        struct ParentInverse
+        {
+            glm::mat4 matrix{1.0f};
+            bool invertible = true;
+        };
+        std::unordered_map<entt::entity, ParentInverse> inverses;
+        inverses.reserve(16);
+
         for (const auto& [entity, runtimeBody] : m_Bodies)
         {
             const PhysicsBody2D& body = runtimeBody.body;
-
-            if (!body.IsValid() ||
-                !scene.Registry().valid(entity) ||
+            if (!body.IsValid() || !scene.Registry().valid(entity) ||
                 !scene.HasComponent<Component::Transform2D>(entity) ||
                 !scene.HasComponent<Component::Rigidbody2D>(entity))
-            {
                 continue;
-            }
 
-            const auto& rigidbody =
-                scene.GetComponent<Component::Rigidbody2D>(entity);
-
+            const auto& rigidbody = scene.GetComponent<Component::Rigidbody2D>(entity);
             if (rigidbody.type == Component::Rigidbody2DType::Static)
                 continue;
 
+            glm::vec2 position{};
+            float radians = 0.0f;
             if (rigidbody.type == Component::Rigidbody2DType::Dynamic)
             {
-                const PhysicsTransform2D& previous = runtimeBody.previousTransform;
-                const PhysicsTransform2D& current = runtimeBody.currentTransform;
+                const auto& previous = runtimeBody.previousTransform;
+                const auto& current = runtimeBody.currentTransform;
+                position = {Lerp(previous.positionX, current.positionX, interpolationAlpha),
+                            Lerp(previous.positionY, current.positionY, interpolationAlpha)};
+                radians = LerpAngleRadians(previous.rotationRadians,
+                                           current.rotationRadians, interpolationAlpha);
+            }
+            else
+            {
+                const auto current = body.GetTransform();
+                position = {current.positionX, current.positionY};
+                radians = current.rotationRadians;
+            }
 
-                const glm::vec2 position{
-                    Lerp(previous.positionX, current.positionX, interpolationAlpha),
-                    Lerp(previous.positionY, current.positionY, interpolationAlpha)};
-                const float rotation = glm::degrees(LerpAngleRadians(
-                    previous.rotationRadians, current.rotationRadians, interpolationAlpha));
-
-                // Root bodies already use world-space transform coordinates.
-                // Avoid matrix inversion, ancestry searches and repeated registry validation.
-                if (!scene.HasComponent<Component::Relationship>(entity))
-                {
-                    auto& transform = scene.GetComponent<Component::Transform2D>(entity);
-                    transform.position = position;
-                    transform.rotation = rotation;
-                }
-                else
-                    scene.SetWorldPose2D(entity, position, rotation);
+            auto& local = scene.GetComponent<Component::Transform2D>(entity);
+            const entt::entity parent = scene.GetParent(entity);
+            if (parent == entt::null)
+            {
+                local.position = position;
+                local.rotation = glm::degrees(radians);
                 continue;
             }
 
-            const PhysicsTransform2D bodyTransform = body.GetTransform();
-            const glm::vec2 position{bodyTransform.positionX, bodyTransform.positionY};
-            const float rotation = glm::degrees(bodyTransform.rotationRadians);
-            if (!scene.HasComponent<Component::Relationship>(entity))
+            auto [it, inserted] = inverses.try_emplace(parent);
+            if (inserted)
             {
-                auto& transform = scene.GetComponent<Component::Transform2D>(entity);
-                transform.position = position;
-                transform.rotation = rotation;
+                const glm::mat4 world = scene.GetWorldTransform(parent);
+                it->second.invertible = std::abs(glm::determinant(world)) >= 0.000001f;
+                if (it->second.invertible)
+                    it->second.matrix = glm::inverse(world);
             }
-            else
-                scene.SetWorldPose2D(entity, position, rotation);
+            if (!it->second.invertible)
+                continue;
+
+            const glm::mat4& inverse = it->second.matrix;
+            const glm::vec4 localPoint = inverse * glm::vec4(position, 0.0f, 1.0f);
+            const glm::vec4 localDirection = inverse * glm::vec4(
+                std::cos(radians), std::sin(radians), 0.0f, 0.0f);
+            local.position = {localPoint.x, localPoint.y};
+            local.rotation = glm::degrees(std::atan2(localDirection.y, localDirection.x));
         }
     }
 }
