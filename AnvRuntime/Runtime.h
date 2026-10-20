@@ -23,14 +23,14 @@ public:
                 : std::filesystem::path(m_Settings.projectDir);
 
         if (!anv::PythonScriptEngine::Initialize(workingDir))
-            ANV_LOG_ERROR("Runtime Python initialization failed for '%s'.",
+            ANV_LOG_FATAL("Runtime Python initialization failed for '%s'.",
                           workingDir.string().c_str());
 
         auto sceneManager = GetSceneManager();
         auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
         if (!scene)
         {
-            ANV_LOG_ERROR("Runtime has no startup scene.");
+            ANV_LOG_FATAL("Runtime has no startup scene.");
             Close();
             return;
         }

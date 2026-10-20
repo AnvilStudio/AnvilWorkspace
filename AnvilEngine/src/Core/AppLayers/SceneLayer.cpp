@@ -1,5 +1,5 @@
 #include "SceneLayer.h"
-
+#include "../App.h"
 #include <Render/Renderer.h>
 
 namespace anv
