@@ -184,20 +184,31 @@ void SceneHierarchy::draw_entity(Ref<Scene> scene,
     else
     {
         open = ImGui::TreeNodeEx("##Entity", flags, "%s", tag.Get().c_str());
-        if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+        // Select on release, not mouse-down: mouse-down on an existing
+        // multi-selection must not collapse it before drag/drop starts.
+        if (ImGui::IsItemHovered() &&
+            ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
+            !ImGui::IsDragDropActive() &&
+            !ImGui::IsItemToggledOpen())
             apply_selection(entity);
     }
 
     if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
     {
         auto* editor = EditorLayer::GetInstance();
-        // Drag an existing selection as a group; an unselected row drags alone.
-        std::vector<entt::entity> dragEntities =
-            editor->IsEntitySelected(entity) ? editor->GetSelectedEntities()
-                                             : std::vector<entt::entity>{entity};
+        // Preserve every selected entity when dragging any selected row.
+        // Dragging a row outside the selection moves only that row.
+        std::vector<entt::entity> dragEntities;
+        if (editor->IsEntitySelected(entity))
+            dragEntities = editor->GetSelectedEntities();
+        else
+            dragEntities.push_back(entity);
         ImGui::SetDragDropPayload("ANV_HIERARCHY_ENTITIES",
             dragEntities.data(), dragEntities.size() * sizeof(entt::entity));
-        ImGui::Text("%zu entities", dragEntities.size());
+        if (dragEntities.size() == 1)
+            ImGui::Text("Move %s", tag.Get().c_str());
+        else
+            ImGui::Text("Move %zu selected entities", dragEntities.size());
         ImGui::EndDragDropSource();
     }
     if (ImGui::BeginDragDropTarget())
