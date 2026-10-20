@@ -22,11 +22,11 @@
 namespace anv
 {
     // needed to find engine resources like the python package and shaders
-    static std::filesystem::path s_ExecDir = std::filesystem::path();
     
     class FileSystem
     {
     public:
+        static std::filesystem::path s_ExecDir;
 
         using _ForEachFn = std::function<void(Ref<File>)>;
 
