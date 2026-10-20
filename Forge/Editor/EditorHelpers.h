@@ -15,42 +15,67 @@ void draw_component(
     auto& component = scene->GetComponent<Comp>(entity);
 
     bool removeComponent = false;
-
     ImGui::PushID(name);
 
-    if (ImGui::Button("..."))
+    // Full-width, square-cornered component header flush with Inspector edges.
+    // The entire bar (including the settings control) shares one background.
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const float sidePadding = style.WindowPadding.x;
+    const ImVec2 headerStart = ImGui::GetCursorScreenPos();
+    const float width = ImGui::GetContentRegionAvail().x;
+    const float height = ImGui::GetFrameHeight() + 7.0f;
+    const ImVec2 barMin(headerStart.x - sidePadding, headerStart.y);
+    const ImVec2 barMax(headerStart.x + width + sidePadding, headerStart.y + height);
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+    const ImU32 barColor = IM_COL32(48, 53, 60, 255);
+    const ImU32 edgeColor = IM_COL32(82, 96, 111, 255);
+    drawList->AddRectFilled(barMin, barMax, barColor);
+    drawList->AddRectFilled(
+        ImVec2(barMin.x, barMax.y - 2.0f), barMax, edgeColor);
+
+    ImGui::SetCursorScreenPos(ImVec2(barMin.x + 6.0f, barMin.y + 3.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.31f, 0.38f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.30f, 0.40f, 0.51f, 1.0f));
+    if (ImGui::Button("...", ImVec2(36.0f, height - 6.0f)))
         ImGui::OpenPopup("Settings");
+    ImGui::PopStyleColor(3);
+    ImGui::PopStyleVar();
 
-    ImGui::SameLine();
+    ImGui::SameLine(0.0f, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.25f, 0.31f, 0.38f, 0.65f));
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.30f, 0.40f, 0.51f, 0.65f));
+    const bool open = ImGui::CollapsingHeader(
+        name, ImGuiTreeNodeFlags_DefaultOpen |
+              ImGuiTreeNodeFlags_AllowOverlap);
+    ImGui::PopStyleColor(3);
+    ImGui::PopStyleVar();
 
-    bool open = ImGui::CollapsingHeader(
-        name,
-        ImGuiTreeNodeFlags_DefaultOpen
-    );
-
+    // Reserve the full header height even when the collapsing arrow is closed.
+    ImGui::SetCursorScreenPos(ImVec2(headerStart.x, barMax.y + 3.0f));
     if (ImGui::BeginPopup("Settings"))
     {
         if (ImGui::MenuItem("Remove Component"))
             removeComponent = true;
-
         ImGui::EndPopup();
     }
 
     if (open)
     {
         ImGui::Indent();
-
         uiFunc(component);
-
         ImGui::Unindent();
     }
 
     ImGui::PopID();
-
     if (removeComponent)
         scene->RemoveComponent<Comp>(entity);
 
-    ImGui::Separator();
+    ImGui::Dummy(ImVec2(0.0f, 4.0f));
 }
 
 static void property_label(const char* label, float width = 90.0f)
