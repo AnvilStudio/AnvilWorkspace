@@ -19,7 +19,22 @@ public:
                 ? std::filesystem::path(m_Settings.projectPath).parent_path()
                 : std::filesystem::path(m_Settings.projectDir);
 
-        anv::PythonScriptEngine::Initialize(workingDir);
+        if (!anv::PythonScriptEngine::Initialize(workingDir))
+            ANV_LOG_ERROR("Runtime Python initialization failed for '%s'.",
+                          workingDir.string().c_str());
+
+        auto sceneManager = GetSceneManager();
+        auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
+        if (!scene)
+        {
+            ANV_LOG_ERROR("Runtime has no startup scene.");
+            Close();
+            return;
+        }
+
+        scene->SetScriptExecutionEnabled(true);
+        scene->StartPhysics();
+        ANV_LOG_INFO("Runtime started scene '%s'.", scene->GetName().c_str());
     }
 
     void OnUpdate() override
@@ -28,6 +43,13 @@ public:
 
     void OnDestroy() override
     {
+        auto sceneManager = GetSceneManager();
+        auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
+        if (scene)
+        {
+            scene->SetScriptExecutionEnabled(false);
+            scene->StopPhysics();
+        }
         anv::PythonScriptEngine::Shutdown();
     }
 
