@@ -97,11 +97,16 @@ namespace anv
 			ANV_ASSERT(vkCmd, "Submit: CommandBuffer cast failed!");
 			vkCmd->Submit(fr2.sync.imageAvailable, fr2.sync.renderFinished, fr2.sync.inFlightFence); });
 
-		m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext &frame)
-									  {
-			m_SwapchainTarget->Begin(cmd);
-			m_ImGuiLayer->Render({.commandBuffer = cmd});
-			m_SwapchainTarget->End(cmd); });
+		if (!m_MainSceneSubmitted)
+        {
+            m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext &frame)
+            {
+                m_SwapchainTarget->Begin(cmd);
+                m_ImGuiLayer->Render({.commandBuffer = cmd});
+                m_SwapchainTarget->End(cmd);
+            });
+        }
+        m_MainSceneSubmitted = false;
 
         {
             ANV_PROFILE_ZONE(RenderSubmitWait);
@@ -177,7 +182,14 @@ namespace anv
 		BeginScene(m_SwapchainTarget);
 	}
 
-	void VulkanRenderAPI::DrawScene(
+	void VulkanRenderAPI::DrawMainScene(_shared<Camera2D> camera)
+    {
+        if (!camera) return;
+        DrawScene(m_SwapchainTarget, camera);
+        m_MainSceneSubmitted = true;
+    }
+
+    void VulkanRenderAPI::DrawScene(
 		Ref<RenderTarget> _renderTarget,
 		_shared<Camera2D> camera)
 	{

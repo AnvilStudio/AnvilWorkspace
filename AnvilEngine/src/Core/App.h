@@ -74,6 +74,7 @@ namespace anv
 		void Close();
 
 	public:
+		virtual bool RendersToMainWindow() const { return false; }
 		virtual void OnSetup()     = 0;
 		virtual void OnUpdate()   = 0;
 		virtual void OnDestroy()  = 0;

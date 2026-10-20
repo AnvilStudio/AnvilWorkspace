@@ -28,7 +28,15 @@ namespace anv
         refresh_active_scene();
 
         if (m_Active)
+        {
             m_Active->Render();
+            if (App::GetInstance()->RendersToMainWindow())
+            {
+                auto camera = m_Active->GetActiveCamera();
+                if (camera)
+                    Renderer2D::DrawMainScene(camera);
+            }
+        }
     }
 
     void SceneLayer::OnUpdate(float _dt)

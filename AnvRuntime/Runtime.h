@@ -12,6 +12,8 @@ public:
     {
     }
 
+    bool RendersToMainWindow() const override { return true; }
+
     void OnSetup() override
     {
         const std::filesystem::path workingDir =

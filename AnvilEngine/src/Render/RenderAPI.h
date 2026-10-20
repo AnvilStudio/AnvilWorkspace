@@ -38,6 +38,7 @@ namespace anv
         virtual void BeginScene() = 0;
         virtual void BeginScene(Ref<RenderTarget> renderTarget) = 0;
         virtual void DrawScene(Ref<RenderTarget> renderTarget, _shared<Camera2D> camera) = 0;
+        virtual void DrawMainScene(_shared<Camera2D> camera) { (void)camera; }
         virtual void DrawQuad(
             const glm::vec2& position,
             float rotation,
