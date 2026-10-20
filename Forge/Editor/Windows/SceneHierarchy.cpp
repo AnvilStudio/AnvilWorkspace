@@ -127,7 +127,7 @@ void SceneHierarchy::Draw()
     ImGui::End();
 }
 
-void SceneHierarchy::draw_entity(const Ref<Scene>& scene,
+void SceneHierarchy::draw_entity(Ref<Scene> scene,
                                  entt::entity entity,
                                  entt::entity selected,
                                  int depth)

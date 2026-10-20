@@ -11,13 +11,13 @@ void About::Draw()
         auto& info = App::GetInstance()->GetEngineInfo();
         ImGui::Text("Engine version ...");
         ImGui::SameLine();
-        ImGui::Text(info.version.c_str());
+        ImGui::TextUnformatted(info.version.c_str());
         ImGui::Separator();
         ImGui::Text("Graphics API ...");
         ImGui::SameLine();
-        ImGui::Text(info.graphicsAPI.c_str());
+        ImGui::TextUnformatted(info.graphicsAPI.c_str());
         ImGui::Separator();
-        ImGui::Text("Autors ...");
+        ImGui::Text("Authors ...");
         ImGui::Text("Cj0x7c00");
         ImGui::End();
     }

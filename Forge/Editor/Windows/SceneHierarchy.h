@@ -15,7 +15,7 @@ public:
     void Draw();
 
 private:
-    void draw_entity(const Ref<Scene>& scene, entt::entity entity,
+    void draw_entity(Ref<Scene> scene, entt::entity entity,
                      entt::entity selected, int depth);
     void begin_rename(
         entt::entity entity,
