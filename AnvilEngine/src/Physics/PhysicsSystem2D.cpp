@@ -75,7 +75,7 @@ namespace anv
         m_Running = true;
         m_Accumulator = 0.0f;
 
-        auto view = scene.Registry().view<Component::Transform2d>();
+        auto view = scene.Registry().view<Component::Transform2D>();
         std::size_t dynamicBodyCount = 0;
         std::size_t colliderOnlyBodyCount = 0;
 
@@ -138,7 +138,7 @@ namespace anv
         if (!m_Running)
             return;
 
-        auto view = scene.Registry().view<Component::Transform2d>();
+        auto view = scene.Registry().view<Component::Transform2D>();
 
         for (const auto entity : view)
         {
@@ -160,6 +160,7 @@ namespace anv
             CapturePreStepTransforms(scene);
             m_World.Step(m_FixedTimeStep, m_SubStepCount);
             CapturePostStepTransforms(scene);
+            // Collision Event Listener
             m_Accumulator -= m_FixedTimeStep;
         }
 
@@ -181,7 +182,7 @@ namespace anv
         if (!m_Running ||
             !scene.Registry().valid(entity) ||
             m_Bodies.contains(entity) ||
-            !scene.HasComponent<Component::Transform2d>(entity))
+            !scene.HasComponent<Component::Transform2D>(entity))
         {
             return;
         }
@@ -195,7 +196,7 @@ namespace anv
             return;
 
         const auto& transform =
-            scene.GetComponent<Component::Transform2d>(entity);
+            scene.GetComponent<Component::Transform2D>(entity);
 
         PhysicsBodyDefinition2D bodyDefinition;
         bodyDefinition.positionX = transform.position.x;
@@ -227,6 +228,13 @@ namespace anv
         }
 
         PhysicsBody2D body = m_World.CreateBody(bodyDefinition);
+
+		// Windows: uintptr_t is 64-bit on x64, so we add 1 to avoid null pointer issues
+        auto entityID = static_cast<uintptr_t>(entt::to_integral(entity));
+        body.SetUserData(
+            reinterpret_cast<void*>(entityID + 1)
+        );
+
         if (!body.IsValid())
         {
             ANV_LOG_ERROR(
@@ -235,6 +243,7 @@ namespace anv
             return;
         }
 
+        // with B2D user data, this may not be needed
         RuntimeBody2D runtimeBody;
         runtimeBody.body = body;
         runtimeBody.currentTransform = body.GetTransform();
@@ -313,7 +322,7 @@ namespace anv
 
             const bool stillParticipates =
                 scene.Registry().valid(entity) &&
-                scene.HasComponent<Component::Transform2d>(entity) &&
+                scene.HasComponent<Component::Transform2D>(entity) &&
                 (scene.HasComponent<Component::Rigidbody2D>(entity) ||
                  scene.HasComponent<Component::BoxCollider2D>(entity));
 
@@ -333,7 +342,7 @@ namespace anv
 
             if (!body.IsValid() ||
                 !scene.Registry().valid(entity) ||
-                !scene.HasComponent<Component::Transform2d>(entity))
+                !scene.HasComponent<Component::Transform2D>(entity))
             {
                 continue;
             }
@@ -348,7 +357,7 @@ namespace anv
             }
 
             const auto& transform =
-                scene.GetComponent<Component::Transform2d>(entity);
+                scene.GetComponent<Component::Transform2D>(entity);
 
             const PhysicsTransform2D bodyTransform = body.GetTransform();
             const float bodyRotation = glm::degrees(bodyTransform.rotationRadians);
@@ -427,7 +436,7 @@ namespace anv
 
             if (!body.IsValid() ||
                 !scene.Registry().valid(entity) ||
-                !scene.HasComponent<Component::Transform2d>(entity) ||
+                !scene.HasComponent<Component::Transform2D>(entity) ||
                 !scene.HasComponent<Component::Rigidbody2D>(entity))
             {
                 continue;
@@ -440,7 +449,7 @@ namespace anv
                 continue;
 
             auto& transform =
-                scene.GetComponent<Component::Transform2d>(entity);
+                scene.GetComponent<Component::Transform2D>(entity);
 
             if (rigidbody.type == Component::Rigidbody2DType::Dynamic)
             {

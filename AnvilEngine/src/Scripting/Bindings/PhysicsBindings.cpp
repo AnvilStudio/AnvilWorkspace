@@ -125,5 +125,6 @@ namespace anv::python
         body->SetLinearVelocity(x, y);
         Py_RETURN_NONE;
     }
+
 }
 #endif

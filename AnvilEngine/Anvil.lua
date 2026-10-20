@@ -25,6 +25,7 @@ project "AnvilEngine"
         "./vendor/imgui/misc/cpp/imgui_stdlib.cpp",
 
         "./vendor/ImGuizmo/src/ImGuizmo.cpp",
+
         "./vendor/ImGuiTextEdit/TextEditor.cpp"
     }
 
@@ -80,7 +81,6 @@ project "AnvilEngine"
                 "ANV_ENABLE_PYTHON"
             }
 
-            -- Use native Premake API arrays instead of raw buildoptions/linkoptions
             includedirs { pythonIncludes }
             libdirs     { pythonLibDir }
             links       { pythonLibName }
@@ -92,14 +92,23 @@ project "AnvilEngine"
             }
         end
 
+        files 
+        {
+            "./vendor/imgui/backends/imgui_impl_glfw.h",
+            "./vendor/imgui/backends/imgui_impl_glfw.cpp",
+            "./vendor/imgui/backends/imgui_impl_vulkan.h",
+            "./vendor/imgui/backends/imgui_impl_vulkan.cpp",
+        }
+
         links
         {
             "GLFW",
             "vulkan-1",
             "shaderc_combinedd"
         }
+    filter ""
 
---[[ filter "system:macosx"
+    filter "system:macosx"
         architecture "arm64" -- new macs only!
 
         local pythonIncludes = os.outputof("python3-config --includes")
@@ -190,7 +199,7 @@ project "AnvilEngine"
                 "CoreFoundation.framework"
             }
         end
-]]
+    filter ""
 
     filter "configurations:DebugG"
         defines { "DEBUG", "DEBUG_G" }

@@ -213,13 +213,13 @@ void Viewport::draw_selection_overlay(
 
     if (entity == entt::null ||
         !scene->Registry().valid(entity) ||
-        !scene->HasComponent<anv::Component::Transform2d>(entity))
+        !scene->HasComponent<anv::Component::Transform2D>(entity))
     {
         return;
     }
 
     const auto &transform =
-        scene->GetComponent<anv::Component::Transform2d>(entity);
+        scene->GetComponent<anv::Component::Transform2D>(entity);
 
     ImDrawList *drawList = ImGui::GetWindowDrawList();
     if (!drawList)
@@ -501,12 +501,12 @@ void Viewport::pick_entity(
     entt::entity pickedEntity = entt::null;
     int highestDrawLayer = std::numeric_limits<int>::min();
 
-    auto view = scene->Registry().view<anv::Component::Transform2d, anv::Component::SpriteRenderer>();
+    auto view = scene->Registry().view<anv::Component::Transform2D, anv::Component::SpriteRenderer>();
 
     for (const auto entity : view)
     {
         const auto &transform =
-            view.get<anv::Component::Transform2d>(entity);
+            view.get<anv::Component::Transform2D>(entity);
 
         const auto &sprite =
             view.get<anv::Component::SpriteRenderer>(entity);
@@ -600,13 +600,13 @@ void Viewport::draw_gizmo()
 
     if (entity == entt::null ||
         !scene->Registry().valid(entity) ||
-        !scene->HasComponent<anv::Component::Transform2d>(entity))
+        !scene->HasComponent<anv::Component::Transform2D>(entity))
     {
         return;
     }
 
     auto &transform =
-        scene->GetComponent<anv::Component::Transform2d>(entity);
+        scene->GetComponent<anv::Component::Transform2D>(entity);
 
     glm::mat4 transformMatrix = transform.GetTransform();
 
