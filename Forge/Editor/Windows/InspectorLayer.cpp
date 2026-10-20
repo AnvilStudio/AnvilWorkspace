@@ -44,6 +44,24 @@ void InspectorLayer::Draw(
                 }
             });
 
+        // Relationship is scene metadata rather than an add/remove component.
+        const entt::entity parent = scene->GetParent(selectedEntity);
+        if (parent != entt::null)
+        {
+            std::string parentName = "Entity";
+            if (scene->HasComponent<Component::Tag>(parent))
+                parentName = scene->GetComponent<Component::Tag>(parent).Get();
+            ImGui::Text("Parent: %s", parentName.c_str());
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Unparent"))
+                if (scene->SetParent(selectedEntity, entt::null)) scene->Save();
+        }
+        else
+        {
+            ImGui::TextDisabled("Parent: None (root)");
+        }
+        ImGui::TextDisabled("Transforms are local to the parent");
+
         draw_component<Component::Transform2D>(
             "Transform2D",
             selectedEntity,

@@ -195,8 +195,8 @@ namespace anv
         if (!hasRigidbody && !hasCollider)
             return;
 
-        const auto& transform =
-            scene.GetComponent<Component::Transform2D>(entity);
+        Component::Transform2D transform;
+        transform.SetFromMatrix(scene.GetWorldTransform(entity));
 
         PhysicsBodyDefinition2D bodyDefinition;
         bodyDefinition.positionX = transform.position.x;
@@ -355,8 +355,8 @@ namespace anv
                     continue;
             }
 
-            const auto& transform =
-                scene.GetComponent<Component::Transform2D>(entity);
+            Component::Transform2D transform;
+            transform.SetFromMatrix(scene.GetWorldTransform(entity));
 
             const PhysicsTransform2D bodyTransform = body.GetTransform();
             const float bodyRotation = glm::degrees(bodyTransform.rotationRadians);
@@ -447,8 +447,8 @@ namespace anv
             if (rigidbody.type == Component::Rigidbody2DType::Static)
                 continue;
 
-            auto& transform =
-                scene.GetComponent<Component::Transform2D>(entity);
+            Component::Transform2D transform;
+            transform.SetFromMatrix(scene.GetWorldTransform(entity));
 
             if (rigidbody.type == Component::Rigidbody2DType::Dynamic)
             {
@@ -464,6 +464,7 @@ namespace anv
                         previous.rotationRadians,
                         current.rotationRadians,
                         interpolationAlpha));
+                scene.SetWorldTransform(entity, transform.GetTransform());
                 continue;
             }
 
@@ -473,6 +474,7 @@ namespace anv
                 bodyTransform.positionY
             };
             transform.rotation = glm::degrees(bodyTransform.rotationRadians);
+            scene.SetWorldTransform(entity, transform.GetTransform());
         }
     }
 }

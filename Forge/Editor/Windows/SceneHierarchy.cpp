@@ -197,6 +197,49 @@ void SceneHierarchy::draw_entity(const Ref<Scene>& scene,
             begin_rename(child, "New Entity");
             scene->Save();
         }
+        if (!scene->HasComponent<Component::Camera2D>(entity) &&
+            ImGui::MenuItem("Add Camera 2D"))
+        {
+            scene->AddComponent<Component::Camera2D>(entity);
+            if (scene->GetActiveCameraEntity() == entt::null)
+                scene->SetActiveCamera(entity);
+            scene->Save();
+        }
+
+        if (scene->HasComponent<Component::Camera2D>(entity) &&
+            scene->GetActiveCameraEntity() != entity &&
+            ImGui::MenuItem("Set As Active Camera"))
+        {
+            scene->SetActiveCamera(entity);
+            scene->Save();
+        }
+
+        if (ImGui::BeginMenu("Physics"))
+        {
+            if (!scene->HasComponent<Component::Rigidbody2D>(entity))
+            {
+                if (ImGui::MenuItem("Add Dynamic Rigidbody2D"))
+                {
+                    auto& body = scene->AddComponent<Component::Rigidbody2D>(entity);
+                    body.type = Component::Rigidbody2DType::Dynamic;
+                }
+
+                if (ImGui::MenuItem("Add Static Rigidbody2D"))
+                {
+                    auto& body = scene->AddComponent<Component::Rigidbody2D>(entity);
+                    body.type = Component::Rigidbody2DType::Static;
+                }
+            }
+
+            if (!scene->HasComponent<Component::BoxCollider2D>(entity) &&
+                ImGui::MenuItem("Add BoxCollider2D"))
+            {
+                scene->AddComponent<Component::BoxCollider2D>(entity);
+            }
+
+            ImGui::EndMenu();
+        }
+
         if (ImGui::MenuItem("Delete")) m_EntityToDelete = entity;
         ImGui::EndPopup();
     }
