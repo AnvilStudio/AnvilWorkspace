@@ -53,44 +53,12 @@ project "AnvilEngine"
         includedirs { "%{VULKAN_SDK}" }
         libdirs { "%{VULKAN_LIB}" }
 
-        -- Helper function to strip trailing newlines safely from terminal output
-        local function strip_newline(str)
-            if str == nil then return "" end
-            return string.gsub(str, "[\r\n]+$", "")
-        end
-
-        -- Retrieve paths via Python sysconfig
-        local rawIncludes = os.outputof("python -c \"import sysconfig; print(sysconfig.get_path('include'))\"")
-        -- On Windows, Python libraries live in the standard installation scheme prefix / 'libs'
-        local rawLibDir   = os.outputof("python -c \"import sysconfig; print(sysconfig.get_config_var('installed_base') + '\\\\libs')\"")
-        -- Querying the exact library name dynamically matching the python version (e.g., python312)
-        local rawPyVersion = os.outputof("python -c \"import sys; print(f'python{sys.version_info.major}{sys.version_info.minor}')\"")
-
-        local pythonIncludes = strip_newline(rawIncludes)
-        local pythonLibDir   = strip_newline(rawLibDir)
-        local pythonLibName  = strip_newline(rawPyVersion)
-
-        print("Python Include Dir: " .. pythonIncludes)
-        print("Python Lib Dir: " .. pythonLibDir)
-        print("Python Link Target: " .. pythonLibName)
-
-        if pythonIncludes ~= "" and pythonLibDir ~= "" then
-            defines
-            {
-                "PLATFORM_WIN64",
-                "ANV_ENABLE_PYTHON"
-            }
-
-            includedirs { pythonIncludes }
-            libdirs     { pythonLibDir }
-            links       { pythonLibName }
-        else
-            print("Warning: Python configuration could not be detected; Python scripting will be disabled.")
-            defines
-            {
-                "PLATFORM_WIN64"
-            }
-        end
+        -- Build against the pinned, locally downloaded CPython SDK.
+        -- build.ps1 downloads this alongside the embeddable runtime.
+        defines { "PLATFORM_WIN64", "ANV_ENABLE_PYTHON" }
+        includedirs { PYTHON_INCLUDE }
+        libdirs { PYTHON_LIBDIR }
+        links { PYTHON_LIBNAME }
 
         files 
         {
