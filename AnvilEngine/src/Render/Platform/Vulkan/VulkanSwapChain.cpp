@@ -71,7 +71,11 @@ namespace anv
 	{
 		VkSurfaceFormatKHR surfaceFormat = vk_util::vku_ChooseSwapSurfaceFormat(m_SupportDetails.formats);
 
-		// FIFO is guaranteed by Vulkan and synchronizes presentation to the display.\n        const VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;\n        ANV_LOG_INFO("Vulkan present mode: FIFO (VSync enabled)");\n\nVkExtent2D extent = vk_util::vku_ChooseSwapExtent(
+		// FIFO synchronizes presentation to the display (VSync).
+		const VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
+		ANV_LOG_INFO("Vulkan present mode: FIFO (VSync enabled)");
+
+		VkExtent2D extent = vk_util::vku_ChooseSwapExtent(
 			m_SupportDetails.capabilities,
 			m_Context->GetAs<VulkanContext>()->GetWinHandle()
 		);
