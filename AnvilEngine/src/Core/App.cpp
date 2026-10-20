@@ -1,5 +1,6 @@
 #include "App.h"
 #include <filesystem>
+#include <cstring>
 #include <Util/Serialize/Serializer.h>
 #include <Util/Time/Time.h>
 #include "AppLayers/SceneLayer.h"
@@ -43,25 +44,41 @@ namespace anv
 		if (s_This == nullptr)
 			s_This = this;
 
-		// Navigate to project directory
-		if ((arg_c - 1) <= 0)
-		{
-			ANV_LOG_INFO("== Usage ==");
-			ANV_LOG_INFO("--projectPath (-prj) <path>\t...\tWhere your .anv project is");
-			std::exit(EXIT_SUCCESS);
-		}
+        // Standalone games can launch without command-line arguments when
+        // Project.anv is placed alongside the executable.
+        std::filesystem::path projectPath;
+        for (int i = 1; i < arg_c; ++i)
+        {
+            if ((std::strcmp(arg_v[i], "--projectPath") == 0 ||
+                 std::strcmp(arg_v[i], "-prj") == 0) && i + 1 < arg_c)
+            {
+                projectPath = arg_v[++i];
+                break;
+            }
+        }
 
-		for (int i = 0; i < arg_c; i++)
-		{
-			if ((strcmp(arg_v[i], "--projectPath") == 0 ||
-				 strcmp(arg_v[i], "-prj") == 0) &&
-				i + 1 < arg_c)
-			{
-				m_Settings.projectPath = arg_v[i + 1];
-				break;
-			}
-		}
+        if (projectPath.empty() && arg_c > 0 && arg_v && arg_v[0])
+        {
+            std::error_code ec;
+            const auto executable = std::filesystem::weakly_canonical(arg_v[0], ec);
+            const auto directory = (ec ? std::filesystem::absolute(arg_v[0]) : executable).parent_path();
+            auto candidate = directory / "Project.anv";
+            if (std::filesystem::is_regular_file(candidate))
+                projectPath = candidate;
+        }
 
+        if (projectPath.empty())
+        {
+            ANV_LOG_ERROR("Provide --projectPath <project.anv>, or place Project.anv next to the executable.");
+            std::exit(EXIT_FAILURE);
+        }
+
+        {
+            std::error_code ec;
+            const auto absolute = std::filesystem::absolute(projectPath, ec);
+            if (!ec) projectPath = absolute.lexically_normal();
+        }
+        m_Settings.projectPath = projectPath.string();
 		anv_log::LogCreateInfo info{
 			.logFilePath = m_Settings.projectPath,
 			.logFileName = ".alog",
@@ -72,8 +89,11 @@ namespace anv
 
 		anv_log::AnvLog::Init(info);
 
-		PopulateSettings(m_Settings.projectPath);
-		InitializeFileSys();
+        PopulateSettings(m_Settings.projectPath);
+        // Always locate project resources relative to the loaded .anv file.
+        // Saved ProjDir values can refer to the developer's old machine.
+        m_Settings.projectDir = std::filesystem::path(m_Settings.projectPath).parent_path().string();
+        InitializeFileSys();
 
 		// 1. Window
 		m_AppWin = Window::Create(m_Settings.WindowCreateInfo);
@@ -102,7 +122,8 @@ namespace anv
 
 	App::~App() noexcept
 	{
-		SaveStates();
+        if (!RendersToMainWindow())
+            SaveStates();
 
 		for (Layer *layer : m_LayerStack)
 		{
