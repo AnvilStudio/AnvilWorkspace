@@ -368,7 +368,14 @@ namespace anv
 				vp.x = 0.0f;
 				vp.y = 0.0f;
 				vp.width = static_cast<float>(_renderTarget->GetWidth());
-				vp.height = static_cast<float>(_renderTarget->GetHeight());
+                // Vulkan's direct-to-swapchain image has no ImGui UV flip.
+                // Keep the existing offscreen viewport convention for Forge.
+                const bool mainWindowTarget = _renderTarget == m_SwapchainTarget;
+                vp.height = mainWindowTarget
+                    ? -static_cast<float>(_renderTarget->GetHeight())
+                    : static_cast<float>(_renderTarget->GetHeight());
+                if (mainWindowTarget)
+                    vp.y = static_cast<float>(_renderTarget->GetHeight());
 				vp.minDepth = 0.0f;
 				vp.maxDepth = 1.0f;
 
