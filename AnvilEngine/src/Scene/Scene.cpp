@@ -7,6 +7,7 @@
 #include <Render/Renderer.h>
 #include <Scripting/PythonScriptEngine.h>
 #include <Util/Serialize/Serializer.h>
+#include <Util/FileSys/FileSystem.h>
 
 #include <limits>
 #include <chrono>
