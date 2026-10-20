@@ -356,7 +356,7 @@ namespace anv
         };
         static thread_local std::vector<SpriteItem> items;
         items.clear();
-        items.reserve(m_Registry.storage<Component::SpriteRenderer>()->size());
+        items.reserve(m_Registry.storage<Component::SpriteRenderer>().size());
 
         // Phase 1: gather sprite data and resolve texture assets.
         {
