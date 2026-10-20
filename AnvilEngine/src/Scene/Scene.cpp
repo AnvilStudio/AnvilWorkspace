@@ -346,36 +346,50 @@ namespace anv
         auto view = m_Registry.view<Component::Transform2D, Component::SpriteRenderer>();
         auto assetManager = App::GetInstance()->GetAssetManager();
 
-        view.each([&](auto entity, Component::Transform2D& transform,
-                      Component::SpriteRenderer& sprite)
+        struct SpriteItem
         {
-            if (!sprite.visibleInGame)
-                return;
+            entt::entity entity;
+            Component::Transform2D pose;
+            Ref<Texture> texture;
+            glm::vec4 color;
+            int drawLayer;
+        };
+        static thread_local std::vector<SpriteItem> items;
+        items.clear();
+        items.reserve(m_Registry.storage<Component::SpriteRenderer>()->size());
 
-            // Measure sprite work in three buckets without nested per-sprite scopes.
-            const auto t0 = std::chrono::steady_clock::now();
-            Ref<Texture> texture = (assetManager && !sprite.texture.uuid.empty())
-                ? assetManager->GetAs<Texture>(sprite.texture) : nullptr;
-            const auto t1 = std::chrono::steady_clock::now();
-
-            const Component::Transform2D* world = &transform;
-            Component::Transform2D resolved;
-            if (m_Registry.any_of<Component::Relationship>(entity))
+        // Phase 1: gather sprite data and resolve texture assets.
+        {
+            ANV_PROFILE_ZONE(SpriteLookup);
+            for (auto entity : view)
             {
-                resolved.SetFromMatrix(GetSnapshotWorldTransform(entity));
-                world = &resolved;
+                const auto& sprite = view.get<Component::SpriteRenderer>(entity);
+                if (!sprite.visibleInGame) continue;
+                Ref<Texture> texture = assetManager && !sprite.texture.uuid.empty()
+                    ? assetManager->GetAs<Texture>(sprite.texture) : nullptr;
+                items.push_back({entity, {}, texture, sprite.color, sprite.drawLayer});
             }
-            const auto t2 = std::chrono::steady_clock::now();
-            Renderer2D::DrawQuad(world->position, world->rotation,
-                world->scale, sprite.color, texture, sprite.drawLayer);
-            const auto t3 = std::chrono::steady_clock::now();
-            FrameProfiler::Record(FrameProfiler::Zone::SpriteLookup,
-                std::chrono::duration<float, std::milli>(t1 - t0).count());
-            FrameProfiler::Record(FrameProfiler::Zone::SpriteTransform,
-                std::chrono::duration<float, std::milli>(t2 - t1).count());
-            FrameProfiler::Record(FrameProfiler::Zone::SpriteSubmit,
-                std::chrono::duration<float, std::milli>(t3 - t2).count());
-        });
+        }
+
+        // Phase 2: resolve each sprite's world pose once, with shared-parent caching.
+        {
+            ANV_PROFILE_ZONE(SpriteTransform);
+            for (auto& item : items)
+            {
+                if (m_Registry.any_of<Component::Relationship>(item.entity))
+                    item.pose = GetSnapshotWorldPose2D(item.entity);
+                else
+                    item.pose = m_Registry.get<Component::Transform2D>(item.entity);
+            }
+        }
+
+        // Phase 3: submit quads; clocks are sampled per phase, not per entity.
+        {
+            ANV_PROFILE_ZONE(SpriteSubmit);
+            for (const auto& item : items)
+                Renderer2D::DrawQuad(item.pose.position, item.pose.rotation,
+                    item.pose.scale, item.color, item.texture, item.drawLayer);
+        }
     }
 
     entt::entity Scene::CreateEntity(std::string tag)
