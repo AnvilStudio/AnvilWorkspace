@@ -258,12 +258,18 @@ namespace anv
         if (!assetManager)
             return;
 
-        const std::filesystem::path iconPath =
+        std::filesystem::path iconPath =
             App::GetInstance()->GetFS().GetKeyVal("Res") /
-            "icons" /
-            "camera_icon.png";
+            "Icons" / "camera_icon.png";
 
         std::error_code error;
+        if (!std::filesystem::is_regular_file(iconPath, error))
+        {
+            // Engine resources are copied alongside Forge/AnvRuntime.
+            iconPath = FileSystem::s_ExecDir / "Anvil" / "Resources" /
+                       "Icons" / "camera_icon.png";
+            error.clear();
+        }
         if (!std::filesystem::is_regular_file(iconPath, error))
         {
             ANV_LOG_WARN(
