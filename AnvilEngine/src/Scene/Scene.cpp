@@ -9,6 +9,7 @@
 #include <Util/Serialize/Serializer.h>
 
 #include <limits>
+#include <chrono>
 #include <unordered_set>
 #include <cmath>
 
@@ -345,20 +346,29 @@ namespace anv
             if (!sprite.visibleInGame)
                 return;
 
-            Ref<Texture> texture = assetManager
-                ? assetManager->GetAs<Texture>(sprite.texture)
-                : nullptr;
+            // Measure sprite work in three buckets without nested per-sprite scopes.
+            const auto t0 = std::chrono::steady_clock::now();
+            Ref<Texture> texture = (assetManager && !sprite.texture.uuid.empty())
+                ? assetManager->GetAs<Texture>(sprite.texture) : nullptr;
+            const auto t1 = std::chrono::steady_clock::now();
 
-            if (!m_Registry.any_of<Component::Relationship>(entity))
-                Renderer2D::DrawQuad(transform.position, transform.rotation,
-                    transform.scale, sprite.color, texture, sprite.drawLayer);
-            else
+            const Component::Transform2D* world = &transform;
+            Component::Transform2D resolved;
+            if (m_Registry.any_of<Component::Relationship>(entity))
             {
-                Component::Transform2D worldTransform;
-                worldTransform.SetFromMatrix(GetWorldTransform(entity));
-                Renderer2D::DrawQuad(worldTransform.position, worldTransform.rotation,
-                    worldTransform.scale, sprite.color, texture, sprite.drawLayer);
+                resolved.SetFromMatrix(GetWorldTransform(entity));
+                world = &resolved;
             }
+            const auto t2 = std::chrono::steady_clock::now();
+            Renderer2D::DrawQuad(world->position, world->rotation,
+                world->scale, sprite.color, texture, sprite.drawLayer);
+            const auto t3 = std::chrono::steady_clock::now();
+            FrameProfiler::Record(FrameProfiler::Zone::SpriteLookup,
+                std::chrono::duration<float, std::milli>(t1 - t0).count());
+            FrameProfiler::Record(FrameProfiler::Zone::SpriteTransform,
+                std::chrono::duration<float, std::milli>(t2 - t1).count());
+            FrameProfiler::Record(FrameProfiler::Zone::SpriteSubmit,
+                std::chrono::duration<float, std::milli>(t3 - t2).count());
         });
     }
 
@@ -467,6 +477,12 @@ namespace anv
             return false;
 
         auto& local = GetComponent<Component::Transform2D>(entity);
+        if (!m_Registry.any_of<Component::Relationship>(entity))
+        {
+            local.position = position;
+            local.rotation = rotationDegrees;
+            return true;
+        }
         const entt::entity parent = GetParent(entity);
         if (parent == entt::null)
         {

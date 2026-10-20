@@ -16,7 +16,7 @@ namespace anv
             Frame, Input, LayerUpdate, RendererBegin, AppUpdate,
             LayerRender, EditorUI, RendererEnd, Submit,
             Physics, BodyManagement, PhysicsToBox2D, PhysicsCapture, Box2D, Box2DToScene,
-            Script, SceneRender, Count
+            Script, SceneRender, SpriteLookup, SpriteTransform, SpriteSubmit, Count
         };
         static constexpr std::size_t Count = static_cast<std::size_t>(Zone::Count);
         static constexpr std::size_t History = 120;
@@ -43,6 +43,9 @@ namespace anv
                 case Zone::Box2DToScene: return "Box2D to scene";
                 case Zone::Script: return "Python scripts";
                 case Zone::SceneRender: return "Scene sprites";
+                case Zone::SpriteLookup: return "Sprite asset lookup";
+                case Zone::SpriteTransform: return "Sprite world transform";
+                case Zone::SpriteSubmit: return "Sprite draw submission";
                 default: return "Unknown";
             }
         }
@@ -68,7 +71,8 @@ namespace anv
         {
             const std::size_t index = static_cast<std::size_t>(zone);
             Result result;
-            result.last = s_Current[index];
+            // Show the most recently completed frame, not the partial frame currently being drawn.
+            result.last = s_Filled ? s_Samples[(s_Next + History - 1) % History][index] : 0.0f;
             if (!s_Filled) return result;
             float total = 0.0f;
             for (std::size_t i = 0; i < s_Filled; ++i)

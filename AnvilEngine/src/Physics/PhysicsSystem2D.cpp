@@ -475,18 +475,36 @@ namespace anv
                 const PhysicsTransform2D& previous = runtimeBody.previousTransform;
                 const PhysicsTransform2D& current = runtimeBody.currentTransform;
 
-                scene.SetWorldPose2D(entity,
-                    { Lerp(previous.positionX, current.positionX, interpolationAlpha),
-                      Lerp(previous.positionY, current.positionY, interpolationAlpha) },
-                    glm::degrees(LerpAngleRadians(
-                        previous.rotationRadians, current.rotationRadians, interpolationAlpha)));
+                const glm::vec2 position{
+                    Lerp(previous.positionX, current.positionX, interpolationAlpha),
+                    Lerp(previous.positionY, current.positionY, interpolationAlpha)};
+                const float rotation = glm::degrees(LerpAngleRadians(
+                    previous.rotationRadians, current.rotationRadians, interpolationAlpha));
+
+                // Root bodies already use world-space transform coordinates.
+                // Avoid matrix inversion, ancestry searches and repeated registry validation.
+                if (!scene.HasComponent<Component::Relationship>(entity))
+                {
+                    auto& transform = scene.GetComponent<Component::Transform2D>(entity);
+                    transform.position = position;
+                    transform.rotation = rotation;
+                }
+                else
+                    scene.SetWorldPose2D(entity, position, rotation);
                 continue;
             }
 
             const PhysicsTransform2D bodyTransform = body.GetTransform();
-            scene.SetWorldPose2D(entity,
-                { bodyTransform.positionX, bodyTransform.positionY },
-                glm::degrees(bodyTransform.rotationRadians));
+            const glm::vec2 position{bodyTransform.positionX, bodyTransform.positionY};
+            const float rotation = glm::degrees(bodyTransform.rotationRadians);
+            if (!scene.HasComponent<Component::Relationship>(entity))
+            {
+                auto& transform = scene.GetComponent<Component::Transform2D>(entity);
+                transform.position = position;
+                transform.rotation = rotation;
+            }
+            else
+                scene.SetWorldPose2D(entity, position, rotation);
         }
     }
 }

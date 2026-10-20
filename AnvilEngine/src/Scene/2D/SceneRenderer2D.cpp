@@ -6,6 +6,7 @@
 #include <Core/App.h>
 #include <algorithm>
 #include <vector>
+#include <chrono>
 
 namespace anv
 {
@@ -41,18 +42,27 @@ namespace anv
             auto& sprite = view.get<Component::SpriteRenderer>(entity);
             if (!sprite.visibleInGame)
                 continue;
+            const auto t0 = std::chrono::steady_clock::now();
             Ref<Texture> texture = sprite.texture.uuid.empty() ? nullptr : assetManager->GetAs<Texture>(sprite.texture);
+            const auto t1 = std::chrono::steady_clock::now();
 
-            if (!scene->HasComponent<Component::Relationship>(entity))
-                Renderer2D::DrawQuad(transform.position, transform.rotation,
-                    transform.scale, sprite.color, texture, sprite.drawLayer);
-            else
+            const Component::Transform2D* world = &transform;
+            Component::Transform2D resolved;
+            if (scene->HasComponent<Component::Relationship>(entity))
             {
-                Component::Transform2D worldTransform;
-                worldTransform.SetFromMatrix(scene->GetWorldTransform(entity));
-                Renderer2D::DrawQuad(worldTransform.position, worldTransform.rotation,
-                    worldTransform.scale, sprite.color, texture, sprite.drawLayer);
+                resolved.SetFromMatrix(scene->GetWorldTransform(entity));
+                world = &resolved;
             }
+            const auto t2 = std::chrono::steady_clock::now();
+            Renderer2D::DrawQuad(world->position, world->rotation,
+                world->scale, sprite.color, texture, sprite.drawLayer);
+            const auto t3 = std::chrono::steady_clock::now();
+            FrameProfiler::Record(FrameProfiler::Zone::SpriteLookup,
+                std::chrono::duration<float, std::milli>(t1 - t0).count());
+            FrameProfiler::Record(FrameProfiler::Zone::SpriteTransform,
+                std::chrono::duration<float, std::milli>(t2 - t1).count());
+            FrameProfiler::Record(FrameProfiler::Zone::SpriteSubmit,
+                std::chrono::duration<float, std::milli>(t3 - t2).count());
         }
     }
 }
