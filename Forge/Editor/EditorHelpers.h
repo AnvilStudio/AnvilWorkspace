@@ -34,24 +34,30 @@ void draw_component(
     drawList->AddRectFilled(
         ImVec2(barMin.x, barMax.y - 2.0f), barMax, edgeColor);
 
-    ImGui::SetCursorScreenPos(ImVec2(barMin.x + 6.0f, barMin.y + 3.0f));
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.31f, 0.38f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.30f, 0.40f, 0.51f, 1.0f));
-    if (ImGui::Button("...", ImVec2(36.0f, height - 6.0f)))
-        ImGui::OpenPopup("Settings");
-    ImGui::PopStyleColor(3);
-    ImGui::PopStyleVar();
+    // The collapsing arrow/title occupies the left; settings is pinned right.
+    const float buttonWidth = 36.0f;
+    const float buttonHeight = height - 6.0f;
+    const float headerWidth = std::max(1.0f, barMax.x - barMin.x - buttonWidth - 12.0f);
 
-    ImGui::SameLine(0.0f, 0.0f);
+    ImGui::SetCursorScreenPos(ImVec2(barMin.x + 6.0f, barMin.y + 3.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
     ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0, 0, 0, 0));
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.25f, 0.31f, 0.38f, 0.65f));
     ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.30f, 0.40f, 0.51f, 0.65f));
+    ImGui::SetNextItemWidth(headerWidth);
     const bool open = ImGui::CollapsingHeader(
         name, ImGuiTreeNodeFlags_DefaultOpen |
               ImGuiTreeNodeFlags_AllowOverlap);
+    ImGui::PopStyleColor(3);
+    ImGui::PopStyleVar();
+
+    ImGui::SetCursorScreenPos(ImVec2(barMax.x - buttonWidth - 6.0f, barMin.y + 3.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.31f, 0.38f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.30f, 0.40f, 0.51f, 1.0f));
+    if (ImGui::Button("...", ImVec2(buttonWidth, buttonHeight)))
+        ImGui::OpenPopup("Settings");
     ImGui::PopStyleColor(3);
     ImGui::PopStyleVar();
 
