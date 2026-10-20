@@ -1,6 +1,7 @@
 ﻿#include "EditorLayer.h"
 #include "MainMenu.h"
 #include <algorithm>
+#include <cstdio>
 
 using namespace anv;
 
@@ -179,17 +180,33 @@ void EditorLayer::draw_stats()
                     IM_COL32(90, 95, 105, 255));
         }
         ImGui::Dummy(ImVec2(barWidth, barHeight));
+        // A wrapping legend stays readable even with a narrow Stats panel.
+        const float availableWidth = ImGui::GetContentRegionAvail().x;
+        float rowWidth = 0.0f;
         for (const auto& segment : segments)
         {
             const float duration = FrameProfiler::Get(segment.zone).average;
-            ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(segment.color));
-            ImGui::Text("■");
-            ImGui::PopStyleColor();
-            ImGui::SameLine();
-            ImGui::Text("%s %.2f ms", segment.name, duration);
-            ImGui::SameLine(0.0f, 12.0f);
+            char label[128];
+            std::snprintf(label, sizeof(label), "%s %.2f ms", segment.name, duration);
+            const float itemWidth = 14.0f + ImGui::CalcTextSize(label).x + 18.0f;
+            if (rowWidth > 0.0f && rowWidth + itemWidth > availableWidth)
+            {
+                ImGui::NewLine();
+                rowWidth = 0.0f;
+            }
+            else if (rowWidth > 0.0f)
+                ImGui::SameLine(0.0f, 10.0f);
+
+            const ImVec2 marker = ImGui::GetCursorScreenPos();
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                ImVec2(marker.x, marker.y + 3.0f),
+                ImVec2(marker.x + 10.0f, marker.y + 13.0f),
+                segment.color);
+            ImGui::Dummy(ImVec2(12.0f, ImGui::GetTextLineHeight()));
+            ImGui::SameLine(0.0f, 2.0f);
+            ImGui::TextUnformatted(label);
+            rowWidth += itemWidth;
         }
-        ImGui::NewLine();
         ImGui::TextDisabled("Other / profiling overhead: %.2f ms", remaining);
         ImGui::Separator();
         ImGui::TextUnformatted("CPU profiler (last / avg / peak, 120 frames)");

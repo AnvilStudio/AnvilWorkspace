@@ -104,9 +104,18 @@ namespace anv
 
         {
             ANV_PROFILE_ZONE(RenderSubmitWait);
-            m_RenderCmdChain->Swap();
-            m_RenderCmdChain->WaitForProcessComplete();
-            m_ImGuiLayer->FinishFrame();
+            {
+                ANV_PROFILE_ZONE(RenderQueueSwap);
+                m_RenderCmdChain->Swap();
+            }
+            {
+                ANV_PROFILE_ZONE(RenderWorkerWait);
+                m_RenderCmdChain->WaitForProcessComplete();
+            }
+            {
+                ANV_PROFILE_ZONE(ImGuiFinish);
+                m_ImGuiLayer->FinishFrame();
+            }
         }
 
         {
