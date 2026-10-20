@@ -36,20 +36,22 @@ namespace anv
 
         for (auto entity : drawOrder)
         {
+            auto& transform = view.get<Component::Transform2D>(entity);
             auto& sprite = view.get<Component::SpriteRenderer>(entity);
             if (!sprite.visibleInGame)
                 continue;
             Ref<Texture> texture = assetManager->GetAs<Texture>(sprite.texture);
 
-            Component::Transform2D worldTransform;
-            worldTransform.SetFromMatrix(scene->GetWorldTransform(entity));
-            Renderer2D::DrawQuad(
-                worldTransform.position,
-                worldTransform.rotation,
-                worldTransform.scale,
-                sprite.color,
-                texture,
-                sprite.drawLayer);
+            if (!scene->HasComponent<Component::Relationship>(entity))
+                Renderer2D::DrawQuad(transform.position, transform.rotation,
+                    transform.scale, sprite.color, texture, sprite.drawLayer);
+            else
+            {
+                Component::Transform2D worldTransform;
+                worldTransform.SetFromMatrix(scene->GetWorldTransform(entity));
+                Renderer2D::DrawQuad(worldTransform.position, worldTransform.rotation,
+                    worldTransform.scale, sprite.color, texture, sprite.drawLayer);
+            }
         }
     }
 }

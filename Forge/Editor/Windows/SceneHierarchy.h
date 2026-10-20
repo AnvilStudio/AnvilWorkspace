@@ -4,6 +4,8 @@
 
 #include <array>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 using namespace anv;
 
@@ -15,8 +17,9 @@ public:
     void Draw();
 
 private:
+    using ChildMap = std::unordered_map<entt::entity, std::vector<entt::entity>>;
     void draw_entity(Ref<Scene> scene, entt::entity entity,
-                     entt::entity selected, int depth);
+                     entt::entity selected, int depth, const ChildMap& children);
     void begin_rename(
         entt::entity entity,
         const std::string& currentName

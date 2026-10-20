@@ -4,6 +4,7 @@
 #include <cstring>
 #include <vector>
 #include <cstdint>
+#include <unordered_map>
 
 SceneHierarchy::SceneHierarchy(Ref<Scene> scene)
 {
@@ -90,11 +91,30 @@ void SceneHierarchy::Draw()
     const auto selectedEntity =
         EditorLayer::GetInstance()->GetSelectedEntity();
 
-    // Only roots appear at top level; descendants render recursively.
+    // Build a single adjacency index per frame instead of scanning for every row.
+    ChildMap children;
+    std::unordered_map<std::string, entt::entity> byUUID;
+    auto ids = scene->Registry().view<uuid::EntityUUID>();
+    byUUID.reserve(ids.size_hint());
+    for (auto entity : ids)
+        byUUID.emplace(ids.get<uuid::EntityUUID>(entity).uuid, entity);
+
+    auto relationships = scene->Registry().view<Component::Relationship>();
+    for (auto entity : relationships)
+    {
+        const auto& parentID = relationships.get<Component::Relationship>(entity).parentUUID;
+        const auto parent = byUUID.find(parentID);
+        if (parent != byUUID.end())
+            children[parent->second].push_back(entity);
+    }
+
     auto view = scene->Registry().view<Component::Tag>();
     for (const auto entity : view)
-        if (scene->GetParent(entity) == entt::null)
-            draw_entity(scene, entity, selectedEntity, 0);
+    {
+        if (!scene->HasComponent<Component::Relationship>(entity) ||
+            !byUUID.contains(scene->GetComponent<Component::Relationship>(entity).parentUUID))
+            draw_entity(scene, entity, selectedEntity, 0, children);
+    }
 
     // Dropping on empty hierarchy space makes an entity a root.
     ImGui::Dummy(ImVec2(-1.0f, 12.0f));
@@ -131,16 +151,16 @@ void SceneHierarchy::Draw()
 void SceneHierarchy::draw_entity(Ref<Scene> scene,
                                  entt::entity entity,
                                  entt::entity selected,
-                                 int depth)
+                                 int depth, const ChildMap& children)
 {
     if (depth > 256 || !scene->Registry().valid(entity) ||
         !scene->HasComponent<Component::Tag>(entity)) return;
 
     auto& tag = scene->GetComponent<Component::Tag>(entity);
-    const auto children = scene->GetChildren(entity);
+    const auto foundChildren = children.find(entity);
     ImGui::PushID(static_cast<uint32_t>(entity));
     const bool renaming = m_IsRenaming && m_RenamedEntity == entity;
-    const bool hasChildren = !children.empty();
+    const bool hasChildren = foundChildren != children.end() && !foundChildren->second.empty();
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow |
         ImGuiTreeNodeFlags_SpanAvailWidth;
     if (entity == selected) flags |= ImGuiTreeNodeFlags_Selected;
@@ -247,8 +267,8 @@ void SceneHierarchy::draw_entity(Ref<Scene> scene,
 
     if (hasChildren && open)
     {
-        for (auto child : children)
-            draw_entity(scene, child, selected, depth + 1);
+        for (auto child : foundChildren->second)
+            draw_entity(scene, child, selected, depth + 1, children);
         ImGui::TreePop();
     }
     ImGui::PopID();

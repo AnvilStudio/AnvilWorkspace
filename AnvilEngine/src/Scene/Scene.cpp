@@ -345,10 +345,16 @@ namespace anv
                 ? assetManager->GetAs<Texture>(sprite.texture)
                 : nullptr;
 
-            Component::Transform2D worldTransform;
-            worldTransform.SetFromMatrix(GetWorldTransform(entity));
-            Renderer2D::DrawQuad(worldTransform.position, worldTransform.rotation,
-                worldTransform.scale, sprite.color, texture, sprite.drawLayer);
+            if (!m_Registry.any_of<Component::Relationship>(entity))
+                Renderer2D::DrawQuad(transform.position, transform.rotation,
+                    transform.scale, sprite.color, texture, sprite.drawLayer);
+            else
+            {
+                Component::Transform2D worldTransform;
+                worldTransform.SetFromMatrix(GetWorldTransform(entity));
+                Renderer2D::DrawQuad(worldTransform.position, worldTransform.rotation,
+                    worldTransform.scale, sprite.color, texture, sprite.drawLayer);
+            }
         });
     }
 
