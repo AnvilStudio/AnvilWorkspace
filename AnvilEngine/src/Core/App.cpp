@@ -122,7 +122,7 @@ namespace anv
 
 	App::~App() noexcept
 	{
-        if (!RendersToMainWindow())
+        if (!m_StandaloneRuntime)
             SaveStates();
 
 		for (Layer *layer : m_LayerStack)
