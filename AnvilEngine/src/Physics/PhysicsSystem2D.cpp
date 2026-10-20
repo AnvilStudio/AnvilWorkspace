@@ -166,6 +166,7 @@ namespace anv
             }
 
             m_Accumulator += std::clamp(deltaTime, 0.0f, 0.25f);
+            int fixedSteps = 0;
             while (m_Accumulator >= m_FixedTimeStep)
             {
                 {
@@ -181,7 +182,9 @@ namespace anv
                     CapturePostStepTransforms(scene);
                 }
                 m_Accumulator -= m_FixedTimeStep;
+                ++fixedSteps;
             }
+            FrameProfiler::Record(FrameProfiler::Zone::PhysicsFixedSteps, static_cast<float>(fixedSteps));
             {
                 ANV_PROFILE_ZONE(Box2DToScene);
                 SynchronizeTransforms(scene);

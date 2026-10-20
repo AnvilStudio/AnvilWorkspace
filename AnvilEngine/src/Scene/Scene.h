@@ -3,6 +3,7 @@
 #include "../vendor/entt/single_include/entt/entt.hpp"
 #include "../Render/Camera.h"
 #include "SceneData.h"
+#include "Components/Transform2d.h"
 #include <unordered_map>
 #include <unordered_set>
 
@@ -99,6 +100,7 @@ namespace anv
         glm::mat4 GetWorldTransform(entt::entity entity) const;
         void RebuildWorldTransformSnapshot() const;
         glm::mat4 GetSnapshotWorldTransform(entt::entity entity) const;
+        Component::Transform2D GetSnapshotWorldPose2D(entt::entity entity) const;
         bool SetWorldTransform(entt::entity entity, const glm::mat4& world);
         bool SetWorldPose2D(entt::entity entity, glm::vec2 position, float rotationDegrees);
         void DestroyEntity(entt::entity entity);
@@ -119,7 +121,13 @@ namespace anv
         // Saves stable UUID relationships while resolving runtime handles once.
         mutable std::unordered_map<std::string, entt::entity> m_UUIDIndex;
         mutable std::unordered_map<entt::entity, entt::entity> m_ParentIndex;
-        mutable std::unordered_map<entt::entity, glm::mat4> m_WorldSnapshot;
+        struct WorldSnapshotEntry
+        {
+            glm::mat4 matrix{1.0f};
+            Component::Transform2D pose{};
+            bool uniformScale = true;
+        };
+        mutable std::unordered_map<entt::entity, WorldSnapshotEntry> m_WorldSnapshot;
         mutable bool m_SnapshotReady = false;
 
         friend class SceneManager;

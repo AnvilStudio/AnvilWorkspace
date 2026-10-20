@@ -16,7 +16,7 @@ namespace anv
             Frame, Input, LayerUpdate, RendererBegin, AppUpdate,
             LayerRender, EditorUI, RendererEnd, Submit,
             Physics, BodyManagement, PhysicsToBox2D, PhysicsCapture, Box2D, Box2DToScene,
-            Script, SceneRender, SpriteLookup, SpriteTransform, SpriteSubmit, Count
+            Script, SceneRender, SpriteLookup, SpriteTransform, SpriteSubmit, PhysicsFixedSteps, Count
         };
         static constexpr std::size_t Count = static_cast<std::size_t>(Zone::Count);
         static constexpr std::size_t History = 120;
@@ -46,6 +46,7 @@ namespace anv
                 case Zone::SpriteLookup: return "Sprite asset lookup";
                 case Zone::SpriteTransform: return "Sprite world transform";
                 case Zone::SpriteSubmit: return "Sprite draw submission";
+                case Zone::PhysicsFixedSteps: return "Physics fixed steps / frame";
                 default: return "Unknown";
             }
         }

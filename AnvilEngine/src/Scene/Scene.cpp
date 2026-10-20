@@ -489,40 +489,81 @@ namespace anv
 
     glm::mat4 Scene::GetSnapshotWorldTransform(entt::entity entity) const
     {
-        auto cached = m_WorldSnapshot.find(entity);
-        if (cached != m_WorldSnapshot.end())
-            return cached->second;
-        if (!m_Registry.valid(entity))
-            return glm::mat4(1.0f);
+        GetSnapshotWorldPose2D(entity);
+        auto it = m_WorldSnapshot.find(entity);
+        return it == m_WorldSnapshot.end() ? glm::mat4(1.0f) : it->second.matrix;
+    }
 
-        // Resolve and memoize the ancestry once per snapshot.
+    Component::Transform2D Scene::GetSnapshotWorldPose2D(entt::entity entity) const
+    {
+        if (!m_SnapshotReady)
+            RebuildWorldTransformSnapshot();
+
+        if (auto found = m_WorldSnapshot.find(entity); found != m_WorldSnapshot.end())
+            return found->second.pose;
+        if (!m_Registry.valid(entity))
+            return {};
+
         std::vector<entt::entity> chain;
         chain.reserve(8);
         entt::entity cursor = entity;
-        const auto maxDepth = m_Registry.storage<entt::entity>()->size();
+        const std::size_t maxDepth = m_Registry.storage<entt::entity>()->size();
         for (std::size_t i = 0; i < maxDepth && cursor != entt::null; ++i)
         {
-            auto known = m_WorldSnapshot.find(cursor);
-            if (known != m_WorldSnapshot.end())
+            if (m_WorldSnapshot.contains(cursor))
                 break;
             if (std::find(chain.begin(), chain.end(), cursor) != chain.end())
                 break;
             chain.push_back(cursor);
-            auto parent = m_ParentIndex.find(cursor);
-            cursor = parent == m_ParentIndex.end() ? entt::null : parent->second;
+            const auto it = m_ParentIndex.find(cursor);
+            cursor = it == m_ParentIndex.end() ? entt::null : it->second;
         }
 
-        glm::mat4 world = glm::mat4(1.0f);
-        auto known = m_WorldSnapshot.find(cursor);
-        if (known != m_WorldSnapshot.end())
-            world = known->second;
+        WorldSnapshotEntry parent{};
+        if (auto known = m_WorldSnapshot.find(cursor); known != m_WorldSnapshot.end())
+            parent = known->second;
+
         for (auto it = chain.rbegin(); it != chain.rend(); ++it)
         {
-            if (m_Registry.any_of<Component::Transform2D>(*it))
-                world *= m_Registry.get<Component::Transform2D>(*it).GetTransform();
-            m_WorldSnapshot.emplace(*it, world);
+            if (!m_Registry.any_of<Component::Transform2D>(*it))
+                continue;
+
+            const auto& local = m_Registry.get<Component::Transform2D>(*it);
+            WorldSnapshotEntry current;
+            const bool hasParent = m_ParentIndex.contains(*it);
+            if (!hasParent)
+            {
+                current.pose = local;
+                current.matrix = local.GetTransform();
+                current.uniformScale = std::abs(local.scale.x - local.scale.y) < 0.00001f;
+            }
+            else if (parent.uniformScale && parent.pose.scale.x > 0.0f &&
+                     std::abs(local.scale.x - local.scale.y) < 0.00001f)
+            {
+                // Uniform scale + rotation preserves ordinary TRS composition.
+                const float angle = glm::radians(parent.pose.rotation);
+                const float c = std::cos(angle), s = std::sin(angle);
+                const glm::vec2 scaled = local.position * parent.pose.scale;
+                current.pose.position = parent.pose.position +
+                    glm::vec2(c * scaled.x - s * scaled.y,
+                              s * scaled.x + c * scaled.y);
+                current.pose.rotation = parent.pose.rotation + local.rotation;
+                current.pose.scale = parent.pose.scale * local.scale;
+                current.uniformScale = true;
+                current.matrix = current.pose.GetTransform();
+            }
+            else
+            {
+                // Mixed nonuniform scale and rotation may produce shear.
+                current.matrix = parent.matrix * local.GetTransform();
+                current.pose.SetFromMatrix(current.matrix);
+                current.uniformScale = false;
+            }
+            parent = current;
+            m_WorldSnapshot.insert_or_assign(*it, current);
         }
-        return world;
+        auto result = m_WorldSnapshot.find(entity);
+        return result != m_WorldSnapshot.end() ? result->second.pose : Component::Transform2D{};
     }
 
     bool Scene::SetWorldTransform(entt::entity entity, const glm::mat4& world)
