@@ -335,7 +335,7 @@ namespace anv
 
         s_ProjectDirectory = _projectDirectory;
         s_ScriptsDirectory = s_ProjectDirectory / "Scripts";
-        s_PythonModuleDirectory = s_ExecDir / "Anvil" / "Resources" / "Python";
+        s_PythonModuleDirectory = FileSystem::s_ExecDir / "Anvil" / "Resources" / "Python";
 
         if (!std::filesystem::exists(s_PythonModuleDirectory))
         {
