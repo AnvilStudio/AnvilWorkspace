@@ -1,5 +1,6 @@
 #pragma once
 #include "Anvil.h"
+#include <algorithm>
 
 template<typename Comp, typename UIFunc>
 void draw_component(
@@ -66,7 +67,35 @@ static void property_label(const char* label, float width = 90.0f)
 static bool property_float2(const char* label, float* value, float speed = 0.1f)
 {
     property_label(label);
-    return ImGui::DragFloat2(("##" + std::string(label)).c_str(), value, speed);
+    // Keep spatial axes recognizable: X red, Y green (Z blue for 3D).
+    const ImVec4 axisColors[2] = {
+        ImVec4(0.80f, 0.29f, 0.31f, 1.0f),
+        ImVec4(0.32f, 0.68f, 0.39f, 1.0f)
+    };
+    const char* axisLabels[2] = {"X", "Y"};
+    const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+    const float available = ImGui::GetContentRegionAvail().x;
+    const float fieldWidth = (available - spacing) * 0.5f;
+    const float axisWidth = 19.0f;
+    bool changed = false;
+
+    ImGui::PushID(label);
+    for (int axis = 0; axis < 2; ++axis)
+    {
+        if (axis != 0) ImGui::SameLine(0.0f, spacing);
+        ImGui::BeginGroup();
+        ImGui::PushStyleColor(ImGuiCol_Text, axisColors[axis]);
+        ImGui::TextUnformatted(axisLabels[axis]);
+        ImGui::PopStyleColor();
+        ImGui::SameLine(0.0f, 3.0f);
+        ImGui::SetNextItemWidth(std::max(25.0f, fieldWidth - axisWidth));
+        ImGui::PushID(axis);
+        changed |= ImGui::DragFloat("##Axis", &value[axis], speed);
+        ImGui::PopID();
+        ImGui::EndGroup();
+    }
+    ImGui::PopID();
+    return changed;
 }
 
 static bool property_float(const char* label, float* value, float speed = 0.1f)
