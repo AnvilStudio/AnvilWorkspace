@@ -19,8 +19,8 @@ void About::Draw()
         ImGui::Separator();
         ImGui::Text("Authors ...");
         ImGui::Text("Cj0x7c00");
-        ImGui::End();
     }
+    ImGui::End();
 }
 
 void About::SetOpen(bool open)

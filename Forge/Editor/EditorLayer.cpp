@@ -23,7 +23,8 @@ void EditorLayer::OnAttach()
     ImGuiIO &io = ImGui::GetIO();
 
     auto &fs = App::GetInstance()->GetFS();
-    io.IniFilename = (fs.GetKeyVal("Settings") / "EditorConfig" / "EditorLayout.ini").string().c_str();
+    m_ImGuiIniPath = (fs.GetKeyVal("Settings") / "EditorConfig" / "EditorLayout.ini").string();
+    io.IniFilename = m_ImGuiIniPath.c_str();
     auto path = fs.GetKeyVal("Assets") / "Fonts" / "JetBrainsMono-Bold.ttf";
 
     io.Fonts->AddFontFromFileTTF(path.string().c_str(), 18.0f);
@@ -109,15 +110,18 @@ void EditorLayer::OnImGuiRender()
 
     {
         ANV_PROFILE_ZONE(ForgeHierarchy);
-        m_SceneHierarchy.Draw();
+        if (m_Windows.showHierarchy)
+            m_SceneHierarchy.Draw();
     }
     {
         ANV_PROFILE_ZONE(ForgeFileBrowser);
-        m_FileBrowser.Draw();
+        if (m_Windows.showFiles)
+            m_FileBrowser.Draw();
     }
     {
         ANV_PROFILE_ZONE(ForgeInspector);
-        m_InspectorLayer.Draw(scene, m_SelectedEntity);
+        if (m_Windows.showInspector)
+            m_InspectorLayer.Draw(scene, m_SelectedEntity);
     }
     {
         ANV_PROFILE_ZONE(ForgeStats);
@@ -137,11 +141,13 @@ void EditorLayer::OnImGuiRender()
     }
     {
         ANV_PROFILE_ZONE(ForgeGameViewport);
-        m_GameViewport.Draw();
+        if (m_Windows.showGameViewport)
+            m_GameViewport.Draw();
     }
     {
         ANV_PROFILE_ZONE(ForgeViewport);
-        m_Viewport.Draw();
+        if (m_Windows.showViewport)
+            m_Viewport.Draw();
     }
 }
 

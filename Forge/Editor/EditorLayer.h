@@ -15,10 +15,23 @@
 
 struct Windows
 {
-    bool showAssetRegistry = true;
-    bool showStats = true;
-    bool showCodeEditor = true;
+    bool showViewport = true;
+    bool showGameViewport = true;
+    bool showHierarchy = true;
+    bool showInspector = true;
+    bool showFiles = true;
+    bool showAssetRegistry = false;
+    bool showStats = false;
+    bool showCodeEditor = false;
     bool showConsole = true;
+
+    void ShowAll()
+    {
+        showViewport = showGameViewport = showHierarchy = showInspector =
+            showFiles = showAssetRegistry = showStats = showCodeEditor = showConsole = true;
+    }
+
+    void RestoreDefaults() { *this = Windows{}; }
 };
 
 class EditorLayer : public anv::Layer
@@ -106,4 +119,5 @@ private:
     anv::ConsolePanel m_Console;
 
     Windows m_Windows{};
+    std::string m_ImGuiIniPath;
 };
