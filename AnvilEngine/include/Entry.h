@@ -32,7 +32,7 @@ extern anv::App* CreateApp(int arg_c = 0, char* arg_v[] = nullptr);
             }
             catch (std::exception& e)
             {
-                std::cout << e.what() << '\n';
+                ANV_LOG_ERROR("%s", e.what());
             }
 
             delete app;
@@ -43,29 +43,38 @@ extern anv::App* CreateApp(int arg_c = 0, char* arg_v[] = nullptr);
 #ifdef PLATFORM_APPLE
 int main(int arg_c, char* arg_v[])
 {
+    #ifndef RELEASE
     std::fprintf(stderr, "MAIN: creating app\n");
     std::fflush(stderr);
+    #endif
 
     std::unique_ptr<anv::App> app(CreateApp(arg_c, arg_v));
 
     if (!app)
     {
-        std::fprintf(stderr, "MAIN: CreateApp returned nullptr\n");
+        #ifndef RELEASE
+    std::fprintf(stderr, "MAIN: CreateApp returned nullptr\n");
         return 1;
     }
 
+    #ifndef RELEASE
     std::fprintf(stderr, "MAIN: entering Run\n");
     std::fflush(stderr);
+    #endif
 
     app->Run();
 
+    #ifndef RELEASE
     std::fprintf(stderr, "MAIN: Run returned\n");
     std::fflush(stderr);
+    #endif
 
     app.reset();
 
+    #ifndef RELEASE
     std::fprintf(stderr, "MAIN: app destroyed\n");
     std::fflush(stderr);
+    #endif
 
     return 0;
 }
