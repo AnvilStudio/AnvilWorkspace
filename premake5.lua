@@ -103,6 +103,13 @@ workspace "AnvilWorkspace"
 
     outdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}" .. rendererSuffix
     ROOTDIR = os.getcwd() .. "/"
+    -- Windows CPython dependency. Install with .\\build.ps1 first.
+    PYTHON_VERSION = "3.13.11"
+    PYTHON_ROOT = "%{wks.location}/Dependencies/Python"
+    PYTHON_INCLUDE = PYTHON_ROOT .. "/sdk/tools/include"
+    PYTHON_LIBDIR = PYTHON_ROOT .. "/sdk/tools/libs"
+    PYTHON_RUNTIME = PYTHON_ROOT .. "/runtime"
+    PYTHON_LIBNAME = "python313"
     print("Root Directory: ", ROOTDIR)
 
     -- Resolve the LunarG Vulkan SDK before project scripts are included so
