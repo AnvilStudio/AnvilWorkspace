@@ -31,11 +31,14 @@ namespace anv
             });
 
         auto assetManager = App::GetInstance()->GetAssetManager();
+        if (!assetManager)
+            return;
 
         for (auto entity : drawOrder)
         {
-            auto& transform = view.get<Component::Transform2D>(entity);
             auto& sprite = view.get<Component::SpriteRenderer>(entity);
+            if (!sprite.visibleInGame)
+                continue;
             Ref<Texture> texture = assetManager->GetAs<Texture>(sprite.texture);
 
             Component::Transform2D worldTransform;

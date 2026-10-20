@@ -115,6 +115,7 @@ void SceneHierarchy::Draw()
     {
         const entt::entity deletedEntity = m_EntityToDelete;
         scene->DestroyEntity(deletedEntity);
+        scene->Save();
         m_EntityToDelete = entt::null;
 
         if (selectedEntity == deletedEntity)

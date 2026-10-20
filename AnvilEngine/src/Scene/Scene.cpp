@@ -402,8 +402,11 @@ namespace anv
 
     bool Scene::IsDescendant(entt::entity entity, entt::entity ancestor) const
     {
-        std::unordered_set<entt::entity> visited;
-        while (entity != entt::null && m_Registry.valid(entity) && visited.insert(entity).second)
+        // An acyclic scene is enforced by SetParent; bound iteration also
+        // protects against corrupt external/serialized relationships.
+        const auto limit = m_Registry.storage<entt::entity>().size();
+        for (std::size_t i = 0; i < limit &&
+             entity != entt::null && m_Registry.valid(entity); ++i)
         {
             if (entity == ancestor)
                 return true;
@@ -415,16 +418,16 @@ namespace anv
     glm::mat4 Scene::GetWorldTransform(entt::entity entity) const
     {
         glm::mat4 result(1.0f);
-        std::vector<entt::entity> lineage;
-        std::unordered_set<entt::entity> visited;
-        while (entity != entt::null && m_Registry.valid(entity) && visited.insert(entity).second)
+        // Pre-multiply ancestors: parent * child, no temporary allocations.
+        // The bound also prevents endless traversal of malformed relationships.
+        const auto limit = m_Registry.storage<entt::entity>().size();
+        for (std::size_t i = 0; i < limit &&
+             entity != entt::null && m_Registry.valid(entity); ++i)
         {
-            lineage.push_back(entity);
+            if (m_Registry.any_of<Component::Transform2D>(entity))
+                result = m_Registry.get<Component::Transform2D>(entity).GetTransform() * result;
             entity = GetParent(entity);
         }
-        for (auto it = lineage.rbegin(); it != lineage.rend(); ++it)
-            if (m_Registry.any_of<Component::Transform2D>(*it))
-                result *= m_Registry.get<Component::Transform2D>(*it).GetTransform();
         return result;
     }
 
@@ -453,10 +456,15 @@ namespace anv
             (parent != entt::null && IsDescendant(parent, child)))
             return false;
 
-        const glm::mat4 world = GetWorldTransform(child);
-        const glm::mat4 parentWorld = parent == entt::null
-            ? glm::mat4(1.0f) : GetWorldTransform(parent);
-        if (keepWorld && HasComponent<Component::Transform2D>(child) &&
+        if (GetParent(child) == parent)
+            return true;
+
+        const bool preserve = keepWorld && HasComponent<Component::Transform2D>(child);
+        const glm::mat4 world = preserve
+            ? GetWorldTransform(child) : glm::mat4(1.0f);
+        const glm::mat4 parentWorld = preserve && parent != entt::null
+            ? GetWorldTransform(parent) : glm::mat4(1.0f);
+        if (preserve &&
             std::abs(glm::determinant(parentWorld)) < 0.000001f)
             return false;
 
@@ -466,7 +474,7 @@ namespace anv
             m_Registry.emplace_or_replace<Component::Relationship>(
                 child, m_Registry.get<uuid::EntityUUID>(parent).uuid);
 
-        if (keepWorld && HasComponent<Component::Transform2D>(child))
+        if (preserve)
             SetWorldTransform(child, world);
         return true;
     }
