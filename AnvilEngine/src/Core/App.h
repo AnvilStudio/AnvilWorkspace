@@ -98,6 +98,7 @@ namespace anv
 		
 		AppStats m_Stats;
 		bool m_CloseEvent = false;
+        bool m_StandaloneRuntime = false;
 	};
 
 }
