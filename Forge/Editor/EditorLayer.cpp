@@ -124,27 +124,47 @@ void EditorLayer::draw_stats()
     if (!m_Windows.showStats)
         return;
 
-    ImGui::Begin("Stats");
-    auto &stats = App::GetInstance()->GetStats();
-    ImGui::Text("Application");
-    ImGui::Separator();
-    ImGui::Text("FPS: %u", stats.fps.GetFPS());
-    ImGui::Text("Frame Time: %.3f ms", stats.frameTime);
-    ImGui::Spacing();
-    ImGui::Text("Rendering");
-    ImGui::Separator();
-    ImGui::Text("Quads Submitted: %i", stats.rendering.QuadCount);
-    ImGui::Text("Draw Calls: %i", stats.rendering.DrawCalls);
-    ImGui::Text("Batches: %i", stats.rendering.BatchCount);
-    ImGui::Text("Batch Build Time: %f", stats.rendering.BatchBuildTime);
-    ImGui::Spacing();
-    ImGui::Text("Scripting");
-    ImGui::Text("UpdateScene(): %f", stats.scriptStats.updateTimer);
+    if (ImGui::Begin("Stats", &m_Windows.showStats))
+    {
+        auto& stats = App::GetInstance()->GetStats();
+        ImGui::Text("FPS: %u", stats.fps.GetFPS());
+        ImGui::Text("Frame: %.2f ms", stats.frameTime);
+        ImGui::Separator();
+        ImGui::TextUnformatted("CPU profiler (last / avg / peak, 120 frames)");
+        if (ImGui::BeginTable("ProfilerTimes", 4,
+            ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_RowBg |
+            ImGuiTableFlags_SizingStretchProp))
+        {
+            ImGui::TableSetupColumn("Scope");
+            ImGui::TableSetupColumn("Last (ms)");
+            ImGui::TableSetupColumn("Avg (ms)");
+            ImGui::TableSetupColumn("Peak (ms)");
+            ImGui::TableHeadersRow();
+            for (std::size_t i = 0; i < FrameProfiler::Count; ++i)
+            {
+                const auto zone = static_cast<FrameProfiler::Zone>(i);
+                const auto result = FrameProfiler::Get(zone);
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(FrameProfiler::Name(zone));
+                ImGui::TableNextColumn();
+                ImGui::Text("%.2f", result.last);
+                ImGui::TableNextColumn();
+                ImGui::Text("%.2f", result.average);
+                ImGui::TableNextColumn();
+                ImGui::Text("%.2f", result.max);
+            }
+            ImGui::EndTable();
+        }
+        ImGui::Separator();
+        ImGui::Text("Quads: %i  Calls: %i  Batches: %i",
+            stats.rendering.QuadCount, stats.rendering.DrawCalls,
+            stats.rendering.BatchCount);
+        ImGui::Text("Batch build: %.3f ms", stats.rendering.BatchBuildTime);
+        ImGui::TextDisabled("CPU scopes can overlap; GPU time is not included.");
+        ImGui::TextDisabled("Current frame is finalized after this UI draw.");
+    }
     ImGui::End();
-    ImGui::Spacing();
-    ImGui::Text("Physics");
-    ImGui::Separator();
-    ImGui::Text("Step: %f", stats.physicsStepTimer);
 }
 
 void EditorLayer::begin_dock_space()

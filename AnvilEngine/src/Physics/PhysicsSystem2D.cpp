@@ -137,37 +137,51 @@ namespace anv
 
     void PhysicsSystem2D::Step(Scene& scene, float deltaTime)
     {
-        TIME_SCOPE(m_StepTimer)
         if (!m_Running)
+        {
+            m_StepTimer = 0.0f;
             return;
-
-        auto view = scene.Registry().view<Component::Transform2D>();
-
-        for (const auto entity : view)
-        {
-            const bool participatesInPhysics =
-                scene.HasComponent<Component::Rigidbody2D>(entity) ||
-                scene.HasComponent<Component::BoxCollider2D>(entity);
-
-            if (participatesInPhysics && !m_Bodies.contains(entity))
-                CreateBody(scene, entity);
         }
 
-        RemoveDestroyedBodies(scene);
-        SynchronizeBodiesFromTransforms(scene);
-
-        m_Accumulator += std::clamp(deltaTime, 0.0f, 0.25f);
-
-        while (m_Accumulator >= m_FixedTimeStep)
+        const auto start = std::chrono::steady_clock::now();
         {
-            CapturePreStepTransforms(scene);
-            m_World.Step(m_FixedTimeStep, m_SubStepCount);
-            CapturePostStepTransforms(scene);
-            // Collision Event Listener
-            m_Accumulator -= m_FixedTimeStep;
-        }
+            ANV_PROFILE_ZONE(Physics);
+            {
+                ANV_PROFILE_ZONE(BodyManagement);
+                auto view = scene.Registry().view<Component::Transform2D>();
+                for (const auto entity : view)
+                {
+                    const bool participates =
+                        scene.HasComponent<Component::Rigidbody2D>(entity) ||
+                        scene.HasComponent<Component::BoxCollider2D>(entity);
+                    if (participates && !m_Bodies.contains(entity))
+                        CreateBody(scene, entity);
+                }
+                RemoveDestroyedBodies(scene);
+            }
+            {
+                ANV_PROFILE_ZONE(PhysicsToBox2D);
+                SynchronizeBodiesFromTransforms(scene);
+            }
 
-        SynchronizeTransforms(scene);
+            m_Accumulator += std::clamp(deltaTime, 0.0f, 0.25f);
+            {
+                ANV_PROFILE_ZONE(Box2D);
+                while (m_Accumulator >= m_FixedTimeStep)
+                {
+                    CapturePreStepTransforms(scene);
+                    m_World.Step(m_FixedTimeStep, m_SubStepCount);
+                    CapturePostStepTransforms(scene);
+                    m_Accumulator -= m_FixedTimeStep;
+                }
+            }
+            {
+                ANV_PROFILE_ZONE(Box2DToScene);
+                SynchronizeTransforms(scene);
+            }
+        }
+        m_StepTimer = std::chrono::duration<float, std::milli>(
+            std::chrono::steady_clock::now() - start).count();
     }
 
     void PhysicsSystem2D::DestroyBody(entt::entity entity)

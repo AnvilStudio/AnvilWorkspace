@@ -118,41 +118,59 @@ namespace anv
 	{
 		s_This->OnSetup();
 
-		while (!m_AppWin->ShouldClose() && m_CloseEvent == false)
-		{
-			TIME_SCOPE(m_Stats.frameTime)
+        while (!m_AppWin->ShouldClose() && !m_CloseEvent)
+        {
+            FrameProfiler::BeginFrame();
+            {
+                ANV_PROFILE_ZONE(Frame);
+                Time::Update();
+                m_Stats.fps.Update(Time::DeltaTime());
 
-			Time::Update();
-			m_Stats.fps.Update(Time::DeltaTime());
+                {
+                    ANV_PROFILE_ZONE(Input);
+                    m_InputSystem->ResetScroll();
+                    m_AppWin->OnUpdate();
+                    m_InputSystem->Update();
+                }
+                {
+                    ANV_PROFILE_ZONE(LayerUpdate);
+                    for (Layer* layer : m_LayerStack)
+                        layer->OnUpdate(Time::DeltaTime());
+                }
+                {
+                    ANV_PROFILE_ZONE(RendererBegin);
+                    Renderer2D::BeginScene();
+                }
+                {
+                    ANV_PROFILE_ZONE(AppUpdate);
+                    s_This->OnUpdate();
+                }
+                {
+                    ANV_PROFILE_ZONE(LayerRender);
+                    for (Layer* layer : m_LayerStack)
+                        layer->OnRender();
+                }
+                {
+                    ANV_PROFILE_ZONE(EditorUI);
+                    for (Layer* layer : m_LayerStack)
+                        layer->OnImGuiRender();
+                }
+                {
+                    ANV_PROFILE_ZONE(RendererEnd);
+                    Renderer2D::EndScene();
+                }
+                {
+                    ANV_PROFILE_ZONE(Submit);
+                    Renderer2D::DrawFrame();
+                }
 
-			m_InputSystem->ResetScroll();
-
-			// Poll input/events
-			m_AppWin->OnUpdate();
-			m_InputSystem->Update();
-
-			// Update engine/game layers
-			for (Layer *layer : m_LayerStack)
-				layer->OnUpdate(Time::DeltaTime());
-
-			Renderer2D::BeginScene();
-			s_This->OnUpdate();
-
-			// Render layers
-			for (Layer *layer : m_LayerStack)
-				layer->OnRender();
-
-			// Render UI
-			for (Layer *layer : m_LayerStack)
-				layer->OnImGuiRender();
-
-			Renderer2D::EndScene();
-			Renderer2D::DrawFrame();
-
-			m_Stats.rendering = Renderer2D::GetStats();
-			m_Stats.scriptStats = PythonScriptEngine::s_Stats;
-			m_Stats.physicsStepTimer = PhysicsSystem2D::m_StepTimer;
-		}
+                m_Stats.rendering = Renderer2D::GetStats();
+                m_Stats.scriptStats = PythonScriptEngine::s_Stats;
+                m_Stats.physicsStepTimer = PhysicsSystem2D::m_StepTimer;
+            }
+            FrameProfiler::EndFrame();
+            m_Stats.frameTime = FrameProfiler::Get(FrameProfiler::Zone::Frame).last;
+        }
 		s_This->OnDestroy();
 	}
 
