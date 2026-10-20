@@ -96,6 +96,7 @@ namespace anv
         bool IsDescendant(entt::entity entity, entt::entity ancestor) const;
         glm::mat4 GetWorldTransform(entt::entity entity) const;
         bool SetWorldTransform(entt::entity entity, const glm::mat4& world);
+        bool SetWorldPose2D(entt::entity entity, glm::vec2 position, float rotationDegrees);
         void DestroyEntity(entt::entity entity);
 
         float GetPhysStepTime();

@@ -165,15 +165,21 @@ namespace anv
             }
 
             m_Accumulator += std::clamp(deltaTime, 0.0f, 0.25f);
+            while (m_Accumulator >= m_FixedTimeStep)
             {
-                ANV_PROFILE_ZONE(Box2D);
-                while (m_Accumulator >= m_FixedTimeStep)
                 {
+                    ANV_PROFILE_ZONE(PhysicsCapture);
                     CapturePreStepTransforms(scene);
-                    m_World.Step(m_FixedTimeStep, m_SubStepCount);
-                    CapturePostStepTransforms(scene);
-                    m_Accumulator -= m_FixedTimeStep;
                 }
+                {
+                    ANV_PROFILE_ZONE(Box2D);
+                    m_World.Step(m_FixedTimeStep, m_SubStepCount);
+                }
+                {
+                    ANV_PROFILE_ZONE(PhysicsCapture);
+                    CapturePostStepTransforms(scene);
+                }
+                m_Accumulator -= m_FixedTimeStep;
             }
             {
                 ANV_PROFILE_ZONE(Box2DToScene);
@@ -464,34 +470,23 @@ namespace anv
             if (rigidbody.type == Component::Rigidbody2DType::Static)
                 continue;
 
-            Component::Transform2D transform;
-            transform.SetFromMatrix(scene.GetWorldTransform(entity));
-
             if (rigidbody.type == Component::Rigidbody2DType::Dynamic)
             {
                 const PhysicsTransform2D& previous = runtimeBody.previousTransform;
                 const PhysicsTransform2D& current = runtimeBody.currentTransform;
 
-                transform.position = {
-                    Lerp(previous.positionX, current.positionX, interpolationAlpha),
-                    Lerp(previous.positionY, current.positionY, interpolationAlpha)
-                };
-                transform.rotation = glm::degrees(
-                    LerpAngleRadians(
-                        previous.rotationRadians,
-                        current.rotationRadians,
-                        interpolationAlpha));
-                scene.SetWorldTransform(entity, transform.GetTransform());
+                scene.SetWorldPose2D(entity,
+                    { Lerp(previous.positionX, current.positionX, interpolationAlpha),
+                      Lerp(previous.positionY, current.positionY, interpolationAlpha) },
+                    glm::degrees(LerpAngleRadians(
+                        previous.rotationRadians, current.rotationRadians, interpolationAlpha)));
                 continue;
             }
 
             const PhysicsTransform2D bodyTransform = body.GetTransform();
-            transform.position = {
-                bodyTransform.positionX,
-                bodyTransform.positionY
-            };
-            transform.rotation = glm::degrees(bodyTransform.rotationRadians);
-            scene.SetWorldTransform(entity, transform.GetTransform());
+            scene.SetWorldPose2D(entity,
+                { bodyTransform.positionX, bodyTransform.positionY },
+                glm::degrees(bodyTransform.rotationRadians));
         }
     }
 }

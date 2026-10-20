@@ -15,7 +15,8 @@ namespace anv
             Component::Transform2D,
             Component::SpriteRenderer>();
 
-        std::vector<entt::entity> drawOrder;
+        static thread_local std::vector<entt::entity> drawOrder;
+        drawOrder.clear();
         drawOrder.reserve(view.size_hint());
 
         for (auto entity : view)
@@ -40,7 +41,7 @@ namespace anv
             auto& sprite = view.get<Component::SpriteRenderer>(entity);
             if (!sprite.visibleInGame)
                 continue;
-            Ref<Texture> texture = assetManager->GetAs<Texture>(sprite.texture);
+            Ref<Texture> texture = sprite.texture.uuid.empty() ? nullptr : assetManager->GetAs<Texture>(sprite.texture);
 
             if (!scene->HasComponent<Component::Relationship>(entity))
                 Renderer2D::DrawQuad(transform.position, transform.rotation,

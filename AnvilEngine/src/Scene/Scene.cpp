@@ -446,14 +446,48 @@ namespace anv
         if (!HasComponent<Component::Transform2D>(entity))
             return false;
 
-        const auto parent = GetParent(entity);
-        const glm::mat4 parentWorld = parent == entt::null
-            ? glm::mat4(1.0f) : GetWorldTransform(parent);
+        auto& transform = GetComponent<Component::Transform2D>(entity);
+        // Root entities are already in world space.
+        if (!HasComponent<Component::Relationship>(entity) || GetParent(entity) == entt::null)
+        {
+            transform.SetFromMatrix(world);
+            return true;
+        }
+
+        const glm::mat4 parentWorld = GetWorldTransform(GetParent(entity));
+        if (std::abs(glm::determinant(parentWorld)) < 0.000001f)
+            return false;
+        transform.SetFromMatrix(glm::inverse(parentWorld) * world);
+        return true;
+    }
+
+    bool Scene::SetWorldPose2D(entt::entity entity, glm::vec2 position, float rotationDegrees)
+    {
+        if (!HasComponent<Component::Transform2D>(entity))
+            return false;
+
+        auto& local = GetComponent<Component::Transform2D>(entity);
+        const entt::entity parent = GetParent(entity);
+        if (parent == entt::null)
+        {
+            local.position = position;
+            local.rotation = rotationDegrees;
+            return true;
+        }
+
+        const glm::mat4 parentWorld = GetWorldTransform(parent);
         if (std::abs(glm::determinant(parentWorld)) < 0.000001f)
             return false;
 
-        GetComponent<Component::Transform2D>(entity).SetFromMatrix(
-            glm::inverse(parentWorld) * world);
+        // Keep the current local scale; the physics body controls only pose.
+        const glm::mat4 inverseParent = glm::inverse(parentWorld);
+        const glm::vec4 localPosition = inverseParent * glm::vec4(position, 0.0f, 1.0f);
+        local.position = glm::vec2(localPosition);
+        // The direction basis accounts for ancestor rotations without extra
+        // world-transform decomposition of the child itself.
+        const glm::vec2 xAxis = glm::vec2(inverseParent * glm::vec4(
+            std::cos(glm::radians(rotationDegrees)), std::sin(glm::radians(rotationDegrees)), 0.0f, 0.0f));
+        local.rotation = glm::degrees(std::atan2(xAxis.y, xAxis.x));
         return true;
     }
 

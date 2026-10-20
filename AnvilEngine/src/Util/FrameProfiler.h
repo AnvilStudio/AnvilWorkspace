@@ -15,7 +15,7 @@ namespace anv
         {
             Frame, Input, LayerUpdate, RendererBegin, AppUpdate,
             LayerRender, EditorUI, RendererEnd, Submit,
-            Physics, BodyManagement, PhysicsToBox2D, Box2D, Box2DToScene,
+            Physics, BodyManagement, PhysicsToBox2D, PhysicsCapture, Box2D, Box2DToScene,
             Script, SceneRender, Count
         };
         static constexpr std::size_t Count = static_cast<std::size_t>(Zone::Count);
@@ -38,7 +38,8 @@ namespace anv
                 case Zone::Physics: return "Physics total";
                 case Zone::BodyManagement: return "Physics body management";
                 case Zone::PhysicsToBox2D: return "Scene to Box2D";
-                case Zone::Box2D: return "Box2D substeps";
+                case Zone::PhysicsCapture: return "Physics pre/post capture";
+                case Zone::Box2D: return "Box2D simulation";
                 case Zone::Box2DToScene: return "Box2D to scene";
                 case Zone::Script: return "Python scripts";
                 case Zone::SceneRender: return "Scene sprites";
