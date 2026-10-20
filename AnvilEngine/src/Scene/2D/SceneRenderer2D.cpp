@@ -32,6 +32,7 @@ namespace anv
                     view.get<Component::SpriteRenderer>(right).drawLayer;
             });
 
+        scene->RebuildWorldTransformSnapshot();
         auto assetManager = App::GetInstance()->GetAssetManager();
         if (!assetManager)
             return;
@@ -50,7 +51,7 @@ namespace anv
             Component::Transform2D resolved;
             if (scene->HasComponent<Component::Relationship>(entity))
             {
-                resolved.SetFromMatrix(scene->GetWorldTransform(entity));
+                resolved.SetFromMatrix(scene->GetSnapshotWorldTransform(entity));
                 world = &resolved;
             }
             const auto t2 = std::chrono::steady_clock::now();

@@ -12,6 +12,7 @@
 #include <chrono>
 #include <unordered_set>
 #include <cmath>
+#include <algorithm>
 
 namespace anv
 {
@@ -113,6 +114,7 @@ namespace anv
         }
 
         ser.Close();
+        m_SnapshotReady = false;
 
         if (hasLegacyCamera && GetActiveCameraEntity() == entt::null)
         {
@@ -324,6 +326,9 @@ namespace anv
 
     void Scene::OnUpdate(float deltaTime)
     {
+        // Rebuild ancestry before physics/script updates. Any transform changes
+        // during the update are handled by the subsequent render snapshot.
+        RebuildWorldTransformSnapshot();
         if (m_ScriptExecutionEnabled)
         {
             ANV_PROFILE_ZONE(Script);
@@ -337,6 +342,7 @@ namespace anv
     void Scene::Render()
     {
         ANV_PROFILE_ZONE(SceneRender);
+        RebuildWorldTransformSnapshot();
         auto view = m_Registry.view<Component::Transform2D, Component::SpriteRenderer>();
         auto assetManager = App::GetInstance()->GetAssetManager();
 
@@ -356,7 +362,7 @@ namespace anv
             Component::Transform2D resolved;
             if (m_Registry.any_of<Component::Relationship>(entity))
             {
-                resolved.SetFromMatrix(GetWorldTransform(entity));
+                resolved.SetFromMatrix(GetSnapshotWorldTransform(entity));
                 world = &resolved;
             }
             const auto t2 = std::chrono::steady_clock::now();
@@ -378,6 +384,7 @@ namespace anv
         m_Registry.emplace<uuid::EntityUUID>(entity) = uuid::uuid_GenEntID();
         m_Registry.emplace<Component::Transform2D>(entity);
         m_Registry.emplace<Component::Tag>(entity, std::move(tag));
+        m_SnapshotReady = false;
         return entity;
     }
 
@@ -386,6 +393,7 @@ namespace anv
         const entt::entity entity = m_Registry.create();
         m_Registry.emplace<Component::Tag>(entity, std::move(tag));
         m_Registry.emplace<uuid::EntityUUID>(entity, std::move(id));
+        m_SnapshotReady = false;
         return entity;
     }
 
@@ -399,6 +407,11 @@ namespace anv
         if (id.empty())
             return entt::null;
 
+        if (m_SnapshotReady)
+        {
+            const auto it = m_ParentIndex.find(entity);
+            return it == m_ParentIndex.end() ? entt::null : it->second;
+        }
         auto view = m_Registry.view<uuid::EntityUUID>();
         for (auto candidate : view)
             if (view.get<uuid::EntityUUID>(candidate).uuid == id)
@@ -449,6 +462,67 @@ namespace anv
             entity = GetParent(entity);
         }
         return result;
+    }
+
+    void Scene::RebuildWorldTransformSnapshot() const
+    {
+        m_UUIDIndex.clear();
+        m_ParentIndex.clear();
+        m_WorldSnapshot.clear();
+
+        auto ids = m_Registry.view<uuid::EntityUUID>();
+        m_UUIDIndex.reserve(ids.size_hint());
+        for (auto entity : ids)
+            m_UUIDIndex.emplace(ids.get<uuid::EntityUUID>(entity).uuid, entity);
+
+        auto relationships = m_Registry.view<Component::Relationship>();
+        m_ParentIndex.reserve(relationships.size_hint());
+        for (auto entity : relationships)
+        {
+            const auto& id = relationships.get<Component::Relationship>(entity).parentUUID;
+            auto parent = m_UUIDIndex.find(id);
+            if (parent != m_UUIDIndex.end() && parent->second != entity)
+                m_ParentIndex.emplace(entity, parent->second);
+        }
+        m_SnapshotReady = true;
+    }
+
+    glm::mat4 Scene::GetSnapshotWorldTransform(entt::entity entity) const
+    {
+        auto cached = m_WorldSnapshot.find(entity);
+        if (cached != m_WorldSnapshot.end())
+            return cached->second;
+        if (!m_Registry.valid(entity))
+            return glm::mat4(1.0f);
+
+        // Resolve and memoize the ancestry once per snapshot.
+        std::vector<entt::entity> chain;
+        chain.reserve(8);
+        entt::entity cursor = entity;
+        const auto maxDepth = m_Registry.storage<entt::entity>()->size();
+        for (std::size_t i = 0; i < maxDepth && cursor != entt::null; ++i)
+        {
+            auto known = m_WorldSnapshot.find(cursor);
+            if (known != m_WorldSnapshot.end())
+                break;
+            if (std::find(chain.begin(), chain.end(), cursor) != chain.end())
+                break;
+            chain.push_back(cursor);
+            auto parent = m_ParentIndex.find(cursor);
+            cursor = parent == m_ParentIndex.end() ? entt::null : parent->second;
+        }
+
+        glm::mat4 world = glm::mat4(1.0f);
+        auto known = m_WorldSnapshot.find(cursor);
+        if (known != m_WorldSnapshot.end())
+            world = known->second;
+        for (auto it = chain.rbegin(); it != chain.rend(); ++it)
+        {
+            if (m_Registry.any_of<Component::Transform2D>(*it))
+                world *= m_Registry.get<Component::Transform2D>(*it).GetTransform();
+            m_WorldSnapshot.emplace(*it, world);
+        }
+        return world;
     }
 
     bool Scene::SetWorldTransform(entt::entity entity, const glm::mat4& world)
@@ -534,6 +608,8 @@ namespace anv
             m_Registry.emplace_or_replace<Component::Relationship>(
                 child, m_Registry.get<uuid::EntityUUID>(parent).uuid);
 
+        // Rebuilding immediately keeps public parent queries correct.
+        m_SnapshotReady = false;
         if (preserve)
             SetWorldTransform(child, world);
         return true;
@@ -553,6 +629,7 @@ namespace anv
 
         PythonScriptEngine::DestroyEntity(*this, entity);
         m_Registry.destroy(entity);
+        m_SnapshotReady = false;
     }
 
     float Scene::GetPhysStepTime()

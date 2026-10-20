@@ -3,6 +3,8 @@
 #include "../vendor/entt/single_include/entt/entt.hpp"
 #include "../Render/Camera.h"
 #include "SceneData.h"
+#include <unordered_map>
+#include <unordered_set>
 
 namespace anv
 {
@@ -95,6 +97,8 @@ namespace anv
         bool SetParent(entt::entity child, entt::entity parent, bool keepWorld = true);
         bool IsDescendant(entt::entity entity, entt::entity ancestor) const;
         glm::mat4 GetWorldTransform(entt::entity entity) const;
+        void RebuildWorldTransformSnapshot() const;
+        glm::mat4 GetSnapshotWorldTransform(entt::entity entity) const;
         bool SetWorldTransform(entt::entity entity, const glm::mat4& world);
         bool SetWorldPose2D(entt::entity entity, glm::vec2 position, float rotationDegrees);
         void DestroyEntity(entt::entity entity);
@@ -110,6 +114,13 @@ namespace anv
         entt::registry m_Registry;
         std::string m_Path;
         _unique<PhysicsSystem2D> m_PhysicsSystem2D = nullptr;
+
+        // Rebuilt at explicit frame boundaries, not across arbitrary mutations.
+        // Saves stable UUID relationships while resolving runtime handles once.
+        mutable std::unordered_map<std::string, entt::entity> m_UUIDIndex;
+        mutable std::unordered_map<entt::entity, entt::entity> m_ParentIndex;
+        mutable std::unordered_map<entt::entity, glm::mat4> m_WorldSnapshot;
+        mutable bool m_SnapshotReady = false;
 
         friend class SceneManager;
         friend class SceneRenderer2D;
