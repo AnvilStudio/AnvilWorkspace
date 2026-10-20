@@ -12,6 +12,7 @@ private:
     void set_gizmo_bounds();
     void draw_gizmo();
     void draw_selection_overlay(const anv::Ref<anv::Scene>& scene);
+    void push_billboards(const anv::Ref<anv::Scene>& scene);
     void pick_entity(const anv::Ref<anv::Scene>& scene);
 
     bool world_to_viewport(
