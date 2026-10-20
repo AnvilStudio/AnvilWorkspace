@@ -100,6 +100,7 @@ void Viewport::Draw()
 
         if (validSize && m_ViewportTarget)
         {
+            push_billboards(scene);
             anv::Renderer2D::DrawScene(m_ViewportTarget, m_EditorCamera);
 
 #if defined(PLATFORM_APPLE_VK) || defined(PLATFORM_WIN64)
@@ -228,7 +229,6 @@ void Viewport::draw_selection_overlay(
     const ImU32 outlineColor = IM_COL32(255, 214, 10, 255);
     const ImU32 activeCameraColor = IM_COL32(80, 220, 120, 255);
     const ImU32 shadowColor = IM_COL32(0, 0, 0, 190);
-    const ImU32 iconFillColor = IM_COL32(45, 45, 50, 235);
     constexpr float outlineThickness = 2.0f;
     constexpr float shadowThickness = 4.0f;
     constexpr float pivotRadius = 5.0f;
@@ -324,51 +324,7 @@ void Viewport::draw_selection_overlay(
                 1.0f);
         }
 
-        constexpr float iconHalfWidth = 10.0f;
-        constexpr float iconHalfHeight = 7.0f;
-        constexpr float lensLength = 7.0f;
 
-        const ImVec2 bodyMin{
-            pivot.x - iconHalfWidth,
-            pivot.y - iconHalfHeight};
-        const ImVec2 bodyMax{
-            pivot.x + iconHalfWidth,
-            pivot.y + iconHalfHeight};
-
-        drawList->AddRectFilled(
-            bodyMin,
-            bodyMax,
-            iconFillColor,
-            2.0f);
-        drawList->AddRect(
-            bodyMin,
-            bodyMax,
-            cameraColor,
-            2.0f,
-            0,
-            outlineThickness);
-
-        const std::array<ImVec2, 3> lens = {
-            ImVec2{bodyMax.x, pivot.y - 5.0f},
-            ImVec2{bodyMax.x + lensLength, pivot.y - 9.0f},
-            ImVec2{bodyMax.x + lensLength, pivot.y + 9.0f}};
-
-        drawList->AddTriangleFilled(
-            lens[0],
-            lens[1],
-            lens[2],
-            iconFillColor);
-        drawList->AddPolyline(
-            lens.data(),
-            static_cast<int>(lens.size()),
-            cameraColor,
-            ImDrawFlags_Closed,
-            outlineThickness);
-
-        drawList->AddCircleFilled(
-            ImVec2{pivot.x - 3.0f, pivot.y},
-            2.5f,
-            cameraColor);
     }
     else
     {
@@ -438,6 +394,37 @@ void Viewport::draw_selection_overlay(
         outlineThickness);
 
     drawList->PopClipRect();
+}
+
+void Viewport::push_billboards(const anv::Ref<anv::Scene>& scene)
+{
+    if (!scene) return;
+
+    auto assetManager = anv::App::GetInstance()->GetAssetManager();
+    if (!assetManager) return;
+
+    auto view = scene->Registry().view<
+        anv::Component::Transform2D,
+        anv::Component::SpriteRenderer>();
+
+    for (const auto entity : view)
+    {
+        const auto& sprite = view.get<anv::Component::SpriteRenderer>(entity);
+        // Game-visible sprites were already queued by SceneLayer.
+        if (!sprite.visibleInEditor || sprite.visibleInGame)
+            continue;
+        if (sprite.texture.uuid.empty())
+            continue;
+
+        auto texture = assetManager->GetAs<anv::Texture>(sprite.texture);
+        if (!texture) continue;
+
+        anv::Component::Transform2D worldPose;
+        worldPose.SetFromMatrix(scene->GetWorldTransform(entity));
+        anv::Renderer2D::DrawQuad(
+            worldPose.position, worldPose.rotation, worldPose.scale,
+            sprite.color, texture, sprite.drawLayer);
+    }
 }
 
 void Viewport::pick_entity(
