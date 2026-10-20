@@ -1,5 +1,6 @@
 ﻿#include "EditorLayer.h"
 #include "MainMenu.h"
+#include <algorithm>
 
 using namespace anv;
 
@@ -130,6 +131,67 @@ void EditorLayer::draw_stats()
         ImGui::Text("FPS: %u", stats.fps.GetFPS());
         ImGui::Text("Frame: %.2f ms", stats.frameTime);
         ImGui::Separator();
+        ImGui::TextUnformatted("Frame budget (120-frame averages)");
+        // Disjoint top-level App::Run scopes: avoid adding nested physics,
+        // sprite, or backend submit scopes a second time.
+        struct BudgetSegment
+        {
+            const char* name;
+            FrameProfiler::Zone zone;
+            ImU32 color;
+        };
+        static constexpr BudgetSegment segments[] = {
+            {"Input", FrameProfiler::Zone::Input, IM_COL32(105, 175, 245, 255)},
+            {"Updates", FrameProfiler::Zone::LayerUpdate, IM_COL32(226, 138, 73, 255)},
+            {"Begin", FrameProfiler::Zone::RendererBegin, IM_COL32(157, 129, 227, 255)},
+            {"App", FrameProfiler::Zone::AppUpdate, IM_COL32(198, 131, 178, 255)},
+            {"Render", FrameProfiler::Zone::LayerRender, IM_COL32(80, 187, 152, 255)},
+            {"Editor", FrameProfiler::Zone::EditorUI, IM_COL32(209, 182, 81, 255)},
+            {"End", FrameProfiler::Zone::RendererEnd, IM_COL32(140, 149, 164, 255)},
+            {"Submit/present", FrameProfiler::Zone::Submit, IM_COL32(217, 103, 103, 255)}
+        };
+        const float frameAverage = FrameProfiler::Get(FrameProfiler::Zone::Frame).average;
+        float tracked = 0.0f;
+        for (const auto& segment : segments)
+            tracked += FrameProfiler::Get(segment.zone).average;
+        const float remaining = std::max(0.0f, frameAverage - tracked);
+        const float denominator = std::max(frameAverage, tracked);
+        const ImVec2 barStart = ImGui::GetCursorScreenPos();
+        const float barWidth = ImGui::GetContentRegionAvail().x;
+        const float barHeight = 24.0f;
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        float cursor = barStart.x;
+        if (denominator > 0.0f && barWidth > 0.0f)
+        {
+            for (const auto& segment : segments)
+            {
+                const float duration = FrameProfiler::Get(segment.zone).average;
+                const float width = barWidth * duration / denominator;
+                if (width > 0.0f)
+                    drawList->AddRectFilled(ImVec2(cursor, barStart.y),
+                        ImVec2(cursor + width, barStart.y + barHeight), segment.color);
+                cursor += width;
+            }
+            const float restWidth = barWidth * remaining / denominator;
+            if (restWidth > 0.0f)
+                drawList->AddRectFilled(ImVec2(cursor, barStart.y),
+                    ImVec2(cursor + restWidth, barStart.y + barHeight),
+                    IM_COL32(90, 95, 105, 255));
+        }
+        ImGui::Dummy(ImVec2(barWidth, barHeight));
+        for (const auto& segment : segments)
+        {
+            const float duration = FrameProfiler::Get(segment.zone).average;
+            ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(segment.color));
+            ImGui::Text("■");
+            ImGui::PopStyleColor();
+            ImGui::SameLine();
+            ImGui::Text("%s %.2f ms", segment.name, duration);
+            ImGui::SameLine(0.0f, 12.0f);
+        }
+        ImGui::NewLine();
+        ImGui::TextDisabled("Other / profiling overhead: %.2f ms", remaining);
+        ImGui::Separator();
         ImGui::TextUnformatted("CPU profiler (last / avg / peak, 120 frames)");
         if (ImGui::BeginTable("ProfilerTimes", 4,
             ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_RowBg |
@@ -162,6 +224,7 @@ void EditorLayer::draw_stats()
             stats.rendering.BatchCount);
         ImGui::Text("Batch build: %.3f ms", stats.rendering.BatchBuildTime);
         ImGui::TextDisabled("CPU scopes can overlap; GPU time is not included.");
+        ImGui::TextDisabled("Backend timings are nested within Draw/present.");
         ImGui::TextDisabled("Current frame is finalized after this UI draw.");
     }
     ImGui::End();

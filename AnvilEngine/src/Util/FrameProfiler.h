@@ -16,7 +16,7 @@ namespace anv
             Frame, Input, LayerUpdate, RendererBegin, AppUpdate,
             LayerRender, EditorUI, RendererEnd, Submit,
             Physics, BodyManagement, PhysicsToBox2D, PhysicsCapture, Box2D, Box2DToScene,
-            Script, SceneRender, SpriteLookup, SpriteTransform, SpriteSubmit, PhysicsFixedSteps, Count
+            Script, SceneRender, SpriteLookup, SpriteTransform, SpriteSubmit, PhysicsFixedSteps, GPUFenceWait, SwapchainAcquire, RenderSubmitWait, Present, MetalEncode, MetalCommit, Count
         };
         static constexpr std::size_t Count = static_cast<std::size_t>(Zone::Count);
         static constexpr std::size_t History = 120;
@@ -47,6 +47,12 @@ namespace anv
                 case Zone::SpriteTransform: return "Sprite world transform";
                 case Zone::SpriteSubmit: return "Sprite draw submission";
                 case Zone::PhysicsFixedSteps: return "Physics fixed steps / frame";
+                case Zone::GPUFenceWait: return "GPU fence wait";
+                case Zone::SwapchainAcquire: return "Swapchain acquire";
+                case Zone::RenderSubmitWait: return "Render command submission/wait";
+                case Zone::Present: return "Swapchain present";
+                case Zone::MetalEncode: return "Metal encode and UI";
+                case Zone::MetalCommit: return "Metal commit/present enqueue";
                 default: return "Unknown";
             }
         }

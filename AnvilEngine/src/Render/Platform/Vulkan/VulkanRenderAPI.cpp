@@ -51,7 +51,10 @@ namespace anv
 		auto vkCtx = m_Context->GetAs<VulkanContext>();
 		auto &fr = m_Frames[m_FrameIndex];
 
-		vkWaitForFences(vkCtx->GetDevice(), 1, &fr.sync.inFlightFence, VK_TRUE, UINT64_MAX);
+        {
+            ANV_PROFILE_ZONE(GPUFenceWait);
+            vkWaitForFences(vkCtx->GetDevice(), 1, &fr.sync.inFlightFence, VK_TRUE, UINT64_MAX);
+        }
 
 		m_FrameVertexOffsets[m_FrameIndex] = 0;
 
@@ -61,7 +64,11 @@ namespace anv
 			MaxBatchQuads * 4 * sizeof(BatchVertex);
 		vbInfo.Dynamic = true;
 
-		uint32_t imageIndex = m_SwapchainTarget->AcquireNextImage(fr.sync.imageAvailable, m_SwapRecreateFlag);
+        uint32_t imageIndex = 0;
+        {
+            ANV_PROFILE_ZONE(SwapchainAcquire);
+            imageIndex = m_SwapchainTarget->AcquireNextImage(fr.sync.imageAvailable, m_SwapRecreateFlag);
+        }
 		if (m_SwapRecreateFlag)
 		{
 			ANV_LOG_INFO("SwapChain recreation due to window resize")
@@ -95,12 +102,17 @@ namespace anv
 			m_ImGuiLayer->Render({.commandBuffer = cmd});
 			m_SwapchainTarget->End(cmd); });
 
-		m_RenderCmdChain->Swap();
-		m_RenderCmdChain->WaitForProcessComplete();
+        {
+            ANV_PROFILE_ZONE(RenderSubmitWait);
+            m_RenderCmdChain->Swap();
+            m_RenderCmdChain->WaitForProcessComplete();
+            m_ImGuiLayer->FinishFrame();
+        }
 
-		m_ImGuiLayer->FinishFrame();
-
-		m_SwapchainTarget->Present(vkCtx->GetPresentQueue(), fr.sync.renderFinished, m_SwapRecreateFlag);
+        {
+            ANV_PROFILE_ZONE(Present);
+            m_SwapchainTarget->Present(vkCtx->GetPresentQueue(), fr.sync.renderFinished, m_SwapRecreateFlag);
+        }
 		if (m_SwapRecreateFlag)
 		{
 			recreate_swap();
