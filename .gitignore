@@ -138,3 +138,6 @@ ProjectCreator/ProjectCreator/.anvil/forge_launcher.json
 .anvil/forge_launcher.json
 *.slnx
 *.pyc
+
+# Downloaded CPython runtime and development SDK
+/Dependencies/Python/
