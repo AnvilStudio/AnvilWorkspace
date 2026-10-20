@@ -6,6 +6,8 @@
 #include "../Scene/Manager.h"
 #include "../Input/Input.h"
 #include "Window.h"
+#include "../Render/RenderStats.h"
+#include "../Scripting/PythonScriptEngine.h"
 #include <string>
 
 namespace anv
@@ -34,8 +36,10 @@ namespace anv
 	struct AppStats
 	{
 		float frameTime = 0.f;
-		uint32_t DrawCalls = 0;
 		FPSCounter fps;
+		RendererStats rendering;
+		ScriptingStats scriptStats;
+		float physicsStepTimer = 0.f;
 	};
 
 	struct EngineInfo
@@ -85,9 +89,9 @@ namespace anv
 		AppSettings           m_Settings;
 		EngineInfo            m_EngineInfo;
 		LayerStack             m_LayerStack;
-		_unique<FileSystem>        m_FileSystem    = nullptr;
+		_unique<FileSystem>    m_FileSystem    = nullptr;
 		_shared<SceneManager>  m_ScnMngr = nullptr;
-		_shared<InputSystem>     m_InputSystem = nullptr;
+		_shared<InputSystem>    m_InputSystem = nullptr;
 		_shared<Window>            m_AppWin        = nullptr;
 		_shared<AssetManager>   m_AssetManager = nullptr;
 		

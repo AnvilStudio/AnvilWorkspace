@@ -5,6 +5,7 @@
 #include "AppLayers/SceneLayer.h"
 // tmp
 #include "../Asset/AssetTypes/Texture.h"
+#include "../Physics/PhysicsSystem2D.h"
 
 namespace anv
 {
@@ -148,7 +149,9 @@ namespace anv
 			Renderer2D::EndScene();
 			Renderer2D::DrawFrame();
 
-			m_Stats.DrawCalls = Renderer2D::GetStats().DrawCalls;
+			m_Stats.rendering = Renderer2D::GetStats();
+			m_Stats.scriptStats = PythonScriptEngine::s_Stats;
+			m_Stats.physicsStepTimer = PhysicsSystem2D::m_StepTimer;
 		}
 		s_This->OnDestroy();
 	}

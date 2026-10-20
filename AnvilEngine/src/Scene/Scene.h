@@ -98,6 +98,8 @@ namespace anv
         bool SetWorldTransform(entt::entity entity, const glm::mat4& world);
         void DestroyEntity(entt::entity entity);
 
+        float GetPhysStepTime();
+
     protected:
         bool m_HasShutdown = false;
         bool m_ScriptExecutionEnabled = false;

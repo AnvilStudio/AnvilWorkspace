@@ -158,6 +158,8 @@ namespace anv
 		auto sceneQuads = m_QuadQueue;
 		auto pipeline = m_PipelineLibrary.Get("Sprite", _renderTarget);
 
+		m_RenderStats.QuadCount = sceneQuads.size();
+
 		m_RenderCmdChain->WriteToBack(
 			[=, this](Ref<CommandBuffer> cmd,
 					  const RenderFrameContext &frame) mutable
@@ -200,6 +202,7 @@ namespace anv
 
 				for (const auto &quad : sceneQuads)
 				{
+					TIME_SCOPE(m_RenderStats.BatchBuildTime)
 					Ref<VulkanTexture> texture = m_WhiteTexture;
 
 					if (quad.TextureAsset)
@@ -254,6 +257,8 @@ namespace anv
 
 					batches.back().QuadCount++;
 				}
+
+				m_RenderStats.BatchCount = batches.size();
 
 				// ---- Acquire space in this frame's vertex buffer ----
 

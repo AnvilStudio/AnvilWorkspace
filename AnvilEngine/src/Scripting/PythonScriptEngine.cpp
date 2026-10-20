@@ -322,6 +322,12 @@ namespace anv
 #endif
     }
 
+    /////////////////////////////////////////////////////////////
+    //                      SCRIPT ENGINE                      //
+    /////////////////////////////////////////////////////////////
+
+    ScriptingStats PythonScriptEngine::s_Stats = {};
+
     bool PythonScriptEngine::Initialize(const std::filesystem::path &_projectDirectory)
     {
         if (s_Initialized)
@@ -425,7 +431,8 @@ namespace anv
 
     void PythonScriptEngine::UpdateScene(Scene &_scene, float _deltaTime)
     {
-#ifndef ANV_ENABLE_PYTHON
+        TIME_SCOPE(s_Stats.updateTimer)
+#ifndef ANV_ENABLE_PYTHON   
         (void)_scene;
         (void)_deltaTime;
 #else

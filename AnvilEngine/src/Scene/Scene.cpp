@@ -500,4 +500,9 @@ namespace anv
         PythonScriptEngine::DestroyEntity(*this, entity);
         m_Registry.destroy(entity);
     }
+
+    float Scene::GetPhysStepTime()
+    {
+        return m_PhysicsSystem2D->m_StepTimer; 
+    }
 }

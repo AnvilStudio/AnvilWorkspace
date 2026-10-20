@@ -57,6 +57,8 @@ namespace anv
         }
     }
 
+    float PhysicsSystem2D::m_StepTimer = 0.f;
+
     PhysicsSystem2D::~PhysicsSystem2D()
     {
         Stop();
@@ -135,6 +137,7 @@ namespace anv
 
     void PhysicsSystem2D::Step(Scene& scene, float deltaTime)
     {
+        TIME_SCOPE(m_StepTimer)
         if (!m_Running)
             return;
 

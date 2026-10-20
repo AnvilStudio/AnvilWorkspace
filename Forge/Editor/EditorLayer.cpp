@@ -126,10 +126,25 @@ void EditorLayer::draw_stats()
 
     ImGui::Begin("Stats");
     auto &stats = App::GetInstance()->GetStats();
+    ImGui::Text("Application");
+    ImGui::Separator();
     ImGui::Text("FPS: %u", stats.fps.GetFPS());
     ImGui::Text("Frame Time: %.3f ms", stats.frameTime);
-    ImGui::Text("Draw Calls: %i", stats.DrawCalls);
+    ImGui::Spacing();
+    ImGui::Text("Rendering");
+    ImGui::Separator();
+    ImGui::Text("Quads Submitted: %i", stats.rendering.QuadCount);
+    ImGui::Text("Draw Calls: %i", stats.rendering.DrawCalls);
+    ImGui::Text("Batches: %i", stats.rendering.BatchCount);
+    ImGui::Text("Batch Build Time: %f", stats.rendering.BatchBuildTime);
+    ImGui::Spacing();
+    ImGui::Text("Scripting");
+    ImGui::Text("UpdateScene(): %f", stats.scriptStats.updateTimer);
     ImGui::End();
+    ImGui::Spacing();
+    ImGui::Text("Physics");
+    ImGui::Separator();
+    ImGui::Text("Step: %f", stats.physicsStepTimer);
 }
 
 void EditorLayer::begin_dock_space()
