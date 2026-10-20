@@ -38,10 +38,12 @@ namespace anv
             auto& sprite = view.get<Component::SpriteRenderer>(entity);
             Ref<Texture> texture = assetManager->GetAs<Texture>(sprite.texture);
 
+            Component::Transform2D worldTransform;
+            worldTransform.SetFromMatrix(scene->GetWorldTransform(entity));
             Renderer2D::DrawQuad(
-                transform.position,
-                transform.rotation,
-                transform.scale,
+                worldTransform.position,
+                worldTransform.rotation,
+                worldTransform.scale,
                 sprite.color,
                 texture,
                 sprite.drawLayer);

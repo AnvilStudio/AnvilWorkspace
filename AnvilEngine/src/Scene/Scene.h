@@ -8,14 +8,6 @@ namespace anv
 {
     class PhysicsSystem2D;
 
-    struct Entity
-    {
-        entt::entity entt_id;
-
-        bool has_parent = false;
-        entt::entity parent;
-    };
-
     class Scene : public RefCounter
     {
     public:
@@ -97,6 +89,13 @@ namespace anv
                 m_Registry.any_of<ComponentType>(entity);
         }
 
+        // Relationships are stored by UUID, not ephemeral EnTT identifiers.
+        entt::entity GetParent(entt::entity entity) const;
+        std::vector<entt::entity> GetChildren(entt::entity entity) const;
+        bool SetParent(entt::entity child, entt::entity parent, bool keepWorld = true);
+        bool IsDescendant(entt::entity entity, entt::entity ancestor) const;
+        glm::mat4 GetWorldTransform(entt::entity entity) const;
+        bool SetWorldTransform(entt::entity entity, const glm::mat4& world);
         void DestroyEntity(entt::entity entity);
 
     protected:

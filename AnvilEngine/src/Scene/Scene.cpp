@@ -9,6 +9,8 @@
 #include <Util/Serialize/Serializer.h>
 
 #include <limits>
+#include <unordered_set>
+#include <cmath>
 
 namespace anv
 {
@@ -104,6 +106,7 @@ namespace anv
                     DeserializeIfPresent<Component::Rigidbody2D>(m_Registry, entity, ser, "Rigidbody2D");
                     DeserializeIfPresent<Component::BoxCollider2D>(m_Registry, entity, ser, "BoxCollider2D");
                     DeserializeIfPresent<Component::Script>(m_Registry, entity, ser, "Script");
+                    DeserializeIfPresent<Component::Relationship>(m_Registry, entity, ser, "Relationship");
                 });
             });
         }
@@ -164,6 +167,7 @@ namespace anv
                 SerializeIfPresent<Component::Rigidbody2D>(m_Registry, entity, ser, "Rigidbody2D");
                 SerializeIfPresent<Component::BoxCollider2D>(m_Registry, entity, ser, "BoxCollider2D");
                 SerializeIfPresent<Component::Script>(m_Registry, entity, ser, "Script");
+                SerializeIfPresent<Component::Relationship>(m_Registry, entity, ser, "Relationship");
             });
         }
 
@@ -187,7 +191,9 @@ namespace anv
             if (!cameraComponent.camera)
                 cameraComponent.camera = std::make_shared<Camera2D>();
 
-            cameraComponent.camera->SetTransform(transform);
+            Component::Transform2D worldTransform;
+            worldTransform.SetFromMatrix(GetWorldTransform(entity));
+            cameraComponent.camera->SetTransform(worldTransform);
             cameraComponent.camera->Update(0.0f);
             return cameraComponent.camera;
         }
@@ -329,7 +335,7 @@ namespace anv
         auto view = m_Registry.view<Component::Transform2D, Component::SpriteRenderer>();
         auto assetManager = App::GetInstance()->GetAssetManager();
 
-        view.each([&](auto, Component::Transform2D& transform,
+        view.each([&](auto entity, Component::Transform2D& transform,
                       Component::SpriteRenderer& sprite)
         {
             if (!sprite.visibleInGame)
@@ -339,8 +345,10 @@ namespace anv
                 ? assetManager->GetAs<Texture>(sprite.texture)
                 : nullptr;
 
-            Renderer2D::DrawQuad(transform.position, transform.rotation,
-                transform.scale, sprite.color, texture, sprite.drawLayer);
+            Component::Transform2D worldTransform;
+            worldTransform.SetFromMatrix(GetWorldTransform(entity));
+            Renderer2D::DrawQuad(worldTransform.position, worldTransform.rotation,
+                worldTransform.scale, sprite.color, texture, sprite.drawLayer);
         });
     }
 
@@ -361,10 +369,116 @@ namespace anv
         return entity;
     }
 
+
+    entt::entity Scene::GetParent(entt::entity entity) const
+    {
+        if (!m_Registry.valid(entity) || !m_Registry.any_of<Component::Relationship>(entity))
+            return entt::null;
+
+        const auto& id = m_Registry.get<Component::Relationship>(entity).parentUUID;
+        if (id.empty())
+            return entt::null;
+
+        auto view = m_Registry.view<uuid::EntityUUID>();
+        for (auto candidate : view)
+            if (view.get<uuid::EntityUUID>(candidate).uuid == id)
+                return candidate;
+        return entt::null;
+    }
+
+    std::vector<entt::entity> Scene::GetChildren(entt::entity entity) const
+    {
+        std::vector<entt::entity> children;
+        if (!m_Registry.valid(entity) || !m_Registry.any_of<uuid::EntityUUID>(entity))
+            return children;
+
+        const auto& id = m_Registry.get<uuid::EntityUUID>(entity).uuid;
+        auto view = m_Registry.view<Component::Relationship>();
+        for (auto candidate : view)
+            if (view.get<Component::Relationship>(candidate).parentUUID == id)
+                children.push_back(candidate);
+        return children;
+    }
+
+    bool Scene::IsDescendant(entt::entity entity, entt::entity ancestor) const
+    {
+        std::unordered_set<entt::entity> visited;
+        while (entity != entt::null && m_Registry.valid(entity) && visited.insert(entity).second)
+        {
+            if (entity == ancestor)
+                return true;
+            entity = GetParent(entity);
+        }
+        return false;
+    }
+
+    glm::mat4 Scene::GetWorldTransform(entt::entity entity) const
+    {
+        glm::mat4 result(1.0f);
+        std::vector<entt::entity> lineage;
+        std::unordered_set<entt::entity> visited;
+        while (entity != entt::null && m_Registry.valid(entity) && visited.insert(entity).second)
+        {
+            lineage.push_back(entity);
+            entity = GetParent(entity);
+        }
+        for (auto it = lineage.rbegin(); it != lineage.rend(); ++it)
+            if (m_Registry.any_of<Component::Transform2D>(*it))
+                result *= m_Registry.get<Component::Transform2D>(*it).GetTransform();
+        return result;
+    }
+
+    bool Scene::SetWorldTransform(entt::entity entity, const glm::mat4& world)
+    {
+        if (!HasComponent<Component::Transform2D>(entity))
+            return false;
+
+        const auto parent = GetParent(entity);
+        const glm::mat4 parentWorld = parent == entt::null
+            ? glm::mat4(1.0f) : GetWorldTransform(parent);
+        if (std::abs(glm::determinant(parentWorld)) < 0.000001f)
+            return false;
+
+        GetComponent<Component::Transform2D>(entity).SetFromMatrix(
+            glm::inverse(parentWorld) * world);
+        return true;
+    }
+
+    bool Scene::SetParent(entt::entity child, entt::entity parent, bool keepWorld)
+    {
+        if (!m_Registry.valid(child) || !HasComponent<uuid::EntityUUID>(child) ||
+            (parent != entt::null && (!m_Registry.valid(parent) ||
+                                       !HasComponent<uuid::EntityUUID>(parent))) ||
+            child == parent ||
+            (parent != entt::null && IsDescendant(parent, child)))
+            return false;
+
+        const glm::mat4 world = GetWorldTransform(child);
+        const glm::mat4 parentWorld = parent == entt::null
+            ? glm::mat4(1.0f) : GetWorldTransform(parent);
+        if (keepWorld && HasComponent<Component::Transform2D>(child) &&
+            std::abs(glm::determinant(parentWorld)) < 0.000001f)
+            return false;
+
+        if (parent == entt::null)
+            m_Registry.remove<Component::Relationship>(child);
+        else
+            m_Registry.emplace_or_replace<Component::Relationship>(
+                child, m_Registry.get<uuid::EntityUUID>(parent).uuid);
+
+        if (keepWorld && HasComponent<Component::Transform2D>(child))
+            SetWorldTransform(child, world);
+        return true;
+    }
+
     void Scene::DestroyEntity(entt::entity entity)
     {
         if (entity == entt::null || !m_Registry.valid(entity))
             return;
+
+        // Orphan children without jumping to a new world position.
+        for (auto child : GetChildren(entity))
+            SetParent(child, entt::null, true);
 
         if (m_PhysicsSystem2D)
             m_PhysicsSystem2D->DestroyBody(entity);

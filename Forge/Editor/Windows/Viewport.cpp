@@ -218,8 +218,8 @@ void Viewport::draw_selection_overlay(
         return;
     }
 
-    const auto &transform =
-        scene->GetComponent<anv::Component::Transform2D>(entity);
+    anv::Component::Transform2D transform;
+    transform.SetFromMatrix(scene->GetWorldTransform(entity));
 
     ImDrawList *drawList = ImGui::GetWindowDrawList();
     if (!drawList)
@@ -372,7 +372,7 @@ void Viewport::draw_selection_overlay(
     }
     else
     {
-        const glm::mat4 model = transform.GetTransform();
+        const glm::mat4 model = scene->GetWorldTransform(entity);
 
         constexpr std::array<glm::vec4, 4> localCorners = {
             glm::vec4{-0.5f, -0.5f, 0.0f, 1.0f},
@@ -512,7 +512,7 @@ void Viewport::pick_entity(
             view.get<anv::Component::SpriteRenderer>(entity);
 
         const glm::mat4 inverseTransform =
-            glm::inverse(transform.GetTransform());
+            glm::inverse(scene->GetWorldTransform(entity));
 
         const glm::vec4 localPosition =
             inverseTransform * glm::vec4(
@@ -608,7 +608,7 @@ void Viewport::draw_gizmo()
     auto &transform =
         scene->GetComponent<anv::Component::Transform2D>(entity);
 
-    glm::mat4 transformMatrix = transform.GetTransform();
+    glm::mat4 transformMatrix = scene->GetWorldTransform(entity);
 
     const glm::mat4 view = m_EditorCamera->GetView();
     const glm::mat4 projection = m_EditorCamera->GetProjection();
@@ -623,5 +623,5 @@ void Viewport::draw_gizmo()
         glm::value_ptr(transformMatrix));
 
     if (ImGuizmo::IsUsing())
-        transform.SetFromMatrix(transformMatrix);
+        scene->SetWorldTransform(entity, transformMatrix);
 }
