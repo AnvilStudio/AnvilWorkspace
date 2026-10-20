@@ -112,6 +112,13 @@ namespace anv
                 ANV_PROFILE_ZONE(RenderWorkerWait);
                 m_RenderCmdChain->WaitForProcessComplete();
             }
+            // Read published worker timings only after the completion signal.
+            const auto worker = m_RenderCmdChain->GetWorkerTimings();
+            FrameProfiler::Record(FrameProfiler::Zone::WorkerBegin, worker.begin);
+            FrameProfiler::Record(FrameProfiler::Zone::WorkerTasks, worker.tasks);
+            FrameProfiler::Record(FrameProfiler::Zone::WorkerEnd, worker.end);
+            FrameProfiler::Record(FrameProfiler::Zone::WorkerSubmit, worker.submit);
+            FrameProfiler::Record(FrameProfiler::Zone::WorkerTotal, worker.total);
             {
                 ANV_PROFILE_ZONE(ImGuiFinish);
                 m_ImGuiLayer->FinishFrame();

@@ -16,7 +16,7 @@ namespace anv
             Frame, Input, LayerUpdate, RendererBegin, AppUpdate,
             LayerRender, EditorUI, RendererEnd, Submit,
             Physics, BodyManagement, PhysicsToBox2D, PhysicsCapture, Box2D, Box2DToScene,
-            Script, SceneRender, SpriteLookup, SpriteTransform, SpriteSubmit, PhysicsFixedSteps, GPUFenceWait, SwapchainAcquire, RenderSubmitWait, RenderQueueSwap, RenderWorkerWait, ImGuiFinish, Present, MetalEncode, MetalCommit, Count
+            Script, SceneRender, SpriteLookup, SpriteTransform, SpriteSubmit, PhysicsFixedSteps, GPUFenceWait, SwapchainAcquire, RenderSubmitWait, RenderQueueSwap, RenderWorkerWait, ImGuiFinish, Present, MetalEncode, MetalCommit, WorkerBegin, WorkerTasks, WorkerEnd, WorkerSubmit, WorkerTotal, Count
         };
         static constexpr std::size_t Count = static_cast<std::size_t>(Zone::Count);
         static constexpr std::size_t History = 120;
@@ -56,6 +56,11 @@ namespace anv
                 case Zone::Present: return "Swapchain present";
                 case Zone::MetalEncode: return "Metal encode and UI";
                 case Zone::MetalCommit: return "Metal commit/present enqueue";
+                case Zone::WorkerBegin: return "Worker command begin";
+                case Zone::WorkerTasks: return "Worker execute tasks";
+                case Zone::WorkerEnd: return "Worker command end";
+                case Zone::WorkerSubmit: return "Worker Vulkan submit";
+                case Zone::WorkerTotal: return "Worker processing total";
                 default: return "Unknown";
             }
         }

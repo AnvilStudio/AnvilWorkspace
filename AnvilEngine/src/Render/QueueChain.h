@@ -29,6 +29,15 @@ namespace anv
         void WriteToBack(Task _task);
         void Swap();
         void WaitForProcessComplete();
+        struct WorkerTimings
+        {
+            float begin = 0.0f;
+            float tasks = 0.0f;
+            float end = 0.0f;
+            float submit = 0.0f;
+            float total = 0.0f;
+        };
+        WorkerTimings GetWorkerTimings() const;
 
         // New: clear both queues (or just back) safely
         void ClearBack();
@@ -55,6 +64,8 @@ namespace anv
 
         std::mutex m_Mutex;
         std::condition_variable m_CV;
+        std::condition_variable m_CompleteCV;
+        WorkerTimings m_WorkerTimings{};
 
         std::atomic<bool> m_StopProc{ false };
         std::atomic<bool> m_ThreadRunning{ false };

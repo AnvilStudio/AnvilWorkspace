@@ -2,6 +2,7 @@
 #include "MainMenu.h"
 #include <algorithm>
 #include <cstdio>
+#include <initializer_list>
 
 using namespace anv;
 
@@ -209,32 +210,52 @@ void EditorLayer::draw_stats()
         }
         ImGui::TextDisabled("Other / profiling overhead: %.2f ms", remaining);
         ImGui::Separator();
-        ImGui::TextUnformatted("CPU profiler (last / avg / peak, 120 frames)");
-        if (ImGui::BeginTable("ProfilerTimes", 4,
-            ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_RowBg |
-            ImGuiTableFlags_SizingStretchProp))
+        ImGui::Separator();
+        ImGui::TextUnformatted("CPU profiler - 120-frame history");
+        const auto drawGroup = [](const char* name,
+            std::initializer_list<FrameProfiler::Zone> zones, bool defaultOpen)
         {
-            ImGui::TableSetupColumn("Scope");
-            ImGui::TableSetupColumn("Last (ms)");
-            ImGui::TableSetupColumn("Avg (ms)");
-            ImGui::TableSetupColumn("Peak (ms)");
-            ImGui::TableHeadersRow();
-            for (std::size_t i = 0; i < FrameProfiler::Count; ++i)
+            ImGui::SetNextItemOpen(defaultOpen, ImGuiCond_Once);
+            if (!ImGui::CollapsingHeader(name))
+                return;
+            ImGui::PushID(name);
+            if (ImGui::BeginTable("Times", 4,
+                ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_RowBg |
+                ImGuiTableFlags_SizingStretchProp))
             {
-                const auto zone = static_cast<FrameProfiler::Zone>(i);
-                const auto result = FrameProfiler::Get(zone);
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-                ImGui::TextUnformatted(FrameProfiler::Name(zone));
-                ImGui::TableNextColumn();
-                ImGui::Text("%.2f", result.last);
-                ImGui::TableNextColumn();
-                ImGui::Text("%.2f", result.average);
-                ImGui::TableNextColumn();
-                ImGui::Text("%.2f", result.max);
+                ImGui::TableSetupColumn("Scope");
+                ImGui::TableSetupColumn("Last");
+                ImGui::TableSetupColumn("Avg");
+                ImGui::TableSetupColumn("Peak");
+                ImGui::TableHeadersRow();
+                for (auto zone : zones)
+                {
+                    const auto result = FrameProfiler::Get(zone);
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted(FrameProfiler::Name(zone));
+                    ImGui::TableNextColumn(); ImGui::Text("%.2f", result.last);
+                    ImGui::TableNextColumn(); ImGui::Text("%.2f", result.average);
+                    ImGui::TableNextColumn(); ImGui::Text("%.2f", result.max);
+                }
+                ImGui::EndTable();
             }
-            ImGui::EndTable();
-        }
+            ImGui::PopID();
+        };
+        using Z = FrameProfiler::Zone;
+        drawGroup("Frame overview", {Z::Frame, Z::Input, Z::LayerUpdate,
+            Z::RendererBegin, Z::AppUpdate, Z::LayerRender,
+            Z::EditorUI, Z::RendererEnd, Z::Submit}, true);
+        drawGroup("Physics", {Z::Physics, Z::BodyManagement, Z::PhysicsToBox2D,
+            Z::PhysicsCapture, Z::Box2D, Z::Box2DToScene, Z::PhysicsFixedSteps}, false);
+        drawGroup("Sprites & scripting", {Z::SceneRender, Z::SpriteLookup,
+            Z::SpriteTransform, Z::SpriteSubmit, Z::Script}, false);
+        drawGroup("Vulkan main thread", {Z::GPUFenceWait, Z::SwapchainAcquire,
+            Z::RenderSubmitWait, Z::RenderQueueSwap, Z::RenderWorkerWait,
+            Z::ImGuiFinish, Z::Present}, true);
+        drawGroup("Vulkan render worker", {Z::WorkerTotal, Z::WorkerBegin,
+            Z::WorkerTasks, Z::WorkerEnd, Z::WorkerSubmit}, true);
+        drawGroup("Metal", {Z::MetalEncode, Z::MetalCommit}, false);
         ImGui::Separator();
         ImGui::Text("Quads: %i  Calls: %i  Batches: %i",
             stats.rendering.QuadCount, stats.rendering.DrawCalls,
