@@ -97,7 +97,7 @@ if (-not $Premake) {
 
 Push-Location $Root
 try {
-    & $PremakePath vs2022
+    & $PremakePath vs2026
     if ($LASTEXITCODE -ne 0) { throw "Premake project generation failed." }
 
     if ($Build) {

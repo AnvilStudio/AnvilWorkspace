@@ -79,27 +79,29 @@ project "AnvilEngine"
     filter "system:macosx"
         architecture "arm64" -- new macs only!
 
-        local pythonIncludes = os.outputof("python3-config --includes")
-        local pythonLinkFlags = os.outputof("python3-config --embed --ldflags")
+        if os.host() == "macosx" then
+            local pythonIncludes = os.outputof("python3-config --includes")
+            local pythonLinkFlags = os.outputof("python3-config --embed --ldflags")
 
-        if pythonIncludes ~= nil and pythonIncludes ~= "" and
-           pythonLinkFlags ~= nil and pythonLinkFlags ~= "" then
-            defines
-            {
-                "PLATFORM_APPLE",
-                "PLATFORM_MACOS",
-                "ANV_ENABLE_PYTHON"
-            }
+            if pythonIncludes ~= nil and pythonIncludes ~= "" and
+            pythonLinkFlags ~= nil and pythonLinkFlags ~= "" then
+                defines
+                {
+                    "PLATFORM_APPLE",
+                    "PLATFORM_MACOS",
+                    "ANV_ENABLE_PYTHON"
+                }
 
-            buildoptions { pythonIncludes }
-            linkoptions { pythonLinkFlags }
-        else
-            print("Warning: python3-config was not found; Python scripting will be disabled.")
-            defines
-            {
-                "PLATFORM_APPLE",
-                "PLATFORM_MACOS"
-            }
+                buildoptions { pythonIncludes }
+                linkoptions { pythonLinkFlags }
+            else
+                print("Warning: python3-config was not found; Python scripting will be disabled.")
+                defines
+                {
+                    "PLATFORM_APPLE",
+                    "PLATFORM_MACOS"
+                }
+            end
         end
 
         files
