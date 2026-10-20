@@ -54,6 +54,7 @@ namespace anv
             return;
 
         std::swap(m_Front, m_Back);
+        m_SpriteTaskTimings = {};
         m_WorkAvailable.store(true, std::memory_order_release);
         m_ProcComplete.store(false, std::memory_order_release);
         m_CV.notify_one();
@@ -72,6 +73,23 @@ namespace anv
     {
         // Called on the main thread after WaitForProcessComplete().
         return m_WorkerTimings;
+    }
+
+    void QueueChain::AccumulateSpriteTaskTimings(const SpriteTaskTimings& timings)
+    {
+        // Invoked on the worker while executing queued sprite tasks.
+        // The mutex is also used for the completion notification.
+        std::lock_guard<std::mutex> lock(m_Mutex);
+        m_SpriteTaskTimings.sort += timings.sort;
+        m_SpriteTaskTimings.build += timings.build;
+        m_SpriteTaskTimings.upload += timings.upload;
+        m_SpriteTaskTimings.commands += timings.commands;
+    }
+
+    QueueChain::SpriteTaskTimings QueueChain::GetSpriteTaskTimings() const
+    {
+        // Only called on main thread after WaitForProcessComplete().
+        return m_SpriteTaskTimings;
     }
 
     void QueueChain::ProcessFrontQueue()

@@ -254,7 +254,8 @@ void EditorLayer::draw_stats()
             Z::RenderSubmitWait, Z::RenderQueueSwap, Z::RenderWorkerWait,
             Z::ImGuiFinish, Z::Present}, true);
         drawGroup("Vulkan render worker", {Z::WorkerTotal, Z::WorkerBegin,
-            Z::WorkerTasks, Z::WorkerEnd, Z::WorkerSubmit}, true);
+            Z::WorkerTasks, Z::WorkerEnd, Z::WorkerSubmit,
+            Z::SpriteSort, Z::SpriteBuild, Z::SpriteUpload, Z::SpriteCommands}, true);
         drawGroup("Metal", {Z::MetalEncode, Z::MetalCommit}, false);
         ImGui::Separator();
         ImGui::Text("Quads: %i  Calls: %i  Batches: %i",

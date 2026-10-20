@@ -119,6 +119,11 @@ namespace anv
             FrameProfiler::Record(FrameProfiler::Zone::WorkerEnd, worker.end);
             FrameProfiler::Record(FrameProfiler::Zone::WorkerSubmit, worker.submit);
             FrameProfiler::Record(FrameProfiler::Zone::WorkerTotal, worker.total);
+            const auto sprites = m_RenderCmdChain->GetSpriteTaskTimings();
+            FrameProfiler::Record(FrameProfiler::Zone::SpriteSort, sprites.sort);
+            FrameProfiler::Record(FrameProfiler::Zone::SpriteBuild, sprites.build);
+            FrameProfiler::Record(FrameProfiler::Zone::SpriteUpload, sprites.upload);
+            FrameProfiler::Record(FrameProfiler::Zone::SpriteCommands, sprites.commands);
             {
                 ANV_PROFILE_ZONE(ImGuiFinish);
                 m_ImGuiLayer->FinishFrame();
@@ -192,6 +197,13 @@ namespace anv
 			[=, this](Ref<CommandBuffer> cmd,
 					  const RenderFrameContext &frame) mutable
 			{
+                using SpriteClock = std::chrono::steady_clock;
+                const auto spriteStart = SpriteClock::now();
+                QueueChain::SpriteTaskTimings spriteTimes{};
+                auto elapsed = [](SpriteClock::time_point start) {
+                    return std::chrono::duration<float, std::milli>(
+                        SpriteClock::now() - start).count();
+                };
 				// Preserve layer ordering and same-layer submission order.
 				std::stable_sort(
 					sceneQuads.begin(),
@@ -200,6 +212,9 @@ namespace anv
 					{
 						return a.Layer < b.Layer;
 					});
+
+                spriteTimes.sort = elapsed(spriteStart);
+                const auto buildStart = SpriteClock::now();
 
 				struct Batch
 				{
@@ -230,7 +245,6 @@ namespace anv
 
 				for (const auto &quad : sceneQuads)
 				{
-					TIME_SCOPE(m_RenderStats.BatchBuildTime)
 					Ref<VulkanTexture> texture = m_WhiteTexture;
 
 					if (quad.TextureAsset)
@@ -286,6 +300,7 @@ namespace anv
 					batches.back().QuadCount++;
 				}
 
+                spriteTimes.build = elapsed(buildStart);
 				m_RenderStats.BatchCount = batches.size();
 
 				// ---- Acquire space in this frame's vertex buffer ----
@@ -320,6 +335,7 @@ namespace anv
 
 				const VkDeviceSize uploadOffset = cursor;
 
+                const auto uploadStart = SpriteClock::now();
 				if (uploadSize > 0)
 				{
 					vkVB->SetData(
@@ -330,6 +346,8 @@ namespace anv
 					cursor += uploadSize;
 				}
 
+                spriteTimes.upload = elapsed(uploadStart);
+                const auto commandStart = SpriteClock::now();
 				const int32_t baseVertex =
 					static_cast<int32_t>(
 						uploadOffset / sizeof(BatchVertex));
@@ -421,6 +439,8 @@ namespace anv
 				m_RenderStats.DrawCalls = drawCalls;
 
 				_renderTarget->End(cmd);
+                spriteTimes.commands = elapsed(commandStart);
+                m_RenderCmdChain->AccumulateSpriteTaskTimings(spriteTimes);
 			});
 	}
 

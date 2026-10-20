@@ -38,6 +38,9 @@ namespace anv
             float total = 0.0f;
         };
         WorkerTimings GetWorkerTimings() const;
+        struct SpriteTaskTimings { float sort=0, build=0, upload=0, commands=0; };
+        void AccumulateSpriteTaskTimings(const SpriteTaskTimings& timings);
+        SpriteTaskTimings GetSpriteTaskTimings() const;
 
         // New: clear both queues (or just back) safely
         void ClearBack();
@@ -66,6 +69,7 @@ namespace anv
         std::condition_variable m_CV;
         std::condition_variable m_CompleteCV;
         WorkerTimings m_WorkerTimings{};
+        SpriteTaskTimings m_SpriteTaskTimings{};
 
         std::atomic<bool> m_StopProc{ false };
         std::atomic<bool> m_ThreadRunning{ false };
