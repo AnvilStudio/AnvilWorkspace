@@ -95,21 +95,54 @@ void EditorLayer::OnUpdate(float dt)
 
 void EditorLayer::OnImGuiRender()
 {
-    begin_dock_space();
-    m_MainMenu.Draw();
+    {
+        ANV_PROFILE_ZONE(ForgeDockspace);
+        begin_dock_space();
+    }
+    {
+        ANV_PROFILE_ZONE(ForgeMainMenu);
+        m_MainMenu.Draw();
+    }
 
     auto sceneManager = App::GetInstance()->GetSceneManager();
     auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
 
-    m_SceneHierarchy.Draw();
-    m_FileBrowser.Draw();
-    m_InspectorLayer.Draw(scene, m_SelectedEntity);
-    draw_stats();
-    m_DevNotes.OnImGuiRender(&m_Windows.showCodeEditor);
-    m_AssetRegistryPanel.Draw(&m_Windows.showAssetRegistry);
-    m_Console.Draw(&m_Windows.showConsole);
-    m_GameViewport.Draw();
-    m_Viewport.Draw();
+    {
+        ANV_PROFILE_ZONE(ForgeHierarchy);
+        m_SceneHierarchy.Draw();
+    }
+    {
+        ANV_PROFILE_ZONE(ForgeFileBrowser);
+        m_FileBrowser.Draw();
+    }
+    {
+        ANV_PROFILE_ZONE(ForgeInspector);
+        m_InspectorLayer.Draw(scene, m_SelectedEntity);
+    }
+    {
+        ANV_PROFILE_ZONE(ForgeStats);
+        draw_stats();
+    }
+    {
+        ANV_PROFILE_ZONE(ForgeNotes);
+        m_DevNotes.OnImGuiRender(&m_Windows.showCodeEditor);
+    }
+    {
+        ANV_PROFILE_ZONE(ForgeAssetRegistry);
+        m_AssetRegistryPanel.Draw(&m_Windows.showAssetRegistry);
+    }
+    {
+        ANV_PROFILE_ZONE(ForgeConsole);
+        m_Console.Draw(&m_Windows.showConsole);
+    }
+    {
+        ANV_PROFILE_ZONE(ForgeGameViewport);
+        m_GameViewport.Draw();
+    }
+    {
+        ANV_PROFILE_ZONE(ForgeViewport);
+        m_Viewport.Draw();
+    }
 }
 
 void EditorLayer::OnDetach()
@@ -233,6 +266,24 @@ void EditorLayer::draw_stats()
                     const auto result = FrameProfiler::Get(zone);
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
+                    ImU32 markerColor = 0;
+                    for (const auto& segment : segments)
+                        if (segment.zone == zone)
+                        {
+                            markerColor = segment.color;
+                            break;
+                        }
+                    if (markerColor != 0)
+                    {
+                        const ImVec2 pos = ImGui::GetCursorScreenPos();
+                        const float markerSize = 9.0f;
+                        ImGui::GetWindowDrawList()->AddRectFilled(
+                            ImVec2(pos.x, pos.y + 3.0f),
+                            ImVec2(pos.x + markerSize, pos.y + 3.0f + markerSize),
+                            markerColor);
+                        ImGui::Dummy(ImVec2(markerSize + 3.0f, ImGui::GetTextLineHeight()));
+                        ImGui::SameLine(0.0f, 2.0f);
+                    }
                     ImGui::TextUnformatted(FrameProfiler::Name(zone));
                     ImGui::TableNextColumn(); ImGui::Text("%.2f", result.last);
                     ImGui::TableNextColumn(); ImGui::Text("%.2f", result.average);
@@ -257,6 +308,10 @@ void EditorLayer::draw_stats()
             Z::WorkerTasks, Z::WorkerEnd, Z::WorkerSubmit,
             Z::SpriteSort, Z::SpriteBuild, Z::SpriteUpload, Z::SpriteCommands}, true);
         drawGroup("Metal", {Z::MetalEncode, Z::MetalCommit}, false);
+        drawGroup("Forge editor panels", {Z::ForgeHierarchy, Z::ForgeInspector,
+            Z::ForgeFileBrowser, Z::ForgeStats, Z::ForgeNotes,
+            Z::ForgeAssetRegistry, Z::ForgeConsole, Z::ForgeGameViewport,
+            Z::ForgeViewport, Z::ForgeMainMenu, Z::ForgeDockspace}, true);
         ImGui::Separator();
         ImGui::Text("Quads: %i  Calls: %i  Batches: %i",
             stats.rendering.QuadCount, stats.rendering.DrawCalls,

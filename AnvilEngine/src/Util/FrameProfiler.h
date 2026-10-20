@@ -16,7 +16,10 @@ namespace anv
             Frame, Input, LayerUpdate, RendererBegin, AppUpdate,
             LayerRender, EditorUI, RendererEnd, Submit,
             Physics, BodyManagement, PhysicsToBox2D, PhysicsCapture, Box2D, Box2DToScene,
-            Script, SceneRender, SpriteLookup, SpriteTransform, SpriteSubmit, PhysicsFixedSteps, GPUFenceWait, SwapchainAcquire, RenderSubmitWait, RenderQueueSwap, RenderWorkerWait, ImGuiFinish, Present, MetalEncode, MetalCommit, WorkerBegin, WorkerTasks, WorkerEnd, WorkerSubmit, WorkerTotal, SpriteSort, SpriteBuild, SpriteUpload, SpriteCommands, Count
+            Script, SceneRender, SpriteLookup, SpriteTransform, SpriteSubmit, PhysicsFixedSteps, GPUFenceWait, SwapchainAcquire, RenderSubmitWait, RenderQueueSwap, RenderWorkerWait, ImGuiFinish, Present, MetalEncode, MetalCommit, WorkerBegin, WorkerTasks, WorkerEnd, WorkerSubmit, WorkerTotal, SpriteSort, SpriteBuild, SpriteUpload, SpriteCommands,
+            ForgeHierarchy, ForgeFileBrowser, ForgeInspector, ForgeStats,
+            ForgeNotes, ForgeAssetRegistry, ForgeConsole, ForgeGameViewport,
+            ForgeViewport, ForgeMainMenu, ForgeDockspace, Count
         };
         static constexpr std::size_t Count = static_cast<std::size_t>(Zone::Count);
         static constexpr std::size_t History = 120;
@@ -65,6 +68,17 @@ namespace anv
                 case Zone::SpriteBuild: return "Worker sprite vertices/batches";
                 case Zone::SpriteUpload: return "Worker sprite buffer upload";
                 case Zone::SpriteCommands: return "Worker sprite command recording";
+                case Zone::ForgeHierarchy: return "Scene hierarchy";
+                case Zone::ForgeFileBrowser: return "File browser";
+                case Zone::ForgeInspector: return "Inspector";
+                case Zone::ForgeStats: return "Stats window";
+                case Zone::ForgeNotes: return "Code editor";
+                case Zone::ForgeAssetRegistry: return "Asset registry";
+                case Zone::ForgeConsole: return "Console";
+                case Zone::ForgeGameViewport: return "Game viewport UI";
+                case Zone::ForgeViewport: return "Editor viewport UI";
+                case Zone::ForgeMainMenu: return "Main menu";
+                case Zone::ForgeDockspace: return "Dockspace";
                 default: return "Unknown";
             }
         }
