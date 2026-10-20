@@ -16,6 +16,7 @@ public:
 
     void OnSetup() override
     {
+        m_StandaloneRuntime = true;
         const std::filesystem::path workingDir =
             m_Settings.projectDir.empty()
                 ? std::filesystem::path(m_Settings.projectPath).parent_path()
