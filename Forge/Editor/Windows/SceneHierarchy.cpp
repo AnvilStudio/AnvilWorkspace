@@ -95,7 +95,7 @@ void SceneHierarchy::Draw()
     ChildMap children;
     std::unordered_map<std::string, entt::entity> byUUID;
     auto ids = scene->Registry().view<uuid::EntityUUID>();
-    byUUID.reserve(ids.size_hint());
+    byUUID.reserve(scene->Registry().storage<uuid::EntityUUID>().size());
     for (auto entity : ids)
         byUUID.emplace(ids.get<uuid::EntityUUID>(entity).uuid, entity);
 
