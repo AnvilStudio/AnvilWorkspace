@@ -12,6 +12,7 @@
 
 #include <Util/Time/Time.h>
 #include <glm/ext/matrix_transform.hpp>
+#include <cmath>
 
 namespace anv
 {
@@ -223,26 +224,22 @@ namespace anv
 					uint32_t QuadCount = 0;
 				};
 
-				std::vector<BatchVertex> vertices;
-				std::vector<Batch> batches;
-
-				vertices.reserve(sceneQuads.size() * 4);
+				// Only the render worker touches these buffers. Preserve capacity
+				// between frames instead of allocating on every DrawScene task.
+				static thread_local std::vector<BatchVertex> vertices;
+				static thread_local std::vector<Batch> batches;
+				vertices.clear();
+				batches.clear();
+				vertices.resize(sceneQuads.size() * 4);
 				batches.reserve(sceneQuads.size());
 
-				const glm::vec4 corners[4] = {
-					{-0.5f, -0.5f, 0.0f, 1.0f},
-					{0.5f, -0.5f, 0.0f, 1.0f},
-					{0.5f, 0.5f, 0.0f, 1.0f},
-					{-0.5f, 0.5f, 0.0f, 1.0f}};
-
 				const glm::vec2 uv[4] = {
-					{0.0f, 0.0f},
-					{1.0f, 0.0f},
-					{1.0f, 1.0f},
-					{0.0f, 1.0f}};
+					{0.0f, 0.0f}, {1.0f, 0.0f},
+					{1.0f, 1.0f}, {0.0f, 1.0f}};
 
 				// ---- CPU batching ----
 
+				std::size_t quadIndex = 0;
 				for (const auto &quad : sceneQuads)
 				{
 					Ref<VulkanTexture> texture = m_WhiteTexture;
@@ -267,37 +264,33 @@ namespace anv
 						Batch batch{};
 						batch.Texture = texture;
 						batch.FirstQuad =
-							static_cast<uint32_t>(vertices.size() / 4);
+							static_cast<uint32_t>(quadIndex);
 
 						batches.push_back(batch);
 					}
 
-					const glm::mat4 model =
-						glm::translate(
-							glm::mat4(1.0f),
-							glm::vec3(quad.Position, 0.0f)) *
-						glm::rotate(
-							glm::mat4(1.0f),
-							glm::radians(quad.Rotation),
-							glm::vec3(0, 0, 1)) *
-						glm::scale(
-							glm::mat4(1.0f),
-							glm::vec3(quad.Size, 1.0f));
-
+					// Compute the four corners directly in 2D. A 4x4
+					// translate/rotate/scale matrix is unnecessary for quads.
+					const float halfX = quad.Size.x * 0.5f;
+					const float halfY = quad.Size.y * 0.5f;
+					const float angle = glm::radians(quad.Rotation);
+					const float c = quad.Rotation == 0.0f ? 1.0f : std::cos(angle);
+					const float sn = quad.Rotation == 0.0f ? 0.0f : std::sin(angle);
+					const glm::vec2 local[4] = {
+						{-halfX, -halfY}, {halfX, -halfY},
+						{halfX, halfY}, {-halfX, halfY}};
 					for (uint32_t i = 0; i < 4; ++i)
 					{
-						BatchVertex vertex{};
-
-						vertex.Position =
-							glm::vec2(model * corners[i]);
-
+						BatchVertex& vertex = vertices[quadIndex * 4 + i];
+						vertex.Position = {
+							quad.Position.x + c * local[i].x - sn * local[i].y,
+							quad.Position.y + sn * local[i].x + c * local[i].y};
 						vertex.TexCoord = uv[i];
 						vertex.Color = quad.Color;
-
-						vertices.push_back(vertex);
 					}
 
 					batches.back().QuadCount++;
+					++quadIndex;
 				}
 
                 spriteTimes.build = elapsed(buildStart);
