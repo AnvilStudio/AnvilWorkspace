@@ -324,7 +324,10 @@ namespace anv
     void Scene::OnUpdate(float deltaTime)
     {
         if (m_ScriptExecutionEnabled)
+        {
+            ANV_PROFILE_ZONE(Script);
             PythonScriptEngine::UpdateScene(*this, deltaTime);
+        }
 
         if (m_PhysicsSystem2D && m_PhysicsSystem2D->IsRunning())
             m_PhysicsSystem2D->Step(*this, deltaTime);
@@ -332,6 +335,7 @@ namespace anv
 
     void Scene::Render()
     {
+        ANV_PROFILE_ZONE(SceneRender);
         auto view = m_Registry.view<Component::Transform2D, Component::SpriteRenderer>();
         auto assetManager = App::GetInstance()->GetAssetManager();
 
