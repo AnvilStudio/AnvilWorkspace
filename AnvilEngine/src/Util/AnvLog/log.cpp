@@ -20,7 +20,9 @@ namespace anv_log
 			auto file = std::fstream(m_Path, std::ios::app);
 			if (!file)
 			{
-				std::cout << "LogError: Failed to open log file for output: " << m_Path << '\n';
+				#ifndef RELEASE
+                std::cerr << "LogError: Failed to open log file for output: " << m_Path << '\n';
+#endif
 				return;
 			}
 
@@ -35,7 +37,9 @@ namespace anv_log
 				std::ofstream newFile(m_Path);
 				if (!newFile)
 				{
-					std::cout << "Failed to find and create file: " << m_Path << '\n';
+					#ifndef RELEASE
+                    std::cerr << "Failed to find and create file: " << m_Path << '\n';
+#endif
 				}
 			}
 
