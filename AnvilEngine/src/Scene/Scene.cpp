@@ -404,7 +404,7 @@ namespace anv
     {
         // An acyclic scene is enforced by SetParent; bound iteration also
         // protects against corrupt external/serialized relationships.
-        const auto limit = m_Registry.storage<entt::entity>().size();
+        const auto limit = m_Registry.storage<entt::entity>()->size();
         for (std::size_t i = 0; i < limit &&
              entity != entt::null && m_Registry.valid(entity); ++i)
         {
@@ -420,7 +420,7 @@ namespace anv
         glm::mat4 result(1.0f);
         // Pre-multiply ancestors: parent * child, no temporary allocations.
         // The bound also prevents endless traversal of malformed relationships.
-        const auto limit = m_Registry.storage<entt::entity>().size();
+        const auto limit = m_Registry.storage<entt::entity>()->size();
         for (std::size_t i = 0; i < limit &&
              entity != entt::null && m_Registry.valid(entity); ++i)
         {
