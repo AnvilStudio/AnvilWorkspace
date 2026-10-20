@@ -188,7 +188,7 @@ void SceneHierarchy::draw_entity(Ref<Scene> scene,
         // multi-selection must not collapse it before drag/drop starts.
         if (ImGui::IsItemHovered() &&
             ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
-            !ImGui::IsDragDropActive() &&
+            !ImGui::IsMouseDragging(ImGuiMouseButton_Left) &&
             !ImGui::IsItemToggledOpen())
             apply_selection(entity);
     }
