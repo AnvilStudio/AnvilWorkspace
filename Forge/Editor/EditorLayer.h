@@ -10,6 +10,7 @@
 #include "Windows/GameViewport.h"
 #include "Windows/InspectorLayer.h"
 #include "Windows/SceneHierarchy.h"
+#include "Windows/SpritesheetEditor.h"
 #include "Windows/Viewport.h"
 #include "MainMenu.h"
 
@@ -24,11 +25,12 @@ struct Windows
     bool showStats = false;
     bool showCodeEditor = false;
     bool showConsole = true;
+    bool showSpritesheetEditor = false;
 
     void ShowAll()
     {
         showViewport = showGameViewport = showHierarchy = showInspector =
-            showFiles = showAssetRegistry = showStats = showCodeEditor = showConsole = true;
+            showFiles = showAssetRegistry = showStats = showCodeEditor = showConsole = showSpritesheetEditor = true;
     }
 
     void RestoreDefaults() { *this = Windows{}; }
@@ -116,6 +118,7 @@ private:
     GameViewport m_GameViewport;
     SceneHierarchy m_SceneHierarchy;
     InspectorLayer m_InspectorLayer;
+    SpritesheetEditor m_SpritesheetEditor;
     anv::ConsolePanel m_Console;
 
     Windows m_Windows{};

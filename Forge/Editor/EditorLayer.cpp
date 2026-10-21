@@ -152,6 +152,10 @@ void EditorLayer::OnImGuiRender()
             m_InspectorLayer.Draw(scene, m_SelectedEntity);
     }
     {
+        if (m_Windows.showSpritesheetEditor)
+            m_SpritesheetEditor.Draw(&m_Windows.showSpritesheetEditor, scene, m_SelectedEntity);
+    }
+    {
         ANV_PROFILE_ZONE(ForgeStats);
         draw_stats();
     }
