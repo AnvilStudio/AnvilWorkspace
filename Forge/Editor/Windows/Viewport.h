@@ -9,6 +9,7 @@ public:
     void Draw();
 
 private:
+    void draw_toolbar();
     void update_operation(bool update);
     void set_gizmo_bounds();
     void draw_gizmo();

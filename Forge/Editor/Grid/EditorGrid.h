@@ -13,6 +13,8 @@ namespace forge
             float cellSize = 1.0f;
             float majorInterval = 5.0f;
             float lineWidth = 1.0f;
+            glm::vec4 minorColor{0.149f, 0.149f, 0.149f, 1.0f};
+            glm::vec4 majorColor{0.769f, 0.769f, 0.769f, 1.0f};
         };
 
         void Initialize(anv::Ref<anv::RenderTarget> target);

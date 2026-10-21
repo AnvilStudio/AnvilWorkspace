@@ -66,6 +66,9 @@ namespace forge
             std::max(m_Settings.lineWidth, 0.1f),
             0.0f);
 
+        data.minorColor = m_Settings.minorColor;
+        data.majorColor = m_Settings.majorColor;
+
         // Values are copied because Vulkan records scene commands on a worker.
         auto pipeline = m_Pipeline;
         overlays.push_back({

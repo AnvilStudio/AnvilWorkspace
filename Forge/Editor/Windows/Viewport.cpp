@@ -51,6 +51,8 @@ void Viewport::Draw()
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     if (ImGui::Begin("Viewport"))
     {
+        draw_toolbar();
+
         auto sceneManager = anv::App::GetInstance()->GetSceneManager();
         auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
 
@@ -179,6 +181,53 @@ void Viewport::Draw()
     }
     ImGui::End();
     ImGui::PopStyleVar();
+}
+
+void Viewport::draw_toolbar()
+{
+    auto& grid = m_EditorGrid.GetSettings();
+
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(5.0f, 4.0f));
+
+    // Separate top strip; its height is excluded from the image/target dimensions.
+    const float height = ImGui::GetFrameHeight() + 8.0f;
+    if (ImGui::BeginChild("##ViewportToolbar", ImVec2(0.0f, height),
+                          ImGuiChildFlags_None,
+                          ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+    {
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
+        if (ImGui::SmallButton(grid.visible ? "Grid: On" : "Grid: Off"))
+            grid.visible = !grid.visible;
+
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Grid Settings..."))
+            ImGui::OpenPopup("##GridSettings");
+
+        if (ImGui::BeginPopup("##GridSettings"))
+        {
+            ImGui::TextUnformatted("Editor Grid");
+            ImGui::Separator();
+            ImGui::Checkbox("Show Grid", &grid.visible);
+            ImGui::SetNextItemWidth(135.0f);
+            ImGui::DragFloat("Cell Size", &grid.cellSize, 0.05f, 0.001f, 1000.0f, "%.2f");
+            ImGui::SetNextItemWidth(135.0f);
+            ImGui::DragFloat("Major Interval", &grid.majorInterval, 0.1f, 1.0f, 100.0f, "%.0f");
+            ImGui::SetNextItemWidth(135.0f);
+            ImGui::DragFloat("Line Width", &grid.lineWidth, 0.05f, 0.1f, 8.0f, "%.2f px");
+            ImGui::ColorEdit4("Minor Color", glm::value_ptr(grid.minorColor),
+                              ImGuiColorEditFlags_AlphaBar);
+            ImGui::ColorEdit4("Major Color", glm::value_ptr(grid.majorColor),
+                              ImGuiColorEditFlags_AlphaBar);
+
+            grid.cellSize = std::clamp(grid.cellSize, 0.001f, 1000.0f);
+            grid.majorInterval = std::clamp(grid.majorInterval, 1.0f, 100.0f);
+            grid.lineWidth = std::clamp(grid.lineWidth, 0.1f, 8.0f);
+            ImGui::EndPopup();
+        }
+    }
+    ImGui::EndChild();
+    ImGui::PopStyleVar(2);
 }
 
 bool Viewport::world_to_viewport(
