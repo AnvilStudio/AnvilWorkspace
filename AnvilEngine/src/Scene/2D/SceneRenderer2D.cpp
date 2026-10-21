@@ -6,6 +6,7 @@
 #include <Core/App.h>
 #include <algorithm>
 #include <vector>
+#include <chrono>
 
 namespace anv
 {
@@ -15,7 +16,8 @@ namespace anv
             Component::Transform2D,
             Component::SpriteRenderer>();
 
-        std::vector<entt::entity> drawOrder;
+        static thread_local std::vector<entt::entity> drawOrder;
+        drawOrder.clear();
         drawOrder.reserve(view.size_hint());
 
         for (auto entity : view)
@@ -30,21 +32,38 @@ namespace anv
                     view.get<Component::SpriteRenderer>(right).drawLayer;
             });
 
+        scene->RebuildWorldTransformSnapshot();
         auto assetManager = App::GetInstance()->GetAssetManager();
+        if (!assetManager)
+            return;
 
         for (auto entity : drawOrder)
         {
             auto& transform = view.get<Component::Transform2D>(entity);
             auto& sprite = view.get<Component::SpriteRenderer>(entity);
-            Ref<Texture> texture = assetManager->GetAs<Texture>(sprite.texture);
+            if (!sprite.visibleInGame)
+                continue;
+            const auto t0 = std::chrono::steady_clock::now();
+            Ref<Texture> texture = sprite.texture.uuid.empty() ? nullptr : assetManager->GetAs<Texture>(sprite.texture);
+            const auto t1 = std::chrono::steady_clock::now();
 
-            Renderer2D::DrawQuad(
-                transform.position,
-                transform.rotation,
-                transform.scale,
-                sprite.color,
-                texture,
-                sprite.drawLayer);
+            const Component::Transform2D* world = &transform;
+            Component::Transform2D resolved;
+            if (scene->HasComponent<Component::Relationship>(entity))
+            {
+                resolved.SetFromMatrix(scene->GetSnapshotWorldTransform(entity));
+                world = &resolved;
+            }
+            const auto t2 = std::chrono::steady_clock::now();
+            Renderer2D::DrawQuad(world->position, world->rotation,
+                world->scale, sprite.color, texture, sprite.drawLayer);
+            const auto t3 = std::chrono::steady_clock::now();
+            FrameProfiler::Record(FrameProfiler::Zone::SpriteLookup,
+                std::chrono::duration<float, std::milli>(t1 - t0).count());
+            FrameProfiler::Record(FrameProfiler::Zone::SpriteTransform,
+                std::chrono::duration<float, std::milli>(t2 - t1).count());
+            FrameProfiler::Record(FrameProfiler::Zone::SpriteSubmit,
+                std::chrono::duration<float, std::milli>(t3 - t2).count());
         }
     }
 }

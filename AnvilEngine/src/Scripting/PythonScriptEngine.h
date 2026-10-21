@@ -12,6 +12,11 @@ namespace anv
     enum class CollisionEventKind2D : uint8_t;
     enum class CollisionEventPhase2D : uint8_t;
 
+    struct ScriptingStats
+    {
+        float updateTimer = 0.f;
+    };
+
     /**
      * @brief Embedded CPython runtime for entity-attached script instances.
      *
@@ -51,6 +56,7 @@ namespace anv
         CollisionEventKind2D _kind,
         CollisionEventPhase2D _phase);
 
+        static ScriptingStats s_Stats;
     private:
         static bool create_instance(Scene& _scene, entt::entity _entity);
         static void destroy_instance(const std::string& _entityID, bool _invokeDestroy);

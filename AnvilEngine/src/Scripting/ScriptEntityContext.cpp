@@ -9,22 +9,29 @@ namespace anv
 {
     namespace
     {
-        std::unordered_set<Scene*> s_ActiveScriptScenes;
+        // Intentional process-lifetime storage: a Scene can be destroyed
+        // by static/global reference cleanup after other globals are gone.
+        // Keep this registry available for late UnregisterScriptScene calls.
+        std::unordered_set<Scene*>& ActiveScriptScenes()
+        {
+            static auto* scenes = new std::unordered_set<Scene*>();
+            return *scenes;
+        }
     }
 
     void RegisterScriptScene(Scene& scene)
     {
-        s_ActiveScriptScenes.insert(&scene);
+        ActiveScriptScenes().insert(&scene);
     }
 
     void UnregisterScriptScene(Scene& scene)
     {
-        s_ActiveScriptScenes.erase(&scene);
+        ActiveScriptScenes().erase(&scene);
     }
 
     void ClearScriptScenes()
     {
-        s_ActiveScriptScenes.clear();
+        ActiveScriptScenes().clear();
     }
 
     ScriptEntityContext ResolveScriptEntity(std::string_view entityID)
@@ -32,7 +39,7 @@ namespace anv
         if (entityID.empty())
             return {};
 
-        for (Scene* scene : s_ActiveScriptScenes)
+        for (Scene* scene : ActiveScriptScenes())
         {
             if (!scene)
                 continue;
@@ -53,7 +60,7 @@ namespace anv
         if (entityName.empty())
             return {};
 
-        for (Scene* scene : s_ActiveScriptScenes)
+        for (Scene* scene : ActiveScriptScenes())
         {
             if (!scene)
                 continue;

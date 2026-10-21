@@ -29,10 +29,12 @@ namespace anv
 		virtual void BeginScene(Ref<RenderTarget> _renderTarget) override;
 		virtual void BeginScene() override;
 		virtual void DrawScene(Ref<RenderTarget> _renderTarget, _shared<Camera2D> camera) override;
+        void DrawScene(Ref<RenderTarget> target, _shared<Camera2D> camera, const RenderOverlays& overlays) override;
+        virtual void DrawMainScene(_shared<Camera2D> camera) override;
 		virtual void DrawQuad(
-			const glm::vec2& position,
+			const glm::vec2 &position,
 			float rotation,
-			const glm::vec2& size,
+			const glm::vec2 &size,
 			glm::vec4 color,
 			Ref<Texture> texture,
 			int layer) override;
@@ -69,7 +71,7 @@ namespace anv
 		_shared<QueueChain> m_RenderCmdChain = nullptr;
 		_shared<AssetManager> m_AssetManager = nullptr;
 
-		Ref<Buffer> m_QuadVB;
+		//Ref<Buffer> m_QuadVB;
 		Ref<Buffer> m_QuadIB;
 		Ref<VulkanTexture> m_WhiteTexture = nullptr;
 
@@ -88,9 +90,15 @@ namespace anv
 		uint32_t m_FrameIndex = 0;
 
 		// Window Resize //
-		std::atomic<bool> m_RecreatingSwapchain{ false };
+		std::atomic<bool> m_RecreatingSwapchain{false};
 		bool m_SwapRecreateFlag = false;
+        bool m_MainSceneSubmitted = false;
 
 		RendererStats m_RenderStats;
+
+		static constexpr uint32_t MaxBatchQuads = 50000;
+
+		std::vector<Ref<Buffer>> m_FrameQuadVBs;
+		std::vector<VkDeviceSize> m_FrameVertexOffsets;
 	};
 }

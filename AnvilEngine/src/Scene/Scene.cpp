@@ -7,8 +7,13 @@
 #include <Render/Renderer.h>
 #include <Scripting/PythonScriptEngine.h>
 #include <Util/Serialize/Serializer.h>
+#include <Util/FileSys/FileSystem.h>
 
 #include <limits>
+#include <chrono>
+#include <unordered_set>
+#include <cmath>
+#include <algorithm>
 
 namespace anv
 {
@@ -104,11 +109,13 @@ namespace anv
                     DeserializeIfPresent<Component::Rigidbody2D>(m_Registry, entity, ser, "Rigidbody2D");
                     DeserializeIfPresent<Component::BoxCollider2D>(m_Registry, entity, ser, "BoxCollider2D");
                     DeserializeIfPresent<Component::Script>(m_Registry, entity, ser, "Script");
+                    DeserializeIfPresent<Component::Relationship>(m_Registry, entity, ser, "Relationship");
                 });
             });
         }
 
         ser.Close();
+        m_SnapshotReady = false;
 
         if (hasLegacyCamera && GetActiveCameraEntity() == entt::null)
         {
@@ -164,6 +171,7 @@ namespace anv
                 SerializeIfPresent<Component::Rigidbody2D>(m_Registry, entity, ser, "Rigidbody2D");
                 SerializeIfPresent<Component::BoxCollider2D>(m_Registry, entity, ser, "BoxCollider2D");
                 SerializeIfPresent<Component::Script>(m_Registry, entity, ser, "Script");
+                SerializeIfPresent<Component::Relationship>(m_Registry, entity, ser, "Relationship");
             });
         }
 
@@ -187,7 +195,9 @@ namespace anv
             if (!cameraComponent.camera)
                 cameraComponent.camera = std::make_shared<Camera2D>();
 
-            cameraComponent.camera->SetTransform(transform);
+            Component::Transform2D worldTransform;
+            worldTransform.SetFromMatrix(GetWorldTransform(entity));
+            cameraComponent.camera->SetTransform(worldTransform);
             cameraComponent.camera->Update(0.0f);
             return cameraComponent.camera;
         }
@@ -249,12 +259,18 @@ namespace anv
         if (!assetManager)
             return;
 
-        const std::filesystem::path iconPath =
+        std::filesystem::path iconPath =
             App::GetInstance()->GetFS().GetKeyVal("Res") /
-            "icons" /
-            "camera_icon.png";
+            "Icons" / "camera_icon.png";
 
         std::error_code error;
+        if (!std::filesystem::is_regular_file(iconPath, error))
+        {
+            // Engine resources are copied alongside Forge/AnvRuntime.
+            iconPath = FileSystem::s_ExecDir / "Anvil" / "Resources" /
+                       "Icons" / "camera_icon.png";
+            error.clear();
+        }
         if (!std::filesystem::is_regular_file(iconPath, error))
         {
             ANV_LOG_WARN(
@@ -317,8 +333,14 @@ namespace anv
 
     void Scene::OnUpdate(float deltaTime)
     {
+        // Rebuild ancestry before physics/script updates. Any transform changes
+        // during the update are handled by the subsequent render snapshot.
+        RebuildWorldTransformSnapshot();
         if (m_ScriptExecutionEnabled)
+        {
+            ANV_PROFILE_ZONE(Script);
             PythonScriptEngine::UpdateScene(*this, deltaTime);
+        }
 
         if (m_PhysicsSystem2D && m_PhysicsSystem2D->IsRunning())
             m_PhysicsSystem2D->Step(*this, deltaTime);
@@ -326,22 +348,55 @@ namespace anv
 
     void Scene::Render()
     {
+        ANV_PROFILE_ZONE(SceneRender);
+        RebuildWorldTransformSnapshot();
         auto view = m_Registry.view<Component::Transform2D, Component::SpriteRenderer>();
         auto assetManager = App::GetInstance()->GetAssetManager();
 
-        view.each([&](auto, Component::Transform2D& transform,
-                      Component::SpriteRenderer& sprite)
+        struct SpriteItem
         {
-            if (!sprite.visibleInGame)
-                return;
+            entt::entity entity;
+            Component::Transform2D pose;
+            Ref<Texture> texture;
+            glm::vec4 color;
+            int drawLayer;
+        };
+        static thread_local std::vector<SpriteItem> items;
+        items.clear();
+        items.reserve(m_Registry.storage<Component::SpriteRenderer>().size());
 
-            Ref<Texture> texture = assetManager
-                ? assetManager->GetAs<Texture>(sprite.texture)
-                : nullptr;
+        // Phase 1: gather sprite data and resolve texture assets.
+        {
+            ANV_PROFILE_ZONE(SpriteLookup);
+            for (auto entity : view)
+            {
+                const auto& sprite = view.get<Component::SpriteRenderer>(entity);
+                if (!sprite.visibleInGame) continue;
+                Ref<Texture> texture = assetManager && !sprite.texture.uuid.empty()
+                    ? assetManager->GetAs<Texture>(sprite.texture) : nullptr;
+                items.push_back({entity, {}, texture, sprite.color, sprite.drawLayer});
+            }
+        }
 
-            Renderer2D::DrawQuad(transform.position, transform.rotation,
-                transform.scale, sprite.color, texture, sprite.drawLayer);
-        });
+        // Phase 2: resolve each sprite's world pose once, with shared-parent caching.
+        {
+            ANV_PROFILE_ZONE(SpriteTransform);
+            for (auto& item : items)
+            {
+                if (m_Registry.any_of<Component::Relationship>(item.entity))
+                    item.pose = GetSnapshotWorldPose2D(item.entity);
+                else
+                    item.pose = m_Registry.get<Component::Transform2D>(item.entity);
+            }
+        }
+
+        // Phase 3: submit quads; clocks are sampled per phase, not per entity.
+        {
+            ANV_PROFILE_ZONE(SpriteSubmit);
+            for (const auto& item : items)
+                Renderer2D::DrawQuad(item.pose.position, item.pose.rotation,
+                    item.pose.scale, item.color, item.texture, item.drawLayer);
+        }
     }
 
     entt::entity Scene::CreateEntity(std::string tag)
@@ -350,6 +405,7 @@ namespace anv
         m_Registry.emplace<uuid::EntityUUID>(entity) = uuid::uuid_GenEntID();
         m_Registry.emplace<Component::Transform2D>(entity);
         m_Registry.emplace<Component::Tag>(entity, std::move(tag));
+        m_SnapshotReady = false;
         return entity;
     }
 
@@ -358,7 +414,267 @@ namespace anv
         const entt::entity entity = m_Registry.create();
         m_Registry.emplace<Component::Tag>(entity, std::move(tag));
         m_Registry.emplace<uuid::EntityUUID>(entity, std::move(id));
+        m_SnapshotReady = false;
         return entity;
+    }
+
+
+    entt::entity Scene::GetParent(entt::entity entity) const
+    {
+        if (!m_Registry.valid(entity) || !m_Registry.any_of<Component::Relationship>(entity))
+            return entt::null;
+
+        const auto& id = m_Registry.get<Component::Relationship>(entity).parentUUID;
+        if (id.empty())
+            return entt::null;
+
+        if (m_SnapshotReady)
+        {
+            const auto it = m_ParentIndex.find(entity);
+            return it == m_ParentIndex.end() ? entt::null : it->second;
+        }
+        auto view = m_Registry.view<uuid::EntityUUID>();
+        for (auto candidate : view)
+            if (view.get<uuid::EntityUUID>(candidate).uuid == id)
+                return candidate;
+        return entt::null;
+    }
+
+    std::vector<entt::entity> Scene::GetChildren(entt::entity entity) const
+    {
+        std::vector<entt::entity> children;
+        if (!m_Registry.valid(entity) || !m_Registry.any_of<uuid::EntityUUID>(entity))
+            return children;
+
+        const auto& id = m_Registry.get<uuid::EntityUUID>(entity).uuid;
+        auto view = m_Registry.view<Component::Relationship>();
+        for (auto candidate : view)
+            if (view.get<Component::Relationship>(candidate).parentUUID == id)
+                children.push_back(candidate);
+        return children;
+    }
+
+    bool Scene::IsDescendant(entt::entity entity, entt::entity ancestor) const
+    {
+        // An acyclic scene is enforced by SetParent; bound iteration also
+        // protects against corrupt external/serialized relationships.
+        const auto limit = m_Registry.storage<entt::entity>()->size();
+        for (std::size_t i = 0; i < limit &&
+             entity != entt::null && m_Registry.valid(entity); ++i)
+        {
+            if (entity == ancestor)
+                return true;
+            entity = GetParent(entity);
+        }
+        return false;
+    }
+
+    glm::mat4 Scene::GetWorldTransform(entt::entity entity) const
+    {
+        glm::mat4 result(1.0f);
+        // Pre-multiply ancestors: parent * child, no temporary allocations.
+        // The bound also prevents endless traversal of malformed relationships.
+        const auto limit = m_Registry.storage<entt::entity>()->size();
+        for (std::size_t i = 0; i < limit &&
+             entity != entt::null && m_Registry.valid(entity); ++i)
+        {
+            if (m_Registry.any_of<Component::Transform2D>(entity))
+                result = m_Registry.get<Component::Transform2D>(entity).GetTransform() * result;
+            entity = GetParent(entity);
+        }
+        return result;
+    }
+
+    void Scene::RebuildWorldTransformSnapshot() const
+    {
+        m_UUIDIndex.clear();
+        m_ParentIndex.clear();
+        m_WorldSnapshot.clear();
+
+        auto ids = m_Registry.view<uuid::EntityUUID>();
+        m_UUIDIndex.reserve(m_Registry.storage<uuid::EntityUUID>()->size());
+        for (auto entity : ids)
+            m_UUIDIndex.emplace(ids.get<uuid::EntityUUID>(entity).uuid, entity);
+
+        auto relationships = m_Registry.view<Component::Relationship>();
+        m_ParentIndex.reserve(m_Registry.storage<Component::Relationship>()->size());
+        for (auto entity : relationships)
+        {
+            const auto& id = relationships.get<Component::Relationship>(entity).parentUUID;
+            auto parent = m_UUIDIndex.find(id);
+            if (parent != m_UUIDIndex.end() && parent->second != entity)
+                m_ParentIndex.emplace(entity, parent->second);
+        }
+        m_SnapshotReady = true;
+    }
+
+    glm::mat4 Scene::GetSnapshotWorldTransform(entt::entity entity) const
+    {
+        GetSnapshotWorldPose2D(entity);
+        auto it = m_WorldSnapshot.find(entity);
+        return it == m_WorldSnapshot.end() ? glm::mat4(1.0f) : it->second.matrix;
+    }
+
+    Component::Transform2D Scene::GetSnapshotWorldPose2D(entt::entity entity) const
+    {
+        if (!m_SnapshotReady)
+            RebuildWorldTransformSnapshot();
+
+        if (auto found = m_WorldSnapshot.find(entity); found != m_WorldSnapshot.end())
+            return found->second.pose;
+        if (!m_Registry.valid(entity))
+            return {};
+
+        std::vector<entt::entity> chain;
+        chain.reserve(8);
+        entt::entity cursor = entity;
+        const std::size_t maxDepth = m_Registry.storage<entt::entity>()->size();
+        for (std::size_t i = 0; i < maxDepth && cursor != entt::null; ++i)
+        {
+            if (m_WorldSnapshot.contains(cursor))
+                break;
+            if (std::find(chain.begin(), chain.end(), cursor) != chain.end())
+                break;
+            chain.push_back(cursor);
+            const auto it = m_ParentIndex.find(cursor);
+            cursor = it == m_ParentIndex.end() ? entt::null : it->second;
+        }
+
+        WorldSnapshotEntry parent{};
+        if (auto known = m_WorldSnapshot.find(cursor); known != m_WorldSnapshot.end())
+            parent = known->second;
+
+        for (auto it = chain.rbegin(); it != chain.rend(); ++it)
+        {
+            if (!m_Registry.any_of<Component::Transform2D>(*it))
+                continue;
+
+            const auto& local = m_Registry.get<Component::Transform2D>(*it);
+            WorldSnapshotEntry current;
+            const bool hasParent = m_ParentIndex.contains(*it);
+            if (!hasParent)
+            {
+                current.pose = local;
+                current.matrix = local.GetTransform();
+                current.uniformScale = std::abs(local.scale.x - local.scale.y) < 0.00001f;
+            }
+            else if (parent.uniformScale && parent.pose.scale.x > 0.0f &&
+                     std::abs(local.scale.x - local.scale.y) < 0.00001f)
+            {
+                // Uniform scale + rotation preserves ordinary TRS composition.
+                const float angle = glm::radians(parent.pose.rotation);
+                const float c = std::cos(angle), s = std::sin(angle);
+                const glm::vec2 scaled = local.position * parent.pose.scale;
+                current.pose.position = parent.pose.position +
+                    glm::vec2(c * scaled.x - s * scaled.y,
+                              s * scaled.x + c * scaled.y);
+                current.pose.rotation = parent.pose.rotation + local.rotation;
+                current.pose.scale = parent.pose.scale * local.scale;
+                current.uniformScale = true;
+                current.matrix = current.pose.GetTransform();
+            }
+            else
+            {
+                // Mixed nonuniform scale and rotation may produce shear.
+                current.matrix = parent.matrix * local.GetTransform();
+                current.pose.SetFromMatrix(current.matrix);
+                current.uniformScale = false;
+            }
+            parent = current;
+            m_WorldSnapshot.insert_or_assign(*it, current);
+        }
+        auto result = m_WorldSnapshot.find(entity);
+        return result != m_WorldSnapshot.end() ? result->second.pose : Component::Transform2D{};
+    }
+
+    bool Scene::SetWorldTransform(entt::entity entity, const glm::mat4& world)
+    {
+        if (!HasComponent<Component::Transform2D>(entity))
+            return false;
+
+        auto& transform = GetComponent<Component::Transform2D>(entity);
+        // Root entities are already in world space.
+        if (!HasComponent<Component::Relationship>(entity) || GetParent(entity) == entt::null)
+        {
+            transform.SetFromMatrix(world);
+            return true;
+        }
+
+        const glm::mat4 parentWorld = GetWorldTransform(GetParent(entity));
+        if (std::abs(glm::determinant(parentWorld)) < 0.000001f)
+            return false;
+        transform.SetFromMatrix(glm::inverse(parentWorld) * world);
+        return true;
+    }
+
+    bool Scene::SetWorldPose2D(entt::entity entity, glm::vec2 position, float rotationDegrees)
+    {
+        if (!HasComponent<Component::Transform2D>(entity))
+            return false;
+
+        auto& local = GetComponent<Component::Transform2D>(entity);
+        if (!m_Registry.any_of<Component::Relationship>(entity))
+        {
+            local.position = position;
+            local.rotation = rotationDegrees;
+            return true;
+        }
+        const entt::entity parent = GetParent(entity);
+        if (parent == entt::null)
+        {
+            local.position = position;
+            local.rotation = rotationDegrees;
+            return true;
+        }
+
+        const glm::mat4 parentWorld = GetWorldTransform(parent);
+        if (std::abs(glm::determinant(parentWorld)) < 0.000001f)
+            return false;
+
+        // Keep the current local scale; the physics body controls only pose.
+        const glm::mat4 inverseParent = glm::inverse(parentWorld);
+        const glm::vec4 localPosition = inverseParent * glm::vec4(position, 0.0f, 1.0f);
+        local.position = glm::vec2(localPosition);
+        // The direction basis accounts for ancestor rotations without extra
+        // world-transform decomposition of the child itself.
+        const glm::vec2 xAxis = glm::vec2(inverseParent * glm::vec4(
+            std::cos(glm::radians(rotationDegrees)), std::sin(glm::radians(rotationDegrees)), 0.0f, 0.0f));
+        local.rotation = glm::degrees(std::atan2(xAxis.y, xAxis.x));
+        return true;
+    }
+
+    bool Scene::SetParent(entt::entity child, entt::entity parent, bool keepWorld)
+    {
+        if (!m_Registry.valid(child) || !HasComponent<uuid::EntityUUID>(child) ||
+            (parent != entt::null && (!m_Registry.valid(parent) ||
+                                       !HasComponent<uuid::EntityUUID>(parent))) ||
+            child == parent ||
+            (parent != entt::null && IsDescendant(parent, child)))
+            return false;
+
+        if (GetParent(child) == parent)
+            return true;
+
+        const bool preserve = keepWorld && HasComponent<Component::Transform2D>(child);
+        const glm::mat4 world = preserve
+            ? GetWorldTransform(child) : glm::mat4(1.0f);
+        const glm::mat4 parentWorld = preserve && parent != entt::null
+            ? GetWorldTransform(parent) : glm::mat4(1.0f);
+        if (preserve &&
+            std::abs(glm::determinant(parentWorld)) < 0.000001f)
+            return false;
+
+        if (parent == entt::null)
+            m_Registry.remove<Component::Relationship>(child);
+        else
+            m_Registry.emplace_or_replace<Component::Relationship>(
+                child, m_Registry.get<uuid::EntityUUID>(parent).uuid);
+
+        // Rebuilding immediately keeps public parent queries correct.
+        m_SnapshotReady = false;
+        if (preserve)
+            SetWorldTransform(child, world);
+        return true;
     }
 
     void Scene::DestroyEntity(entt::entity entity)
@@ -366,10 +682,20 @@ namespace anv
         if (entity == entt::null || !m_Registry.valid(entity))
             return;
 
+        // Orphan children without jumping to a new world position.
+        for (auto child : GetChildren(entity))
+            SetParent(child, entt::null, true);
+
         if (m_PhysicsSystem2D)
             m_PhysicsSystem2D->DestroyBody(entity);
 
         PythonScriptEngine::DestroyEntity(*this, entity);
         m_Registry.destroy(entity);
+        m_SnapshotReady = false;
+    }
+
+    float Scene::GetPhysStepTime()
+    {
+        return m_PhysicsSystem2D->m_StepTimer; 
     }
 }

@@ -2,6 +2,7 @@
 #include "../Core/Reference.h"
 #include "RenderPass.h"
 #include "Shader.h"
+#include "RenderCommandEncoderTypes.h"
 
 namespace anv
 {
@@ -77,6 +78,7 @@ namespace anv
 		virtual void SetRasterizationSettings(const RasterizationSettings* _raster) = 0;
 		virtual void SetColorBlendSettings(const ColorBlendSettings* _colbld)       = 0;
 		virtual void SetRenderPass(const Ref<RenderPass> _rps) = 0;
+        virtual void SetPushConstants(const PushConstantRange& range) = 0;
 		virtual void Build() = 0;
 		virtual void Bind(Ref<CommandBuffer> _cmd) = 0;
 

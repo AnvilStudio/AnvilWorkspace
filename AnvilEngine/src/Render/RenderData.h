@@ -15,18 +15,16 @@ namespace anv
     struct Quad
     {
         static inline QuadVertex vertices[4] =
-        {
-            {{-0.5f, -0.5f}, {0.0f, 0.0f}},
-            {{ 0.5f, -0.5f}, {1.0f, 0.0f}},
-            {{ 0.5f,  0.5f}, {1.0f, 1.0f}},
-            {{-0.5f,  0.5f}, {0.0f, 1.0f}}
-        };
+            {
+                {{-0.5f, -0.5f}, {0.0f, 0.0f}},
+                {{0.5f, -0.5f}, {1.0f, 0.0f}},
+                {{0.5f, 0.5f}, {1.0f, 1.0f}},
+                {{-0.5f, 0.5f}, {0.0f, 1.0f}}};
 
         static inline uint32_t indices[6] =
-        {
-            0, 1, 2,
-            2, 3, 0
-        };
+            {
+                0, 1, 2,
+                2, 3, 0};
     };
 
     struct QuadSubmission
@@ -38,4 +36,13 @@ namespace anv
         Ref<Texture> TextureAsset = nullptr;
         int Layer = 0;
     };
+
+    struct BatchVertex
+    {
+        glm::vec2 Position;
+        glm::vec2 TexCoord;
+        glm::vec4 Color;
+    };
+
+    static_assert(sizeof(BatchVertex) == 32);
 }

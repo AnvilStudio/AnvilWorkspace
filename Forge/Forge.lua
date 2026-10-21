@@ -34,7 +34,8 @@ project "Forge"
     postbuildcommands
     {
         '{MKDIR} "%{cfg.targetdir}/Anvil"',
-        '{COPYDIR} "%{wks.location}/AnvilEngine/Resources" "%{cfg.targetdir}/Anvil"'
+        '{COPYDIR} "%{wks.location}/AnvilEngine/Resources" "%{cfg.targetdir}/Anvil"',
+        '{COPYDIR} "%{wks.location}/Forge/Resources" "%{cfg.targetdir}/ForgeResources"'
     }
 
 filter "system:macosx"

@@ -216,14 +216,20 @@ namespace anv
         id<MTLCommandBuffer> commandBuffer = (__bridge id<MTLCommandBuffer>)m_CurrentCommandBuffer;
         id<MTLRenderCommandEncoder> encoder = (__bridge id<MTLRenderCommandEncoder>)m_CurrentEncoder;
 
-        encode_quads(m_CurrentEncoder, m_Camera);
-        m_ImGuiLayer->Render({
-            .nativeCommandBuffer = (__bridge void*)commandBuffer,
-            .nativeRenderEncoder = (__bridge void*)encoder
-        });
-        [encoder endEncoding];
-        [commandBuffer presentDrawable:drawable];
-        [commandBuffer commit];
+        {
+            ANV_PROFILE_ZONE(MetalEncode);
+            encode_quads(m_CurrentEncoder, m_Camera);
+            m_ImGuiLayer->Render({
+                .nativeCommandBuffer = (__bridge void*)commandBuffer,
+                .nativeRenderEncoder = (__bridge void*)encoder
+            });
+            [encoder endEncoding];
+        }
+        {
+            ANV_PROFILE_ZONE(MetalCommit);
+            [commandBuffer presentDrawable:drawable];
+            [commandBuffer commit];
+        }
 
         m_Stats.DrawCalls = static_cast<uint32_t>(m_QuadQueue.size());
 

@@ -7,6 +7,7 @@
 #include "Camera.h"
 #include "Framebuffer.h"
 #include "RenderStats.h"
+#include "RenderOverlay.h"
 #include <glm/glm.hpp>
 
 namespace anv
@@ -38,6 +39,12 @@ namespace anv
         virtual void BeginScene() = 0;
         virtual void BeginScene(Ref<RenderTarget> renderTarget) = 0;
         virtual void DrawScene(Ref<RenderTarget> renderTarget, _shared<Camera2D> camera) = 0;
+        virtual void DrawScene(Ref<RenderTarget> target, _shared<Camera2D> camera, const RenderOverlays& overlays)
+        {
+            ANV_ASSERT(overlays.empty(), "Custom overlays are unsupported on this backend");
+            DrawScene(target, camera);
+        }
+        virtual void DrawMainScene(_shared<Camera2D> camera) { (void)camera; }
         virtual void DrawQuad(
             const glm::vec2& position,
             float rotation,

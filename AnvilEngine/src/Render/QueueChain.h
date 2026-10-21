@@ -29,12 +29,24 @@ namespace anv
         void WriteToBack(Task _task);
         void Swap();
         void WaitForProcessComplete();
+        struct WorkerTimings
+        {
+            float begin = 0.0f;
+            float tasks = 0.0f;
+            float end = 0.0f;
+            float submit = 0.0f;
+            float total = 0.0f;
+        };
+        WorkerTimings GetWorkerTimings() const;
+        struct SpriteTaskTimings { float sort=0, build=0, upload=0, commands=0; };
+        void AccumulateSpriteTaskTimings(const SpriteTaskTimings& timings);
+        SpriteTaskTimings GetSpriteTaskTimings() const;
 
         // New: clear both queues (or just back) safely
         void ClearBack();
         void ClearAll();
 
-        // New: “hard stop” for swapchain recreation:
+        // New: hard stop for swapchain recreation:
         // - Wait for any in-flight processing
         // - Clear any queued work that might reference old swapchain
         void Flush();
@@ -55,6 +67,9 @@ namespace anv
 
         std::mutex m_Mutex;
         std::condition_variable m_CV;
+        std::condition_variable m_CompleteCV;
+        WorkerTimings m_WorkerTimings{};
+        SpriteTaskTimings m_SpriteTaskTimings{};
 
         std::atomic<bool> m_StopProc{ false };
         std::atomic<bool> m_ThreadRunning{ false };
