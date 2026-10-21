@@ -9,6 +9,7 @@
 #include "VulkanTexture.h"
 #include "Render/RenderData.h"
 #include "VulkanPipeline.h"
+#include "VulkanRenderCommandEncoder.h"
 
 #include <Util/Time/Time.h>
 #include <glm/ext/matrix_transform.hpp>
@@ -189,9 +190,15 @@ namespace anv
         m_MainSceneSubmitted = true;
     }
 
+    void VulkanRenderAPI::DrawScene(Ref<RenderTarget> target, _shared<Camera2D> camera)
+    {
+        DrawScene(target, camera, {});
+    }
+
     void VulkanRenderAPI::DrawScene(
 		Ref<RenderTarget> _renderTarget,
-		_shared<Camera2D> camera)
+		_shared<Camera2D> camera,
+        const RenderOverlays& overlays)
 	{
 		ANV_ASSERT(_renderTarget, "DrawScene requires a render target");
 		ANV_ASSERT(camera, "DrawScene requires a camera");
@@ -201,6 +208,12 @@ namespace anv
 		const glm::mat4 sceneViewProjection =
 			camera->GetCameraUBO().ViewProjection;
 
+        auto orderedOverlays = overlays;
+        std::stable_sort(orderedOverlays.begin(), orderedOverlays.end(),
+            [](const RenderOverlay& a, const RenderOverlay& b) {
+                if (a.stage != b.stage) return a.stage < b.stage;
+                return a.priority < b.priority;
+            });
 		auto sceneQuads = m_QuadQueue;
 		auto pipeline = m_PipelineLibrary.Get("Sprite", _renderTarget);
 
@@ -361,8 +374,14 @@ namespace anv
 
 				auto vkCmd = cmd.As<VulkanCommandBuffer>();
 
-				_renderTarget->Begin(cmd);
-				pipeline->Bind(cmd);
+                _renderTarget->Begin(cmd);
+                VulkanRenderCommandEncoder overlayEncoder(cmd);
+                auto runOverlays = [&](RenderOverlayStage stage) {
+                    for (const auto& overlay : orderedOverlays)
+                        if (overlay.stage == stage && overlay.callback)
+                            overlay.callback(overlayEncoder);
+                };
+                pipeline->Bind(cmd);
 
 				VkViewport vp{};
 				vp.x = 0.0f;
@@ -389,6 +408,8 @@ namespace anv
 
 				vkCmdSetScissor(vkCmd->Get(), 0, 1, &sc);
 
+                runOverlays(RenderOverlayStage::BeforeScene);
+                pipeline->Bind(cmd); // restore sprite pipeline after client drawing
 				VkBuffer vertexBuffer = vkVB->GetBuffer();
 				VkDeviceSize vertexOffset = 0;
 
@@ -448,7 +469,8 @@ namespace anv
 					++drawCalls;
 				}
 
-				m_RenderStats.DrawCalls = drawCalls;
+                m_RenderStats.DrawCalls = drawCalls;
+                runOverlays(RenderOverlayStage::AfterScene);
 
 				_renderTarget->End(cmd);
                 spriteTimes.commands = elapsed(commandStart);

@@ -88,6 +88,7 @@ namespace anv
         static void SetCamera(_shared<Camera2D> mainCamera);
         static void BeginScene();
         static void DrawScene(Ref<RenderTarget> renderTarget, _shared<Camera2D> camera);
+        static void DrawScene(Ref<RenderTarget> target, _shared<Camera2D> camera, const RenderOverlays& overlays);
         static void DrawMainScene(_shared<Camera2D> camera);
         static void EndScene();
 

@@ -216,6 +216,14 @@ namespace anv
 		m_PushRange.size = _size;
 	}
 
+    void VulkanPipeline::SetPushConstants(const PushConstantRange& range)
+    {
+        VkShaderStageFlags flags = 0;
+        if (range.stageMask & 1u) flags |= VK_SHADER_STAGE_VERTEX_BIT;
+        if (range.stageMask & 2u) flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+        m_PushRange = {flags, range.offset, range.size};
+    }
+
 	void VulkanPipeline::Build()
 	{
 		ANV_ASSERT(m_RenderPass != VK_NULL_HANDLE, "Render pass not set");

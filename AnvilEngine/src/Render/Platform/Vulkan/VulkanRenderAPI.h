@@ -29,6 +29,7 @@ namespace anv
 		virtual void BeginScene(Ref<RenderTarget> _renderTarget) override;
 		virtual void BeginScene() override;
 		virtual void DrawScene(Ref<RenderTarget> _renderTarget, _shared<Camera2D> camera) override;
+        void DrawScene(Ref<RenderTarget> target, _shared<Camera2D> camera, const RenderOverlays& overlays) override;
         virtual void DrawMainScene(_shared<Camera2D> camera) override;
 		virtual void DrawQuad(
 			const glm::vec2 &position,
