@@ -233,26 +233,20 @@ void InspectorLayer::Draw(
                     property_color4("Color", &sprite.color.x);
                     ImGui::TableNextRow();
                     property_int("Draw Layer", &sprite.drawLayer);
-                    ImGui::TableNextRow();
 
-                    // UVs
+                    ImGui::TableNextRow();
                     if (property_float2("UV Min", &sprite.uvMin.x))
                     {
-                        sprite.uvMin = glm::clamp(
-                            sprite.uvMin,
-                            glm::vec2(0.0f),
-                            glm::vec2(1.0f));
+                        sprite.uvMin = glm::clamp(sprite.uvMin, glm::vec2(0.0f), glm::vec2(1.0f));
+                        scene->Save();
                     }
 
                     ImGui::TableNextRow();
                     if (property_float2("UV Max", &sprite.uvMax.x))
                     {
-                        sprite.uvMax = glm::clamp(
-                            sprite.uvMax,
-                            glm::vec2(0.0f),
-                            glm::vec2(1.0f));
+                        sprite.uvMax = glm::clamp(sprite.uvMax, glm::vec2(0.0f), glm::vec2(1.0f));
+                        scene->Save();
                     }
-
                     ImGui::EndTable();
                 }
             });
