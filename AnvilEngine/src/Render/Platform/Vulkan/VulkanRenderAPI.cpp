@@ -53,10 +53,10 @@ namespace anv
 		auto vkCtx = m_Context->GetAs<VulkanContext>();
 		auto &fr = m_Frames[m_FrameIndex];
 
-        {
-            ANV_PROFILE_ZONE(GPUFenceWait);
-            vkWaitForFences(vkCtx->GetDevice(), 1, &fr.sync.inFlightFence, VK_TRUE, UINT64_MAX);
-        }
+		{
+			ANV_PROFILE_ZONE(GPUFenceWait);
+			vkWaitForFences(vkCtx->GetDevice(), 1, &fr.sync.inFlightFence, VK_TRUE, UINT64_MAX);
+		}
 
 		m_FrameVertexOffsets[m_FrameIndex] = 0;
 
@@ -66,11 +66,11 @@ namespace anv
 			MaxBatchQuads * 4 * sizeof(BatchVertex);
 		vbInfo.Dynamic = true;
 
-        uint32_t imageIndex = 0;
-        {
-            ANV_PROFILE_ZONE(SwapchainAcquire);
-            imageIndex = m_SwapchainTarget->AcquireNextImage(fr.sync.imageAvailable, m_SwapRecreateFlag);
-        }
+		uint32_t imageIndex = 0;
+		{
+			ANV_PROFILE_ZONE(SwapchainAcquire);
+			imageIndex = m_SwapchainTarget->AcquireNextImage(fr.sync.imageAvailable, m_SwapRecreateFlag);
+		}
 		if (m_SwapRecreateFlag)
 		{
 			ANV_LOG_INFO("SwapChain recreation due to window resize")
@@ -99,48 +99,47 @@ namespace anv
 			vkCmd->Submit(fr2.sync.imageAvailable, fr2.sync.renderFinished, fr2.sync.inFlightFence); });
 
 		if (!m_MainSceneSubmitted)
-        {
-            m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext &frame)
-            {
+		{
+			m_RenderCmdChain->WriteToBack([=](Ref<CommandBuffer> cmd, const RenderFrameContext &frame)
+										  {
                 m_SwapchainTarget->Begin(cmd);
                 m_ImGuiLayer->Render({.commandBuffer = cmd});
-                m_SwapchainTarget->End(cmd);
-            });
-        }
-        m_MainSceneSubmitted = false;
+                m_SwapchainTarget->End(cmd); });
+		}
+		m_MainSceneSubmitted = false;
 
-        {
-            ANV_PROFILE_ZONE(RenderSubmitWait);
-            {
-                ANV_PROFILE_ZONE(RenderQueueSwap);
-                m_RenderCmdChain->Swap();
-            }
-            {
-                ANV_PROFILE_ZONE(RenderWorkerWait);
-                m_RenderCmdChain->WaitForProcessComplete();
-            }
-            // Read published worker timings only after the completion signal.
-            const auto worker = m_RenderCmdChain->GetWorkerTimings();
-            FrameProfiler::Record(FrameProfiler::Zone::WorkerBegin, worker.begin);
-            FrameProfiler::Record(FrameProfiler::Zone::WorkerTasks, worker.tasks);
-            FrameProfiler::Record(FrameProfiler::Zone::WorkerEnd, worker.end);
-            FrameProfiler::Record(FrameProfiler::Zone::WorkerSubmit, worker.submit);
-            FrameProfiler::Record(FrameProfiler::Zone::WorkerTotal, worker.total);
-            const auto sprites = m_RenderCmdChain->GetSpriteTaskTimings();
-            FrameProfiler::Record(FrameProfiler::Zone::SpriteSort, sprites.sort);
-            FrameProfiler::Record(FrameProfiler::Zone::SpriteBuild, sprites.build);
-            FrameProfiler::Record(FrameProfiler::Zone::SpriteUpload, sprites.upload);
-            FrameProfiler::Record(FrameProfiler::Zone::SpriteCommands, sprites.commands);
-            {
-                ANV_PROFILE_ZONE(ImGuiFinish);
-                m_ImGuiLayer->FinishFrame();
-            }
-        }
+		{
+			ANV_PROFILE_ZONE(RenderSubmitWait);
+			{
+				ANV_PROFILE_ZONE(RenderQueueSwap);
+				m_RenderCmdChain->Swap();
+			}
+			{
+				ANV_PROFILE_ZONE(RenderWorkerWait);
+				m_RenderCmdChain->WaitForProcessComplete();
+			}
+			// Read published worker timings only after the completion signal.
+			const auto worker = m_RenderCmdChain->GetWorkerTimings();
+			FrameProfiler::Record(FrameProfiler::Zone::WorkerBegin, worker.begin);
+			FrameProfiler::Record(FrameProfiler::Zone::WorkerTasks, worker.tasks);
+			FrameProfiler::Record(FrameProfiler::Zone::WorkerEnd, worker.end);
+			FrameProfiler::Record(FrameProfiler::Zone::WorkerSubmit, worker.submit);
+			FrameProfiler::Record(FrameProfiler::Zone::WorkerTotal, worker.total);
+			const auto sprites = m_RenderCmdChain->GetSpriteTaskTimings();
+			FrameProfiler::Record(FrameProfiler::Zone::SpriteSort, sprites.sort);
+			FrameProfiler::Record(FrameProfiler::Zone::SpriteBuild, sprites.build);
+			FrameProfiler::Record(FrameProfiler::Zone::SpriteUpload, sprites.upload);
+			FrameProfiler::Record(FrameProfiler::Zone::SpriteCommands, sprites.commands);
+			{
+				ANV_PROFILE_ZONE(ImGuiFinish);
+				m_ImGuiLayer->FinishFrame();
+			}
+		}
 
-        {
-            ANV_PROFILE_ZONE(Present);
-            m_SwapchainTarget->Present(vkCtx->GetPresentQueue(), fr.sync.renderFinished, m_SwapRecreateFlag);
-        }
+		{
+			ANV_PROFILE_ZONE(Present);
+			m_SwapchainTarget->Present(vkCtx->GetPresentQueue(), fr.sync.renderFinished, m_SwapRecreateFlag);
+		}
 		if (m_SwapRecreateFlag)
 		{
 			recreate_swap();
@@ -184,21 +183,22 @@ namespace anv
 	}
 
 	void VulkanRenderAPI::DrawMainScene(_shared<Camera2D> camera)
-    {
-        if (!camera) return;
-        DrawScene(m_SwapchainTarget, camera);
-        m_MainSceneSubmitted = true;
-    }
+	{
+		if (!camera)
+			return;
+		DrawScene(m_SwapchainTarget, camera);
+		m_MainSceneSubmitted = true;
+	}
 
-    void VulkanRenderAPI::DrawScene(Ref<RenderTarget> target, _shared<Camera2D> camera)
-    {
-        DrawScene(target, camera, {});
-    }
+	void VulkanRenderAPI::DrawScene(Ref<RenderTarget> target, _shared<Camera2D> camera)
+	{
+		DrawScene(target, camera, {});
+	}
 
-    void VulkanRenderAPI::DrawScene(
+	void VulkanRenderAPI::DrawScene(
 		Ref<RenderTarget> _renderTarget,
 		_shared<Camera2D> camera,
-        const RenderOverlays& overlays)
+		const RenderOverlays &overlays)
 	{
 		ANV_ASSERT(_renderTarget, "DrawScene requires a render target");
 		ANV_ASSERT(camera, "DrawScene requires a camera");
@@ -208,12 +208,14 @@ namespace anv
 		const glm::mat4 sceneViewProjection =
 			camera->GetCameraUBO().ViewProjection;
 
-        auto orderedOverlays = overlays;
-        std::stable_sort(orderedOverlays.begin(), orderedOverlays.end(),
-            [](const RenderOverlay& a, const RenderOverlay& b) {
-                if (a.stage != b.stage) return a.stage < b.stage;
-                return a.priority < b.priority;
-            });
+		auto orderedOverlays = overlays;
+		std::stable_sort(orderedOverlays.begin(), orderedOverlays.end(),
+						 [](const RenderOverlay &a, const RenderOverlay &b)
+						 {
+							 if (a.stage != b.stage)
+								 return a.stage < b.stage;
+							 return a.priority < b.priority;
+						 });
 		auto sceneQuads = m_QuadQueue;
 		auto pipeline = m_PipelineLibrary.Get("Sprite", _renderTarget);
 
@@ -223,13 +225,15 @@ namespace anv
 			[=, this](Ref<CommandBuffer> cmd,
 					  const RenderFrameContext &frame) mutable
 			{
-                using SpriteClock = std::chrono::steady_clock;
-                const auto spriteStart = SpriteClock::now();
-                QueueChain::SpriteTaskTimings spriteTimes{};
-                auto elapsed = [](SpriteClock::time_point start) {
-                    return std::chrono::duration<float, std::milli>(
-                        SpriteClock::now() - start).count();
-                };
+				using SpriteClock = std::chrono::steady_clock;
+				const auto spriteStart = SpriteClock::now();
+				QueueChain::SpriteTaskTimings spriteTimes{};
+				auto elapsed = [](SpriteClock::time_point start)
+				{
+					return std::chrono::duration<float, std::milli>(
+							   SpriteClock::now() - start)
+						.count();
+				};
 				// Preserve layer ordering and same-layer submission order.
 				std::stable_sort(
 					sceneQuads.begin(),
@@ -239,8 +243,8 @@ namespace anv
 						return a.Layer < b.Layer;
 					});
 
-                spriteTimes.sort = elapsed(spriteStart);
-                const auto buildStart = SpriteClock::now();
+				spriteTimes.sort = elapsed(spriteStart);
+				const auto buildStart = SpriteClock::now();
 
 				struct Batch
 				{
@@ -258,16 +262,19 @@ namespace anv
 				vertices.resize(sceneQuads.size() * 4);
 				batches.reserve(sceneQuads.size());
 
-				const glm::vec2 uv[4] = {
-					{0.0f, 0.0f}, {1.0f, 0.0f},
-					{1.0f, 1.0f}, {0.0f, 1.0f}};
-
 				// ---- CPU batching ----
 
 				std::size_t quadIndex = 0;
 				for (const auto &quad : sceneQuads)
 				{
 					Ref<VulkanTexture> texture = m_WhiteTexture;
+
+					// Build UVs
+					const glm::vec2 uv[4] = {
+						{quad.UVMin.x, quad.UVMin.y},
+						{quad.UVMax.x, quad.UVMin.y},
+						{quad.UVMax.x, quad.UVMax.y},
+						{quad.UVMin.x, quad.UVMax.y}};
 
 					if (quad.TextureAsset)
 					{
@@ -302,11 +309,10 @@ namespace anv
 					const float c = quad.Rotation == 0.0f ? 1.0f : std::cos(angle);
 					const float sn = quad.Rotation == 0.0f ? 0.0f : std::sin(angle);
 					const glm::vec2 local[4] = {
-						{-halfX, -halfY}, {halfX, -halfY},
-						{halfX, halfY}, {-halfX, halfY}};
+						{-halfX, -halfY}, {halfX, -halfY}, {halfX, halfY}, {-halfX, halfY}};
 					for (uint32_t i = 0; i < 4; ++i)
 					{
-						BatchVertex& vertex = vertices[quadIndex * 4 + i];
+						BatchVertex &vertex = vertices[quadIndex * 4 + i];
 						vertex.Position = {
 							quad.Position.x + c * local[i].x - sn * local[i].y,
 							quad.Position.y + sn * local[i].x + c * local[i].y};
@@ -318,7 +324,7 @@ namespace anv
 					++quadIndex;
 				}
 
-                spriteTimes.build = elapsed(buildStart);
+				spriteTimes.build = elapsed(buildStart);
 				m_RenderStats.BatchCount = batches.size();
 
 				// ---- Acquire space in this frame's vertex buffer ----
@@ -353,7 +359,7 @@ namespace anv
 
 				const VkDeviceSize uploadOffset = cursor;
 
-                const auto uploadStart = SpriteClock::now();
+				const auto uploadStart = SpriteClock::now();
 				if (uploadSize > 0)
 				{
 					vkVB->SetData(
@@ -364,8 +370,8 @@ namespace anv
 					cursor += uploadSize;
 				}
 
-                spriteTimes.upload = elapsed(uploadStart);
-                const auto commandStart = SpriteClock::now();
+				spriteTimes.upload = elapsed(uploadStart);
+				const auto commandStart = SpriteClock::now();
 				const int32_t baseVertex =
 					static_cast<int32_t>(
 						uploadOffset / sizeof(BatchVertex));
@@ -374,27 +380,28 @@ namespace anv
 
 				auto vkCmd = cmd.As<VulkanCommandBuffer>();
 
-                _renderTarget->Begin(cmd);
-                VulkanRenderCommandEncoder overlayEncoder(cmd);
-                auto runOverlays = [&](RenderOverlayStage stage) {
-                    for (const auto& overlay : orderedOverlays)
-                        if (overlay.stage == stage && overlay.callback)
-                            overlay.callback(overlayEncoder);
-                };
-                pipeline->Bind(cmd);
+				_renderTarget->Begin(cmd);
+				VulkanRenderCommandEncoder overlayEncoder(cmd);
+				auto runOverlays = [&](RenderOverlayStage stage)
+				{
+					for (const auto &overlay : orderedOverlays)
+						if (overlay.stage == stage && overlay.callback)
+							overlay.callback(overlayEncoder);
+				};
+				pipeline->Bind(cmd);
 
 				VkViewport vp{};
 				vp.x = 0.0f;
 				vp.y = 0.0f;
 				vp.width = static_cast<float>(_renderTarget->GetWidth());
-                // Vulkan's direct-to-swapchain image has no ImGui UV flip.
-                // Keep the existing offscreen viewport convention for Forge.
-                const bool mainWindowTarget = _renderTarget == m_SwapchainTarget;
-                vp.height = mainWindowTarget
-                    ? -static_cast<float>(_renderTarget->GetHeight())
-                    : static_cast<float>(_renderTarget->GetHeight());
-                if (mainWindowTarget)
-                    vp.y = static_cast<float>(_renderTarget->GetHeight());
+				// Vulkan's direct-to-swapchain image has no ImGui UV flip.
+				// Keep the existing offscreen viewport convention for Forge.
+				const bool mainWindowTarget = _renderTarget == m_SwapchainTarget;
+				vp.height = mainWindowTarget
+								? -static_cast<float>(_renderTarget->GetHeight())
+								: static_cast<float>(_renderTarget->GetHeight());
+				if (mainWindowTarget)
+					vp.y = static_cast<float>(_renderTarget->GetHeight());
 				vp.minDepth = 0.0f;
 				vp.maxDepth = 1.0f;
 
@@ -408,8 +415,8 @@ namespace anv
 
 				vkCmdSetScissor(vkCmd->Get(), 0, 1, &sc);
 
-                runOverlays(RenderOverlayStage::BeforeScene);
-                pipeline->Bind(cmd); // restore sprite pipeline after client drawing
+				runOverlays(RenderOverlayStage::BeforeScene);
+				pipeline->Bind(cmd); // restore sprite pipeline after client drawing
 				VkBuffer vertexBuffer = vkVB->GetBuffer();
 				VkDeviceSize vertexOffset = 0;
 
@@ -469,19 +476,26 @@ namespace anv
 					++drawCalls;
 				}
 
-                m_RenderStats.DrawCalls = drawCalls;
-                runOverlays(RenderOverlayStage::AfterScene);
+				m_RenderStats.DrawCalls = drawCalls;
+				runOverlays(RenderOverlayStage::AfterScene);
 
 				_renderTarget->End(cmd);
-                spriteTimes.commands = elapsed(commandStart);
-                m_RenderCmdChain->AccumulateSpriteTaskTimings(spriteTimes);
+				spriteTimes.commands = elapsed(commandStart);
+				m_RenderCmdChain->AccumulateSpriteTaskTimings(spriteTimes);
 			});
 	}
 
-	void VulkanRenderAPI::DrawQuad(const glm::vec2 &position, float rotation, const glm::vec2 &size,
-								   glm::vec4 color, Ref<Texture> texture, int layer)
+	void VulkanRenderAPI::DrawQuad(
+		const glm::vec2 &position,
+		float rotation,
+		const glm::vec2 &size,
+		glm::vec4 color,
+		Ref<Texture> texture,
+		int layer,
+		glm::vec2 uvMin,
+		glm::vec2 uvMax)
 	{
-		m_QuadQueue.push_back({position, rotation, size, color, texture, layer});
+		m_QuadQueue.push_back({position, rotation, size, color, texture, layer, uvMin, uvMax});
 		m_RenderStats.QuadCount++;
 	}
 

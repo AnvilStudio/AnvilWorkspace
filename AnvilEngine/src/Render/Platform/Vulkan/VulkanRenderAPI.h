@@ -31,13 +31,17 @@ namespace anv
 		virtual void DrawScene(Ref<RenderTarget> _renderTarget, _shared<Camera2D> camera) override;
         void DrawScene(Ref<RenderTarget> target, _shared<Camera2D> camera, const RenderOverlays& overlays) override;
         virtual void DrawMainScene(_shared<Camera2D> camera) override;
+
 		virtual void DrawQuad(
-			const glm::vec2 &position,
-			float rotation,
-			const glm::vec2 &size,
-			glm::vec4 color,
-			Ref<Texture> texture,
-			int layer) override;
+            const glm::vec2 &position,
+            float rotation,
+            const glm::vec2 &size,
+            glm::vec4 color,
+            Ref<Texture> texture = nullptr,
+            int layer = 0,
+            glm::vec2 uvMin = {0.0f, 0.0f},
+            glm::vec2 uvMax = {1.0f, 1.0f}) override;
+
 		virtual void EndScene() override;
 
 		virtual void SetMainCamera(_shared<Camera2D> camera) override;

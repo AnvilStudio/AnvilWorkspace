@@ -56,7 +56,7 @@ namespace anv
             }
             const auto t2 = std::chrono::steady_clock::now();
             Renderer2D::DrawQuad(world->position, world->rotation,
-                world->scale, sprite.color, texture, sprite.drawLayer);
+                world->scale, sprite.color, texture, sprite.drawLayer, sprite.uvMin, sprite.uvMax);
             const auto t3 = std::chrono::steady_clock::now();
             FrameProfiler::Record(FrameProfiler::Zone::SpriteLookup,
                 std::chrono::duration<float, std::milli>(t1 - t0).count());

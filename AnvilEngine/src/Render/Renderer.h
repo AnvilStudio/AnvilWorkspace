@@ -88,17 +88,19 @@ namespace anv
         static void SetCamera(_shared<Camera2D> mainCamera);
         static void BeginScene();
         static void DrawScene(Ref<RenderTarget> renderTarget, _shared<Camera2D> camera);
-        static void DrawScene(Ref<RenderTarget> target, _shared<Camera2D> camera, const RenderOverlays& overlays);
+        static void DrawScene(Ref<RenderTarget> target, _shared<Camera2D> camera, const RenderOverlays &overlays);
         static void DrawMainScene(_shared<Camera2D> camera);
         static void EndScene();
 
         static void DrawQuad(
-            const glm::vec2& position,
+            const glm::vec2 &position,
             float rotation,
-            const glm::vec2& size,
+            const glm::vec2 &size,
             glm::vec4 color,
             Ref<Texture> texture = nullptr,
-            int layer = 0);
+            int layer = 0,
+            glm::vec2 uvMin = {0.0f, 0.0f},
+            glm::vec2 uvMax = {1.0f, 1.0f});
 
         static void WaitIdle();
 

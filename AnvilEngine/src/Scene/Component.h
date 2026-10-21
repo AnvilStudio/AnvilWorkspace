@@ -12,40 +12,40 @@
 
 namespace anv
 {
-    template<typename T>
-    concept SerializableComponent = requires(T t, Serializer& ser)
-    {
+    template <typename T>
+    concept SerializableComponent = requires(T t, Serializer &ser) {
         t.Serialize(ser);
     };
 
-    template<typename T>
-    concept DeserializableComponent = requires(T t, Serializer& ser)
-    {
+    template <typename T>
+    concept DeserializableComponent = requires(T t, Serializer &ser) {
         t.Deserialize(ser);
     };
 
-    template<SerializableComponent T>
-    void SerializeIfPresent(entt::registry& registry, entt::entity entity,
-                            Serializer& ser, const std::string& name)
+    template <SerializableComponent T>
+    void SerializeIfPresent(entt::registry &registry, entt::entity entity,
+                            Serializer &ser, const std::string &name)
     {
         if (!registry.any_of<T>(entity))
             return;
 
-        ser.Object(name, [&]() { registry.get<T>(entity).Serialize(ser); });
+        ser.Object(name, [&]()
+                   { registry.get<T>(entity).Serialize(ser); });
     }
 
-    template<DeserializableComponent T>
-    void DeserializeIfPresent(entt::registry& registry, entt::entity entity,
-                              Serializer& ser, const std::string& name)
+    template <DeserializableComponent T>
+    void DeserializeIfPresent(entt::registry &registry, entt::entity entity,
+                              Serializer &ser, const std::string &name)
     {
         if (!ser.HasObject(name))
             return;
 
-        T& component = registry.any_of<T>(entity)
-            ? registry.get<T>(entity)
-            : registry.emplace<T>(entity);
+        T &component = registry.any_of<T>(entity)
+                           ? registry.get<T>(entity)
+                           : registry.emplace<T>(entity);
 
-        ser.Object(name, [&]() { component.Deserialize(ser); });
+        ser.Object(name, [&]()
+                   { component.Deserialize(ser); });
     }
 
     namespace Component
@@ -55,8 +55,8 @@ namespace anv
             std::string value;
             std::string Get() const { return value; }
 
-            void Serialize(Serializer& ser) { ser.Field("Value", value); }
-            void Deserialize(Serializer& ser) { ser.Field("Value", value); }
+            void Serialize(Serializer &ser) { ser.Field("Value", value); }
+            void Deserialize(Serializer &ser) { ser.Field("Value", value); }
         };
 
         // Persistent parent reference; a missing component denotes a root entity.
@@ -65,8 +65,8 @@ namespace anv
         {
             std::string parentUUID;
 
-            void Serialize(Serializer& ser) { ser.Field("Parent", parentUUID); }
-            void Deserialize(Serializer& ser) { ser.FieldOr<std::string>("Parent", parentUUID, ""); }
+            void Serialize(Serializer &ser) { ser.Field("Parent", parentUUID); }
+            void Deserialize(Serializer &ser) { ser.FieldOr<std::string>("Parent", parentUUID, ""); }
         };
 
         struct UID
@@ -80,14 +80,14 @@ namespace anv
             _shared<anv::Camera2D> camera = std::make_shared<anv::Camera2D>();
             bool isActive = false;
 
-            void Serialize(Serializer& ser)
+            void Serialize(Serializer &ser)
             {
                 float zoom = camera ? camera->GetZoom() : 1.0f;
                 ser.Field("IsActive", isActive);
                 ser.Field("Zoom", zoom);
             }
 
-            void Deserialize(Serializer& ser)
+            void Deserialize(Serializer &ser)
             {
                 float zoom = 1.0f;
                 ser.FieldOr<bool>("IsActive", isActive, false);
@@ -107,29 +107,49 @@ namespace anv
             int drawLayer = 0;
             bool visibleInGame = true;
             bool visibleInEditor = true;
+            glm::vec2 uvMin{0.0f, 0.0f};
+            glm::vec2 uvMax{1.0f, 1.0f};
 
-            void Serialize(Serializer& ser)
+            void Serialize(Serializer &ser)
             {
                 ser.Field("TextureID", texture.uuid);
+                
                 ser.Field("ColorR", color.x);
                 ser.Field("ColorG", color.y);
                 ser.Field("ColorB", color.z);
                 ser.Field("ColorA", color.w);
+
                 ser.Field("DrawLayer", drawLayer);
+
                 ser.Field("VisibleInGame", visibleInGame);
                 ser.Field("VisibleInEditor", visibleInEditor);
+
+                ser.Field("UVMinX", uvMin.x);
+                ser.Field("UVMinY", uvMin.y);
+
+                ser.Field("UVMaxX", uvMax.x);
+                ser.Field("UVMaxY", uvMax.y);
             }
 
-            void Deserialize(Serializer& ser)
+            void Deserialize(Serializer &ser)
             {
                 ser.FieldOr<std::string>("TextureID", texture.uuid, "");
+
                 ser.FieldOr<float>("ColorR", color.x, 1.0f);
                 ser.FieldOr<float>("ColorG", color.y, 1.0f);
                 ser.FieldOr<float>("ColorB", color.z, 1.0f);
                 ser.FieldOr<float>("ColorA", color.w, 1.0f);
+
                 ser.FieldOr<int>("DrawLayer", drawLayer, 0);
+
                 ser.FieldOr<bool>("VisibleInGame", visibleInGame, true);
                 ser.FieldOr<bool>("VisibleInEditor", visibleInEditor, true);
+
+                ser.FieldOr<float>("UVMinX", uvMin.x, 1.f);
+                ser.FieldOr<float>("UVMinY", uvMin.y, 1.f);
+
+                ser.FieldOr<float>("UVMaxX", uvMax.x, 1.f);
+                ser.FieldOr<float>("UVMaxY", uvMax.y, 1.f);
             }
         };
 
@@ -140,24 +160,39 @@ namespace anv
             Dynamic = 2
         };
 
-        inline const char* Rigidbody2DTypeToString(Rigidbody2DType type)
+        inline const char *Rigidbody2DTypeToString(Rigidbody2DType type)
         {
             switch (type)
             {
-                case Rigidbody2DType::Static: return "Static";
-                case Rigidbody2DType::Kinematic: return "Kinematic";
-                case Rigidbody2DType::Dynamic: return "Dynamic";
+            case Rigidbody2DType::Static:
+                return "Static";
+            case Rigidbody2DType::Kinematic:
+                return "Kinematic";
+            case Rigidbody2DType::Dynamic:
+                return "Dynamic";
             }
             return "Dynamic";
         }
 
         inline bool Rigidbody2DTypeFromString(
-            const std::string& value,
-            Rigidbody2DType& type)
+            const std::string &value,
+            Rigidbody2DType &type)
         {
-            if (value == "Static") { type = Rigidbody2DType::Static; return true; }
-            if (value == "Kinematic") { type = Rigidbody2DType::Kinematic; return true; }
-            if (value == "Dynamic") { type = Rigidbody2DType::Dynamic; return true; }
+            if (value == "Static")
+            {
+                type = Rigidbody2DType::Static;
+                return true;
+            }
+            if (value == "Kinematic")
+            {
+                type = Rigidbody2DType::Kinematic;
+                return true;
+            }
+            if (value == "Dynamic")
+            {
+                type = Rigidbody2DType::Dynamic;
+                return true;
+            }
             return false;
         }
 
@@ -171,10 +206,10 @@ namespace anv
             bool bullet = false;
             bool enabled = true;
 
-            void Serialize(Serializer& ser)
+            void Serialize(Serializer &ser)
             {
                 ser.EnumFieldOr("Type", type, Rigidbody2DType::Dynamic,
-                    Rigidbody2DTypeToString, Rigidbody2DTypeFromString);
+                                Rigidbody2DTypeToString, Rigidbody2DTypeFromString);
                 ser.Field("GravityScale", gravityScale);
                 ser.Field("LinearDamping", linearDamping);
                 ser.Field("AngularDamping", angularDamping);
@@ -183,10 +218,10 @@ namespace anv
                 ser.Field("Enabled", enabled);
             }
 
-            void Deserialize(Serializer& ser)
+            void Deserialize(Serializer &ser)
             {
                 ser.EnumFieldOr("Type", type, Rigidbody2DType::Dynamic,
-                    Rigidbody2DTypeToString, Rigidbody2DTypeFromString);
+                                Rigidbody2DTypeToString, Rigidbody2DTypeFromString);
                 ser.FieldOr<float>("GravityScale", gravityScale, 1.0f);
                 ser.FieldOr<float>("LinearDamping", linearDamping, 0.0f);
                 ser.FieldOr<float>("AngularDamping", angularDamping, 0.0f);
@@ -205,7 +240,7 @@ namespace anv
             float restitution = 0.0f;
             bool sensor = false;
 
-            void Serialize(Serializer& ser)
+            void Serialize(Serializer &ser)
             {
                 ser.Field("OffsetX", offset.x);
                 ser.Field("OffsetY", offset.y);
@@ -217,7 +252,7 @@ namespace anv
                 ser.Field("Sensor", sensor);
             }
 
-            void Deserialize(Serializer& ser)
+            void Deserialize(Serializer &ser)
             {
                 ser.FieldOr<float>("OffsetX", offset.x, 0.0f);
                 ser.FieldOr<float>("OffsetY", offset.y, 0.0f);
@@ -237,29 +272,29 @@ namespace anv
             bool enabled = true;
             ScriptFieldMap fields;
 
-            void Serialize(Serializer& ser)
+            void Serialize(Serializer &ser)
             {
                 ser.Field("Module", modulePath);
                 ser.Field("Class", className);
                 ser.Field("Enabled", enabled);
-                for (auto& [name, field] : fields)
+                for (auto &[name, field] : fields)
                 {
-                    ser.ObjectKeyed("Fields", name, [&]() { field.Serialize(ser); });
+                    ser.ObjectKeyed("Fields", name, [&]()
+                                    { field.Serialize(ser); });
                 }
             }
 
-            void Deserialize(Serializer& ser)
+            void Deserialize(Serializer &ser)
             {
                 ser.FieldOr<std::string>("Module", modulePath, "");
                 ser.FieldOr<std::string>("Class", className, "");
                 ser.FieldOr<bool>("Enabled", enabled, true);
                 fields.clear();
-                ser.ForEachTable("Fields", [&](const std::string& name)
-                {
+                ser.ForEachTable("Fields", [&](const std::string &name)
+                                 {
                     ScriptField field;
                     field.Deserialize(ser);
-                    fields.emplace(name, std::move(field));
-                });
+                    fields.emplace(name, std::move(field)); });
             }
         };
     }

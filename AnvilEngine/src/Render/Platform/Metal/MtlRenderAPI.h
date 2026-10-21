@@ -21,12 +21,14 @@ namespace anv
         void DrawScene(Ref<RenderTarget> renderTarget, _shared<Camera2D> camera) override;
 
         void DrawQuad(
-            const glm::vec2& position,
+            const glm::vec2 &position,
             float rotation,
-            const glm::vec2& size,
+            const glm::vec2 &size,
             glm::vec4 color,
-            Ref<Texture> texture,
-            int layer) override;
+            Ref<Texture> texture = nullptr,
+            int layer = 0,
+            glm::vec2 uvMin,
+            glm::vec2 uvMax) override;
 
         void EndScene() override;
         void SetMainCamera(_shared<Camera2D> camera) override;

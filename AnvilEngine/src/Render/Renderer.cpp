@@ -32,7 +32,7 @@ namespace anv
         m_RenderAPI->DrawScene(renderTarget, camera);
     }
 
-    void Renderer2D::DrawScene(Ref<RenderTarget> target, _shared<Camera2D> camera, const RenderOverlays& overlays)
+    void Renderer2D::DrawScene(Ref<RenderTarget> target, _shared<Camera2D> camera, const RenderOverlays &overlays)
     {
         m_RenderAPI->DrawScene(target, camera, overlays);
     }
@@ -48,14 +48,16 @@ namespace anv
     }
 
     void Renderer2D::DrawQuad(
-        const glm::vec2& position,
+        const glm::vec2 &position,
         float rotation,
-        const glm::vec2& size,
+        const glm::vec2 &size,
         glm::vec4 color,
         Ref<Texture> texture,
-        int layer)
+        int layer,
+        glm::vec2 uvMin,
+        glm::vec2 uvMax)
     {
-        m_RenderAPI->DrawQuad(position, rotation, size, color, texture, layer);
+        m_RenderAPI->DrawQuad(position, rotation, size, color, texture, layer, uvMin, uvMax);
     }
 
     void Renderer2D::DrawFrame()

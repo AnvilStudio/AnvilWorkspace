@@ -35,6 +35,9 @@ namespace anv
         glm::vec4 Color{1.0f};
         Ref<Texture> TextureAsset = nullptr;
         int Layer = 0;
+
+        glm::vec2 UVMin{0.0f, 0.0f};
+        glm::vec2 UVMax{1.0f, 1.0f};
     };
 
     struct BatchVertex

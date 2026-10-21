@@ -22,10 +22,15 @@ namespace anv
         glm::mat4 ViewProjection{1.0f};
         glm::mat4 Model{1.0f};
         glm::vec4 Color{1.0f};
+
+        glm::vec2 UVMin{0.0f, 0.0f};
+        glm::vec2 UVMax{1.0f, 1.0f};
+
         uint32_t UseTexture = 0;
         uint32_t Padding[3]{};
     };
 
+    // TODO: Need to get GLSL to cross compile to MSL SOON!
     static NSString* SpriteShaderSource = @R"(
         #include <metal_stdlib>
         using namespace metal;
@@ -35,6 +40,8 @@ namespace anv
             float4x4 viewProjection;
             float4x4 model;
             float4 color;
+            float2 uvMin;
+            float2 uvMax;
             uint useTexture;
             uint3 padding;
         };
@@ -72,10 +79,18 @@ namespace anv
             };
 
             VertexOutput output;
+            
             output.position = uniforms.viewProjection * uniforms.model *
                 float4(positions[vertexID], 0.0, 1.0);
+            
             output.color = uniforms.color;
-            output.texCoord = texCoords[vertexID];
+            
+            output.texCoord = mix(
+                uniforms.uvMin,
+                uniforms.uvMax,
+                texCoords[vertexID]
+            );
+            
             output.useTexture = uniforms.useTexture;
             return output;
         }
@@ -187,12 +202,16 @@ namespace anv
         for (const QuadSubmission& quad : m_QuadQueue)
         {
             MetalSpriteUniforms uniforms{};
+
             uniforms.ViewProjection = camera->GetCameraUBO().ViewProjection;
             uniforms.Model =
                 glm::translate(glm::mat4(1.0f), glm::vec3(quad.Position, 0.0f)) *
                 glm::rotate(glm::mat4(1.0f), glm::radians(quad.Rotation), glm::vec3(0.0f, 0.0f, 1.0f)) *
                 glm::scale(glm::mat4(1.0f), glm::vec3(quad.Size, 1.0f));
             uniforms.Color = quad.Color;
+
+            uniforms.UVMin = quad.UVMin;
+            uniforms.UVMax = quad.UVMax;
 
             id<MTLTexture> texture = nil;
             if (quad.TextureAsset && quad.TextureAsset->IsGPUReady())
@@ -335,14 +354,16 @@ namespace anv
     }
 
     void MetalRenderAPI::DrawQuad(
-        const glm::vec2& position,
-        float rotation,
-        const glm::vec2& size,
-        glm::vec4 color,
-        Ref<Texture> texture,
-        int layer)
+            const glm::vec2 &position,
+            float rotation,
+            const glm::vec2 &size,
+            glm::vec4 color,
+            Ref<Texture> texture = nullptr,
+            int layer = 0,
+            glm::vec2 uvMin,
+            glm::vec2 uvMax)
     {
-        m_QuadQueue.push_back({position, rotation, size, color, texture, layer});
+        m_QuadQueue.push_back({position, rotation, size, color, texture, layer, uvMin, uvMax});
         m_Stats.QuadCount++;
     }
 
