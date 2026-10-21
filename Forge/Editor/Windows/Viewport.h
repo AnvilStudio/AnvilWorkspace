@@ -10,7 +10,7 @@ public:
     void Draw();
 
 private:
-    void draw_toolbar();
+    void draw_toolbar(const ImVec2& imageMin);
     void initialize_toolbar_icons();
     bool toolbar_icon_button(const char* id, int index, bool selected, const char* tooltip);
     void update_operation(bool update);
