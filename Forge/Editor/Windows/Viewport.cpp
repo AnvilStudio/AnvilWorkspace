@@ -1,4 +1,5 @@
 #include "Viewport.h"
+#include "../Grid/EditorGrid.h"
 #include "../EditorLayer.h"
 
 #include <algorithm>
@@ -42,6 +43,7 @@ Viewport::Viewport()
 
     m_EditorCamera = std::make_shared<anv::Camera2D>();
     m_Controller.SetCamera(m_EditorCamera);
+    m_EditorGrid.Initialize(m_ViewportTarget);
 }
 
 void Viewport::Draw()
@@ -101,7 +103,18 @@ void Viewport::Draw()
         if (validSize && m_ViewportTarget)
         {
             push_billboards(scene);
-            anv::Renderer2D::DrawScene(m_ViewportTarget, m_EditorCamera);
+            anv::RenderOverlays overlays;
+#if defined(PLATFORM_WIN64) || defined(PLATFORM_APPLE_VK)
+            if (m_EditorCamera)
+            {
+                // Match camera state used in DrawScene's queued submission.
+                m_EditorCamera->Update(0.0f);
+                const glm::mat4 viewProjection =
+                    m_EditorCamera->GetProjection() * m_EditorCamera->GetView();
+                m_EditorGrid.Submit(overlays, viewProjection);
+            }
+#endif
+            anv::Renderer2D::DrawScene(m_ViewportTarget, m_EditorCamera, overlays);
 
 #if defined(PLATFORM_APPLE_VK) || defined(PLATFORM_WIN64)
             const ImVec2 uv0(0.0f, 1.0f);
