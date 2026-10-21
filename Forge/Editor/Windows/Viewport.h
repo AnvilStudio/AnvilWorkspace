@@ -8,12 +8,10 @@ class Viewport
 public:
     Viewport();
     void Draw();
-    ~Viewport();
 
 private:
     void draw_toolbar();
     void initialize_toolbar_icons();
-    void release_toolbar_icons();
     bool toolbar_icon_button(const char* id, int index, bool selected, const char* tooltip);
     void update_operation(bool update);
     void set_gizmo_bounds();
@@ -35,7 +33,6 @@ private:
     struct ToolbarIcon
     {
         anv::Ref<anv::Texture> texture;
-        void* imguiID = nullptr;
     };
     std::array<ToolbarIcon, 4> m_ToolbarIcons{};
     bool m_ToolbarIconsInitialized = false;

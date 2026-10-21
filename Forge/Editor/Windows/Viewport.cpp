@@ -8,10 +8,6 @@
 #include <cmath>
 #include <limits>
 #include <filesystem>
-#if defined(PLATFORM_WIN64) || defined(PLATFORM_APPLE_VK)
-#include <backends/imgui_impl_vulkan.h>
-#include <Render/Platform/Vulkan/VulkanTexture.h>
-#endif
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -49,11 +45,6 @@ Viewport::Viewport()
     m_EditorCamera = std::make_shared<anv::Camera2D>();
     m_Controller.SetCamera(m_EditorCamera);
     m_EditorGrid.Initialize(m_ViewportTarget);
-}
-
-Viewport::~Viewport()
-{
-    release_toolbar_icons();
 }
 
 void Viewport::Draw()
@@ -224,39 +215,8 @@ void Viewport::initialize_toolbar_icons()
             continue;
 
         m_ToolbarIcons[i].texture = texture;
-
-#if defined(PLATFORM_WIN64) || defined(PLATFORM_APPLE_VK)
-        auto vkTexture = texture.As<anv::VulkanTexture>();
-        if (vkTexture)
-            m_ToolbarIcons[i].imguiID = (void*)ImGui_ImplVulkan_AddTexture(
-                vkTexture->GetSampler(),
-                vkTexture->GetImageView(),
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-#else
-        m_ToolbarIcons[i].imguiID = texture->GetNativeHandle();
-#endif
     }
     m_ToolbarIconsInitialized = true;
-}
-
-void Viewport::release_toolbar_icons()
-{
-#if defined(PLATFORM_WIN64) || defined(PLATFORM_APPLE_VK)
-    // The ImGui backend may already be destroyed during application shutdown.
-    if (ImGui::GetCurrentContext() && ImGui::GetIO().BackendRendererUserData)
-    {
-        anv::Renderer2D::WaitIdle();
-        for (auto& icon : m_ToolbarIcons)
-            if (icon.imguiID)
-                ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)icon.imguiID);
-    }
-#endif
-    for (auto& icon : m_ToolbarIcons)
-    {
-        icon.imguiID = nullptr;
-        icon.texture = nullptr;
-    }
-    m_ToolbarIconsInitialized = false;
 }
 
 bool Viewport::toolbar_icon_button(const char* id, int index, bool selected, const char* tooltip)
@@ -264,16 +224,17 @@ bool Viewport::toolbar_icon_button(const char* id, int index, bool selected, con
     const ImVec2 buttonSize(30.0f, 30.0f);
     const ImVec2 iconSize(22.0f, 22.0f);
     const auto& icon = m_ToolbarIcons[index];
+    void* imguiID = icon.texture ? icon.texture->GetImGuiTextureID() : nullptr;
 
     ImGui::PushID(id);
     if (selected)
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.24f, 0.42f, 0.62f, 1.0f));
 
     bool pressed = false;
-    if (icon.imguiID)
+    if (imguiID)
     {
         // Frame padding (4 px each side) yields a 30px button.
-        pressed = ImGui::ImageButton("##icon", icon.imguiID, iconSize,
+        pressed = ImGui::ImageButton("##icon", imguiID, iconSize,
                                     ImVec2(0, 0), ImVec2(1, 1),
                                     ImVec4(0, 0, 0, 0));
     }
