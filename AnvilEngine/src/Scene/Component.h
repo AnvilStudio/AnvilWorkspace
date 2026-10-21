@@ -113,7 +113,7 @@ namespace anv
             void Serialize(Serializer &ser)
             {
                 ser.Field("TextureID", texture.uuid);
-                
+
                 ser.Field("ColorR", color.x);
                 ser.Field("ColorG", color.y);
                 ser.Field("ColorB", color.z);
@@ -145,8 +145,8 @@ namespace anv
                 ser.FieldOr<bool>("VisibleInGame", visibleInGame, true);
                 ser.FieldOr<bool>("VisibleInEditor", visibleInEditor, true);
 
-                ser.FieldOr<float>("UVMinX", uvMin.x, 1.f);
-                ser.FieldOr<float>("UVMinY", uvMin.y, 1.f);
+                ser.FieldOr<float>("UVMinX", uvMin.x, 0.f);
+                ser.FieldOr<float>("UVMinY", uvMin.y, 0.f);
 
                 ser.FieldOr<float>("UVMaxX", uvMax.x, 1.f);
                 ser.FieldOr<float>("UVMaxY", uvMax.y, 1.f);

@@ -58,7 +58,7 @@ namespace anv
             int layer = 0,
             glm::vec2 uvMin = {0.0f, 0.0f},
             glm::vec2 uvMax = {1.0f, 1.0f}
-        );
+        ) = 0;
 
         virtual void EndScene() = 0;
         virtual void SetMainCamera(_shared<Camera2D> camera) = 0;

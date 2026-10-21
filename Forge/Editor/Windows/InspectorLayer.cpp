@@ -54,7 +54,8 @@ void InspectorLayer::Draw(
             ImGui::Text("Parent: %s", parentName.c_str());
             ImGui::SameLine();
             if (ImGui::SmallButton("Unparent"))
-                if (scene->SetParent(selectedEntity, entt::null)) scene->Save();
+                if (scene->SetParent(selectedEntity, entt::null))
+                    scene->Save();
         }
         else
         {
@@ -232,6 +233,26 @@ void InspectorLayer::Draw(
                     property_color4("Color", &sprite.color.x);
                     ImGui::TableNextRow();
                     property_int("Draw Layer", &sprite.drawLayer);
+                    ImGui::TableNextRow();
+
+                    // UVs
+                    if (property_float2("UV Min", &sprite.uvMin.x))
+                    {
+                        sprite.uvMin = glm::clamp(
+                            sprite.uvMin,
+                            glm::vec2(0.0f),
+                            glm::vec2(1.0f));
+                    }
+
+                    ImGui::TableNextRow();
+                    if (property_float2("UV Max", &sprite.uvMax.x))
+                    {
+                        sprite.uvMax = glm::clamp(
+                            sprite.uvMax,
+                            glm::vec2(0.0f),
+                            glm::vec2(1.0f));
+                    }
+
                     ImGui::EndTable();
                 }
             });
