@@ -5,47 +5,45 @@
 
 namespace anv
 {
-	VulkanPipeline::VulkanPipeline(_shared<Context> _ctx, std::string& _dName)
+	VulkanPipeline::VulkanPipeline(_shared<Context> _ctx, std::string &_dName)
 		: GraphicsPipeline(_ctx, _dName),
-		m_Pipeline(VK_NULL_HANDLE),
-  		m_PipelineLayout(VK_NULL_HANDLE),
-  		m_RenderPass(VK_NULL_HANDLE)
+		  m_Pipeline(VK_NULL_HANDLE),
+		  m_PipelineLayout(VK_NULL_HANDLE),
+		  m_RenderPass(VK_NULL_HANDLE)
 	{
 		ANV_PROFILE_SCOPE()
 		// Get the native Vk Context;
 		m_VkContext = _ctx->GetAs<VulkanContext>();
 
-
 		// Zero all create infos up front
-		m_CreateInfo.dynamicState      = {};
-		m_CreateInfo.viewportState     = {};
-		m_CreateInfo.vertexInputInfo   = {};
-		m_CreateInfo.inputAssembly     = {};
-		m_CreateInfo.rasterizer        = {};
-		m_CreateInfo.multisampling     = {};
+		m_CreateInfo.dynamicState = {};
+		m_CreateInfo.viewportState = {};
+		m_CreateInfo.vertexInputInfo = {};
+		m_CreateInfo.inputAssembly = {};
+		m_CreateInfo.rasterizer = {};
+		m_CreateInfo.multisampling = {};
 		m_CreateInfo.colorBlendAttachment = {};
-		m_CreateInfo.colorBlending     = {};
-		m_CreateInfo.pipelineLayoutInfo= {};
-		m_CreateInfo.pipelineCreateInfo= {};
+		m_CreateInfo.colorBlending = {};
+		m_CreateInfo.pipelineLayoutInfo = {};
+		m_CreateInfo.pipelineCreateInfo = {};
 
 		// Set Viewport
 
-		VkExtent2D scExtent = { 
+		VkExtent2D scExtent = {
 			m_VkContext->GetSwapchain()->GetExtent().width,
-			m_VkContext->GetSwapchain()->GetExtent().height 
-		};
+			m_VkContext->GetSwapchain()->GetExtent().height};
 
 		m_CreateInfo.viewport = {};
 		m_CreateInfo.viewport.x = 0.0f;
 		m_CreateInfo.viewport.y = 0.0f;
-		m_CreateInfo.viewport.width =  scExtent.width;
+		m_CreateInfo.viewport.width = scExtent.width;
 		m_CreateInfo.viewport.height = scExtent.height;
 		m_CreateInfo.viewport.minDepth = 0.0f;
 		m_CreateInfo.viewport.maxDepth = 1.0f;
 
 		// Set scissor
 		m_CreateInfo.scissor = {};
-		m_CreateInfo.scissor.offset = { 0, 0 };
+		m_CreateInfo.scissor.offset = {0, 0};
 		m_CreateInfo.scissor.extent = scExtent;
 
 		// Set Dynamic states
@@ -58,7 +56,7 @@ namespace anv
 		m_CreateInfo.viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 		m_CreateInfo.viewportState.viewportCount = 1;
 		m_CreateInfo.viewportState.pViewports = &m_CreateInfo.viewport;
-		m_CreateInfo.viewportState.scissorCount  = 1;
+		m_CreateInfo.viewportState.scissorCount = 1;
 		m_CreateInfo.viewportState.pScissors = &m_CreateInfo.scissor;
 
 		// Set Input assembly info
@@ -71,9 +69,10 @@ namespace anv
 	VulkanPipeline::~VulkanPipeline()
 	{
 		ANV_PROFILE_SCOPE();
-    	if (m_Pipeline)       vkDestroyPipeline(m_VkContext->GetDevice(), m_Pipeline, nullptr);
-    	if (m_PipelineLayout) vkDestroyPipelineLayout(m_VkContext->GetDevice(), m_PipelineLayout, nullptr);
-
+		if (m_Pipeline)
+			vkDestroyPipeline(m_VkContext->GetDevice(), m_Pipeline, nullptr);
+		if (m_PipelineLayout)
+			vkDestroyPipelineLayout(m_VkContext->GetDevice(), m_PipelineLayout, nullptr);
 	}
 
 	VkPipelineLayout VulkanPipeline::GetPipelineLayout()
@@ -90,15 +89,17 @@ namespace anv
 		// fix for pName lifetime issue:
 		m_EntryNames.clear();
 		m_EntryNames.reserve(m_CreateInfo.stages.size());
-		for (auto& st : m_CreateInfo.stages) {
-			if (st.pName) {
+		for (auto &st : m_CreateInfo.stages)
+		{
+			if (st.pName)
+			{
 				m_EntryNames.emplace_back(st.pName);
 				st.pName = m_EntryNames.back().c_str(); // point to our owned copy
 			}
 		}
 	}
 
-	void VulkanPipeline::SetVertexInputLayout(const VertexInputLayout* _layout)
+	void VulkanPipeline::SetVertexInputLayout(const VertexInputLayout *_layout)
 	{
 		if (_layout == nullptr)
 		{
@@ -111,7 +112,7 @@ namespace anv
 		}
 		else
 		{
-			
+
 			m_VertexBindingDescription.binding = _layout->binding;
 			m_VertexBindingDescription.stride = _layout->stride;
 			m_VertexBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
@@ -137,7 +138,7 @@ namespace anv
 		ANV_LOG_DEBUG("Set Pipeline Vertex Input");
 	}
 
-	void VulkanPipeline::SetRasterizationSettings(const RasterizationSettings* _raster)
+	void VulkanPipeline::SetRasterizationSettings(const RasterizationSettings *_raster)
 	{
 		m_CreateInfo.rasterizer = {};
 		m_CreateInfo.rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -149,33 +150,33 @@ namespace anv
 		m_CreateInfo.rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
 		m_CreateInfo.rasterizer.depthBiasEnable = VK_FALSE;
 		m_CreateInfo.rasterizer.depthBiasConstantFactor = 0.0f; // Optional
-		m_CreateInfo.rasterizer.depthBiasClamp = 0.0f; // Optional
-		m_CreateInfo.rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
+		m_CreateInfo.rasterizer.depthBiasClamp = 0.0f;			// Optional
+		m_CreateInfo.rasterizer.depthBiasSlopeFactor = 0.0f;	// Optional
 
 		// TODO: needs its own settup fn
 		m_CreateInfo.multisampling = {};
 		m_CreateInfo.multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 		m_CreateInfo.multisampling.sampleShadingEnable = VK_FALSE;
 		m_CreateInfo.multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-		m_CreateInfo.multisampling.minSampleShading = 1.0f; // Optional
-		m_CreateInfo.multisampling.pSampleMask = nullptr; // Optional
+		m_CreateInfo.multisampling.minSampleShading = 1.0f;			 // Optional
+		m_CreateInfo.multisampling.pSampleMask = nullptr;			 // Optional
 		m_CreateInfo.multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
-		m_CreateInfo.multisampling.alphaToOneEnable = VK_FALSE; // Optional
+		m_CreateInfo.multisampling.alphaToOneEnable = VK_FALSE;		 // Optional
 
 		ANV_LOG_DEBUG("Set Pipeline rasterization");
 	}
 
-	void VulkanPipeline::SetColorBlendSettings(const ColorBlendSettings* _colbld)
+	void VulkanPipeline::SetColorBlendSettings(const ColorBlendSettings *_colbld)
 	{
 		m_CreateInfo.colorBlendAttachment = {};
 		m_CreateInfo.colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 		m_CreateInfo.colorBlendAttachment.blendEnable = VK_FALSE;
-		m_CreateInfo.colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+		m_CreateInfo.colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;  // Optional
 		m_CreateInfo.colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-		m_CreateInfo.colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
-		m_CreateInfo.colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+		m_CreateInfo.colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;			  // Optional
+		m_CreateInfo.colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;  // Optional
 		m_CreateInfo.colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-		m_CreateInfo.colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+		m_CreateInfo.colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;			  // Optional
 		m_CreateInfo.colorBlendAttachment.blendEnable = VK_TRUE;
 		m_CreateInfo.colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 		m_CreateInfo.colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -195,18 +196,15 @@ namespace anv
 		m_CreateInfo.colorBlending.blendConstants[2] = 0.0f; // Optional
 		m_CreateInfo.colorBlending.blendConstants[3] = 0.0f; // Optional
 
-
-		
-
 		ANV_LOG_DEBUG("Set Pipeline Color Blend");
 	}
 
 	void VulkanPipeline::SetRenderPass(const Ref<RenderPass> _rps)
-    {
+	{
 		m_RenderPass = _rps.As<VulkanRenderPass>()->Get();
-    }
+	}
 
-	void VulkanPipeline::SetDescriptorSetLayouts(const _vec<VkDescriptorSetLayout>& layouts)
+	void VulkanPipeline::SetDescriptorSetLayouts(const _vec<VkDescriptorSetLayout> &layouts)
 	{
 		m_DescriptorSetLayouts = layouts;
 	}
@@ -216,8 +214,6 @@ namespace anv
 		m_PushRange.stageFlags = _stage;
 		m_PushRange.offset = 0;
 		m_PushRange.size = _size;
-
-
 	}
 
 	void VulkanPipeline::Build()
@@ -226,49 +222,65 @@ namespace anv
 		create_layout();
 		ANV_ASSERT(m_PipelineLayout != VK_NULL_HANDLE, "Pipeline layout not created");
 
-		auto* info = m_CreateInfo.BuildInfo();
+		auto *info = m_CreateInfo.BuildInfo();
 		*info = {}; // full reset before fill
-		info->sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		info->layout              = m_PipelineLayout;
-		info->renderPass          = m_RenderPass;
-		info->pVertexInputState   = &m_CreateInfo.vertexInputInfo;
+		info->sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		info->layout = m_PipelineLayout;
+		info->renderPass = m_RenderPass;
+		info->pVertexInputState = &m_CreateInfo.vertexInputInfo;
 		info->pInputAssemblyState = &m_CreateInfo.inputAssembly;
-		info->pViewportState      = &m_CreateInfo.viewportState;
+		info->pViewportState = &m_CreateInfo.viewportState;
 		info->pRasterizationState = &m_CreateInfo.rasterizer;
-		info->pMultisampleState   = &m_CreateInfo.multisampling;
-		info->pColorBlendState    = &m_CreateInfo.colorBlending;
-		info->pDynamicState       = &m_CreateInfo.dynamicState;
-		info->pDepthStencilState  = nullptr;
-		info->subpass             = 0;
-		info->basePipelineHandle  = VK_NULL_HANDLE;
-		info->basePipelineIndex   = -1;
-		info->stageCount          = static_cast<uint32_t>(m_CreateInfo.stages.size());
-		info->pStages             = m_CreateInfo.stages.data();
+		info->pMultisampleState = &m_CreateInfo.multisampling;
+		info->pColorBlendState = &m_CreateInfo.colorBlending;
+		info->pDynamicState = &m_CreateInfo.dynamicState;
+		info->pDepthStencilState = nullptr;
+		info->subpass = 0;
+		info->basePipelineHandle = VK_NULL_HANDLE;
+		info->basePipelineIndex = -1;
+		info->stageCount = static_cast<uint32_t>(m_CreateInfo.stages.size());
+		info->pStages = m_CreateInfo.stages.data();
+
+		const auto &blend = m_CreateInfo.colorBlendAttachment;
+
+		ANV_LOG_INFO(
+			"Blend enabled: %s",
+			blend.blendEnable == VK_TRUE ? "YES" : "NO");
+
+		ANV_LOG_INFO(
+			"Source blend factor: %d",
+			static_cast<int>(blend.srcColorBlendFactor));
+
+		ANV_LOG_INFO(
+			"Destination blend factor: %d",
+			static_cast<int>(blend.dstColorBlendFactor));
+
+		ANV_ASSERT(
+			blend.blendEnable == VK_TRUE,
+			"Sprite pipeline blending is disabled!");
 
 		ANV_VK_CHECK_RESULT(
 			vkCreateGraphicsPipelines(m_VkContext->GetDevice(), VK_NULL_HANDLE, 1, info, nullptr, &m_Pipeline),
-			"Failed to create Vk graphics pipeline"
-		);
+			"Failed to create Vk graphics pipeline");
 	}
 
 	void VulkanPipeline::Bind(Ref<CommandBuffer> _cmd)
 	{
 		vkCmdBindPipeline(_cmd.As<VulkanCommandBuffer>()->Get(),
-			VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);		
+						  VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
 	}
 
-	void VulkanPipeline::OnSave(Serializer& _ser)
+	void VulkanPipeline::OnSave(Serializer &_ser)
 	{
 		_ser.Object("Spec", [&]
-			{
+					{
 				_ser.Field("Type", "GraphicsPipeline");
 				_ser.Field("API", "VK");
 				_ser.Field("Name", m_Name);
 				_ser.Object("PipelineInfo", [&] {
 					
 
-				});
-			});
+				}); });
 	}
 
 	void VulkanPipeline::create_layout()
@@ -282,8 +294,8 @@ namespace anv
 
 		m_CreateInfo.pipelineLayoutInfo.pSetLayouts =
 			m_DescriptorSetLayouts.empty()
-			? nullptr
-			: m_DescriptorSetLayouts.data();
+				? nullptr
+				: m_DescriptorSetLayouts.data();
 
 		// push constants
 		if (m_PushRange.size > 0)
@@ -299,10 +311,9 @@ namespace anv
 
 		ANV_VK_CHECK_RESULT(
 			vkCreatePipelineLayout(
-				m_VkContext->GetDevice(), 
+				m_VkContext->GetDevice(),
 				&m_CreateInfo.pipelineLayoutInfo,
-			    nullptr, &m_PipelineLayout)
-			, "Failed to create pipeline layout!"
-		)
+				nullptr, &m_PipelineLayout),
+			"Failed to create pipeline layout!")
 	}
 }

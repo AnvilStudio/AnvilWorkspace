@@ -323,8 +323,6 @@ void Viewport::draw_selection_overlay(
                 cameraColor,
                 1.0f);
         }
-
-
     }
     else
     {
@@ -396,28 +394,31 @@ void Viewport::draw_selection_overlay(
     drawList->PopClipRect();
 }
 
-void Viewport::push_billboards(const anv::Ref<anv::Scene>& scene)
+void Viewport::push_billboards(const anv::Ref<anv::Scene> &scene)
 {
-    if (!scene) return;
+    if (!scene)
+        return;
 
     auto assetManager = anv::App::GetInstance()->GetAssetManager();
-    if (!assetManager) return;
+    if (!assetManager)
+        return;
 
-    auto view = scene->Registry().view<
-        anv::Component::Transform2D,
-        anv::Component::SpriteRenderer>();
+    auto view = scene->Registry().view<anv::Component::Transform2D, anv::Component::SpriteRenderer>();
 
     for (const auto entity : view)
     {
-        const auto& sprite = view.get<anv::Component::SpriteRenderer>(entity);
+        const auto &sprite = view.get<anv::Component::SpriteRenderer>(entity);
         // Game-visible sprites were already queued by SceneLayer.
         if (!sprite.visibleInEditor || sprite.visibleInGame)
             continue;
+
         if (sprite.texture.uuid.empty())
             continue;
 
         auto texture = assetManager->GetAs<anv::Texture>(sprite.texture);
-        if (!texture) continue;
+
+        if (!texture || !texture->IsGPUReady())
+            continue;
 
         anv::Component::Transform2D worldPose;
         worldPose.SetFromMatrix(scene->GetWorldTransform(entity));
