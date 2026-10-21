@@ -360,6 +360,8 @@ namespace anv
             Ref<Texture> texture;
             glm::vec4 color;
             int drawLayer;
+            glm::vec2 uvMin;
+            glm::vec2 uvMax;
         };
         static thread_local std::vector<SpriteItem> items;
         items.clear();
@@ -374,7 +376,7 @@ namespace anv
                 if (!sprite.visibleInGame) continue;
                 Ref<Texture> texture = assetManager && !sprite.texture.uuid.empty()
                     ? assetManager->GetAs<Texture>(sprite.texture) : nullptr;
-                items.push_back({entity, {}, texture, sprite.color, sprite.drawLayer});
+                items.push_back({entity, {}, texture, sprite.color, sprite.drawLayer, sprite.uvMin, sprite.uvMax});
             }
         }
 
@@ -395,7 +397,8 @@ namespace anv
             ANV_PROFILE_ZONE(SpriteSubmit);
             for (const auto& item : items)
                 Renderer2D::DrawQuad(item.pose.position, item.pose.rotation,
-                    item.pose.scale, item.color, item.texture, item.drawLayer);
+                    item.pose.scale, item.color, item.texture, item.drawLayer,
+                    item.uvMin, item.uvMax);
         }
     }
 
