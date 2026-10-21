@@ -10,8 +10,8 @@ namespace forge
     {
         glm::mat4 inverseViewProjection{1.0f};
         glm::vec4 settings{1.0f, 5.0f, 1.0f, 0.0f};
-        glm::vec4 minorColor{0.45f, 0.47f, 0.52f, 0.20f};
-        glm::vec4 majorColor{0.55f, 0.60f, 0.67f, 0.38f};
+        glm::vec4 minorColor{0.149f, 0.149f, 0.149f, 1.f};
+        glm::vec4 majorColor{0.769f, 0.769f, 0.769f, 1.f};
     };
     static_assert(sizeof(GridPush) == 112);
 
