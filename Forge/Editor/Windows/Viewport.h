@@ -38,6 +38,12 @@ private:
     bool m_ToolbarIconsInitialized = false;
     bool m_ToolbarHovered = false;
 
+    // Editor-only gizmo snapping; never changes runtime scene behavior.
+    bool m_SnapEnabled = false;
+    float m_TranslationSnap = 1.0f;
+    float m_RotationSnap = 15.0f; // degrees
+    float m_ScaleSnap = 0.1f;
+
     uint32_t m_LastTargetWidth = 0;
     uint32_t m_LastTargetHeight = 0;
 

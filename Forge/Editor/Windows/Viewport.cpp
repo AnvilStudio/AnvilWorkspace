@@ -256,7 +256,7 @@ void Viewport::draw_toolbar()
     initialize_toolbar_icons();
     auto& grid = m_EditorGrid.GetSettings();
     const ImVec2 toolbarPos = ImGui::GetCursorScreenPos();
-    const ImVec2 toolbarSize(178.0f, 42.0f);
+    const ImVec2 toolbarSize(245.0f, 42.0f);
 
     ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.10f, 0.11f, 0.13f, 0.94f));
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 4.0f);
@@ -280,6 +280,31 @@ void Viewport::draw_toolbar()
         if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
             grid.visible = !grid.visible;
 
+        ImGui::SameLine();
+        if (ImGui::Button(m_SnapEnabled ? "Snap: On" : "Snap: Off"))
+            m_SnapEnabled = !m_SnapEnabled;
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+            ImGui::OpenPopup("##SnapSettings");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Toggle gizmo snapping (right-click for increments)");
+
+        if (ImGui::BeginPopup("##SnapSettings"))
+        {
+            ImGui::TextUnformatted("Transform Snapping");
+            ImGui::Separator();
+            ImGui::Checkbox("Enable Snapping", &m_SnapEnabled);
+            ImGui::SetNextItemWidth(120.0f);
+            ImGui::DragFloat("Move Step", &m_TranslationSnap, 0.05f, 0.001f, 1000.0f, "%.3f");
+            ImGui::SetNextItemWidth(120.0f);
+            ImGui::DragFloat("Rotate Step", &m_RotationSnap, 1.0f, 0.1f, 180.0f, "%.1f deg");
+            ImGui::SetNextItemWidth(120.0f);
+            ImGui::DragFloat("Scale Step", &m_ScaleSnap, 0.01f, 0.001f, 10.0f, "%.3f");
+            m_TranslationSnap = std::clamp(m_TranslationSnap, 0.001f, 1000.0f);
+            m_RotationSnap = std::clamp(m_RotationSnap, 0.1f, 180.0f);
+            m_ScaleSnap = std::clamp(m_ScaleSnap, 0.001f, 10.0f);
+            ImGui::EndPopup();
+        }
+
         if (ImGui::BeginPopup("##GridSettings"))
         {
             ImGui::TextUnformatted("Grid Settings");
@@ -300,7 +325,8 @@ void Viewport::draw_toolbar()
         }
     }
     m_ToolbarHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows)
-        || ImGui::IsPopupOpen("##GridSettings");
+        || ImGui::IsPopupOpen("##GridSettings")
+        || ImGui::IsPopupOpen("##SnapSettings");
     ImGui::EndChild();
     ImGui::PopStyleVar(3);
     ImGui::PopStyleColor();
@@ -741,12 +767,25 @@ void Viewport::draw_gizmo()
 
     // ImGuizmo::BeginFrame();
 
+    // ImGuizmo expects snapping in world units for translation,
+    // degrees for rotation, and scale-factor increments for scaling.
+    float snap[3] = {1.0f, 1.0f, 1.0f};
+    if (m_SnapEnabled)
+    {
+        const float increment = m_Operation == ImGuizmo::TRANSLATE
+            ? m_TranslationSnap
+            : (m_Operation == ImGuizmo::ROTATE ? m_RotationSnap : m_ScaleSnap);
+        snap[0] = snap[1] = snap[2] = increment;
+    }
+
     ImGuizmo::Manipulate(
         glm::value_ptr(view),
         glm::value_ptr(projection),
         m_Operation,
         ImGuizmo::LOCAL,
-        glm::value_ptr(transformMatrix));
+        glm::value_ptr(transformMatrix),
+        nullptr,
+        m_SnapEnabled ? snap : nullptr);
 
     if (ImGuizmo::IsUsing())
         scene->SetWorldTransform(entity, transformMatrix);
