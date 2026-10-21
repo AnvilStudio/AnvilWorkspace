@@ -7,6 +7,11 @@
 #include <cctype>
 #include <cmath>
 #include <limits>
+#include <filesystem>
+#if defined(PLATFORM_WIN64) || defined(PLATFORM_APPLE_VK)
+#include <backends/imgui_impl_vulkan.h>
+#include <Render/Platform/Vulkan/VulkanTexture.h>
+#endif
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -46,13 +51,16 @@ Viewport::Viewport()
     m_EditorGrid.Initialize(m_ViewportTarget);
 }
 
+Viewport::~Viewport()
+{
+    release_toolbar_icons();
+}
+
 void Viewport::Draw()
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     if (ImGui::Begin("Viewport"))
     {
-        draw_toolbar();
-
         auto sceneManager = anv::App::GetInstance()->GetSceneManager();
         auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
 
@@ -133,6 +141,11 @@ void Viewport::Draw()
                 uv1);
 
             set_gizmo_bounds();
+            const ImVec2 cursorAfterImage = ImGui::GetCursorScreenPos();
+            const ImVec2 imageMin = ImGui::GetItemRectMin();
+            ImGui::SetCursorScreenPos(ImVec2(imageMin.x + 10.0f, imageMin.y + 10.0f));
+            draw_toolbar();
+            ImGui::SetCursorScreenPos(cursorAfterImage);
 
             if (ImGui::BeginDragDropTarget())
             {
@@ -183,51 +196,153 @@ void Viewport::Draw()
     ImGui::PopStyleVar();
 }
 
+void Viewport::initialize_toolbar_icons()
+{
+    if (m_ToolbarIconsInitialized)
+        return;
+    if (!ImGui::GetCurrentContext() || !ImGui::GetIO().BackendRendererUserData)
+        return;
+
+    const auto base = anv::App::GetInstance()->GetFS().GetExecDir()
+        / "ForgeResources" / "Icons";
+    static const char* filenames[] = {
+        "3232Translate.png", "3232Rotate.png",
+        "3232Scale.png", "3232viewport_grid.png"
+    };
+
+    for (int i = 0; i < 4; ++i)
+    {
+        const auto path = base / filenames[i];
+        if (!std::filesystem::exists(path))
+        {
+            ANV_LOG_WARN("Viewport toolbar icon missing: %s", path.string().c_str());
+            continue;
+        }
+
+        auto texture = anv::Texture::Create(path);
+        if (!texture || !texture->IsGPUReady())
+            continue;
+
+        m_ToolbarIcons[i].texture = texture;
+
+#if defined(PLATFORM_WIN64) || defined(PLATFORM_APPLE_VK)
+        auto vkTexture = texture.As<anv::VulkanTexture>();
+        if (vkTexture)
+            m_ToolbarIcons[i].imguiID = (void*)ImGui_ImplVulkan_AddTexture(
+                vkTexture->GetSampler(),
+                vkTexture->GetImageView(),
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+#else
+        m_ToolbarIcons[i].imguiID = texture->GetNativeHandle();
+#endif
+    }
+    m_ToolbarIconsInitialized = true;
+}
+
+void Viewport::release_toolbar_icons()
+{
+#if defined(PLATFORM_WIN64) || defined(PLATFORM_APPLE_VK)
+    // The ImGui backend may already be destroyed during application shutdown.
+    if (ImGui::GetCurrentContext() && ImGui::GetIO().BackendRendererUserData)
+    {
+        anv::Renderer2D::WaitIdle();
+        for (auto& icon : m_ToolbarIcons)
+            if (icon.imguiID)
+                ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet)icon.imguiID);
+    }
+#endif
+    for (auto& icon : m_ToolbarIcons)
+    {
+        icon.imguiID = nullptr;
+        icon.texture = nullptr;
+    }
+    m_ToolbarIconsInitialized = false;
+}
+
+bool Viewport::toolbar_icon_button(const char* id, int index, bool selected, const char* tooltip)
+{
+    const ImVec2 buttonSize(30.0f, 30.0f);
+    const ImVec2 iconSize(22.0f, 22.0f);
+    const auto& icon = m_ToolbarIcons[index];
+
+    ImGui::PushID(id);
+    if (selected)
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.24f, 0.42f, 0.62f, 1.0f));
+
+    bool pressed = false;
+    if (icon.imguiID)
+    {
+        // Frame padding (4 px each side) yields a 30px button.
+        pressed = ImGui::ImageButton("##icon", icon.imguiID, iconSize,
+                                    ImVec2(0, 0), ImVec2(1, 1),
+                                    ImVec4(0, 0, 0, 0));
+    }
+    else
+    {
+        pressed = ImGui::Button(id, buttonSize);
+    }
+
+    if (selected)
+        ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", tooltip);
+    ImGui::PopID();
+    return pressed;
+}
+
 void Viewport::draw_toolbar()
 {
+    initialize_toolbar_icons();
     auto& grid = m_EditorGrid.GetSettings();
+    const ImVec2 toolbarPos = ImGui::GetCursorScreenPos();
+    const ImVec2 toolbarSize(178.0f, 42.0f);
 
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(5.0f, 4.0f));
-
-    // Separate top strip; its height is excluded from the image/target dimensions.
-    const float height = ImGui::GetFrameHeight() + 8.0f;
-    if (ImGui::BeginChild("##ViewportToolbar", ImVec2(0.0f, height),
-                          ImGuiChildFlags_None,
-                          ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.10f, 0.11f, 0.13f, 0.94f));
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 4.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(5.0f, 5.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(5.0f, 0.0f));
+    if (ImGui::BeginChild("##ViewportFloatingToolbar", toolbarSize,
+                         ImGuiChildFlags_Borders,
+                         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
     {
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
-        if (ImGui::SmallButton(grid.visible ? "Grid: On" : "Grid: Off"))
-            grid.visible = !grid.visible;
-
+        if (toolbar_icon_button("Translate", 0, m_Operation == ImGuizmo::TRANSLATE, "Move (1)"))
+            m_Operation = ImGuizmo::TRANSLATE;
         ImGui::SameLine();
-        if (ImGui::SmallButton("Grid Settings..."))
+        if (toolbar_icon_button("Rotate", 1, m_Operation == ImGuizmo::ROTATE, "Rotate (2)"))
+            m_Operation = ImGuizmo::ROTATE;
+        ImGui::SameLine();
+        if (toolbar_icon_button("Scale", 2, m_Operation == ImGuizmo::SCALE, "Scale (3)"))
+            m_Operation = ImGuizmo::SCALE;
+        ImGui::SameLine();
+        if (toolbar_icon_button("Grid", 3, grid.visible, "Grid settings (right-click to toggle)"))
             ImGui::OpenPopup("##GridSettings");
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+            grid.visible = !grid.visible;
 
         if (ImGui::BeginPopup("##GridSettings"))
         {
-            ImGui::TextUnformatted("Editor Grid");
+            ImGui::TextUnformatted("Grid Settings");
             ImGui::Separator();
-            ImGui::Checkbox("Show Grid", &grid.visible);
-            ImGui::SetNextItemWidth(135.0f);
+            ImGui::Checkbox("Visible", &grid.visible);
+            ImGui::SetNextItemWidth(130.0f);
             ImGui::DragFloat("Cell Size", &grid.cellSize, 0.05f, 0.001f, 1000.0f, "%.2f");
-            ImGui::SetNextItemWidth(135.0f);
+            ImGui::SetNextItemWidth(130.0f);
             ImGui::DragFloat("Major Interval", &grid.majorInterval, 0.1f, 1.0f, 100.0f, "%.0f");
-            ImGui::SetNextItemWidth(135.0f);
+            ImGui::SetNextItemWidth(130.0f);
             ImGui::DragFloat("Line Width", &grid.lineWidth, 0.05f, 0.1f, 8.0f, "%.2f px");
-            ImGui::ColorEdit4("Minor Color", glm::value_ptr(grid.minorColor),
-                              ImGuiColorEditFlags_AlphaBar);
-            ImGui::ColorEdit4("Major Color", glm::value_ptr(grid.majorColor),
-                              ImGuiColorEditFlags_AlphaBar);
-
+            ImGui::ColorEdit4("Minor Color", glm::value_ptr(grid.minorColor), ImGuiColorEditFlags_AlphaBar);
+            ImGui::ColorEdit4("Major Color", glm::value_ptr(grid.majorColor), ImGuiColorEditFlags_AlphaBar);
             grid.cellSize = std::clamp(grid.cellSize, 0.001f, 1000.0f);
             grid.majorInterval = std::clamp(grid.majorInterval, 1.0f, 100.0f);
             grid.lineWidth = std::clamp(grid.lineWidth, 0.1f, 8.0f);
             ImGui::EndPopup();
         }
     }
+    m_ToolbarHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows)
+        || ImGui::IsPopupOpen("##GridSettings");
     ImGui::EndChild();
-    ImGui::PopStyleVar(2);
+    ImGui::PopStyleVar(3);
+    ImGui::PopStyleColor();
 }
 
 bool Viewport::world_to_viewport(
@@ -502,7 +617,7 @@ void Viewport::pick_entity(
         return;
     }
 
-    if (!m_ViewportHovered ||
+    if (m_ToolbarHovered || !m_ViewportHovered ||
         !ImGui::IsMouseClicked(ImGuiMouseButton_Left) ||
         ImGuizmo::IsOver() ||
         ImGuizmo::IsUsing())

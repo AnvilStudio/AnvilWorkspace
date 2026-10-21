@@ -1,15 +1,20 @@
 #pragma once
 #include <Anvil.h>
 #include "../Grid/EditorGrid.h"
+#include <array>
 
 class Viewport
 {
 public:
     Viewport();
     void Draw();
+    ~Viewport();
 
 private:
     void draw_toolbar();
+    void initialize_toolbar_icons();
+    void release_toolbar_icons();
+    bool toolbar_icon_button(const char* id, int index, bool selected, const char* tooltip);
     void update_operation(bool update);
     void set_gizmo_bounds();
     void draw_gizmo();
@@ -27,6 +32,14 @@ private:
     anv::_shared<anv::Camera2D> m_EditorCamera;
     anv::CameraController m_Controller;
     forge::EditorGrid m_EditorGrid;
+    struct ToolbarIcon
+    {
+        anv::Ref<anv::Texture> texture;
+        void* imguiID = nullptr;
+    };
+    std::array<ToolbarIcon, 4> m_ToolbarIcons{};
+    bool m_ToolbarIconsInitialized = false;
+    bool m_ToolbarHovered = false;
 
     uint32_t m_LastTargetWidth = 0;
     uint32_t m_LastTargetHeight = 0;
