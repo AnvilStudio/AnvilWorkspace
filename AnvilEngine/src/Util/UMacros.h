@@ -3,6 +3,7 @@
 #include "Profile.h"
 #include "AnvLog/AnvLog.h"
 #include "ScopedTimer.h"
+#include "FrameProfiler.h"
 #include <memory>
 #include <vector>
 #include <random>
@@ -35,7 +36,10 @@ using _weak = std::weak_ptr<_ty>;
 // profile a specific scope
 #define ANV_PROFILE_SCOPE() Profiler _profile_scope(__func__);
 #define ANV_PROFILE_SCOPE_NAME(scope) Profiler _profile_scope(scope);
-#define TIME_SCOPE(result) ScopedTimer timer(result);
+#define ANV_JOIN_IMPL(a, b) a##b
+#define ANV_JOIN(a, b) ANV_JOIN_IMPL(a, b)
+#define TIME_SCOPE(result) ::anv::ScopedTimer ANV_JOIN(_anv_timer_, __COUNTER__)(result);
+#define ANV_PROFILE_ZONE(zone) ::anv::ProfileZone ANV_JOIN(_anv_zone_, __COUNTER__)(::anv::FrameProfiler::Zone::zone);
 
 // Logging
 // ====================================================================

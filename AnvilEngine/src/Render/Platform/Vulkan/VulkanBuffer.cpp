@@ -23,8 +23,7 @@ namespace anv
 			m_VkUsage,
 			m_Properties,
 			m_Buffer,
-			m_Memory
-		);
+			m_Memory);
 
 		if (m_Info.InitialData)
 			SetData(m_Info.InitialData, m_Info.Size, 0);
@@ -50,28 +49,38 @@ namespace anv
 		}
 	}
 
-	void VulkanBuffer::SetData(const void* data, uint64_t size, uint64_t offset)
+	void VulkanBuffer::SetData(
+		const void *data,
+		uint64_t size,
+		uint64_t offset)
 	{
-		ANV_ASSERT(data, "VulkanBuffer::SetData data is null!");
-		ANV_ASSERT(offset + size <= m_Info.Size, "Buffer upload exceeds buffer size!");
+		ANV_ASSERT(data, "Buffer data is null!");
+		ANV_ASSERT(
+			offset <= m_Info.Size &&
+				size <= m_Info.Size - offset,
+			"Buffer upload exceeds capacity!");
 
-		void* mapped = nullptr;
+		VkDevice device =
+			m_Context->GetAs<VulkanContext>()->GetDevice();
 
-		vkMapMemory(
-			m_Context->GetAs<VulkanContext>()->GetDevice(),
-			m_Memory,
-			offset,
-			size,
-			0,
-			&mapped
-		);
+		void *mapped = nullptr;
 
-		memcpy(mapped, data, size);
+		ANV_ASSERT(
+			vkMapMemory(
+				device,
+				m_Memory,
+				0,
+				VK_WHOLE_SIZE,
+				0,
+				&mapped) == VK_SUCCESS,
+			"Failed to map Vulkan buffer!");
 
-		vkUnmapMemory(
-			m_Context->GetAs<VulkanContext>()->GetDevice(),
-			m_Memory
-		);
+		std::memcpy(
+			static_cast<std::byte *>(mapped) + offset,
+			data,
+			static_cast<size_t>(size));
+
+		vkUnmapMemory(device, m_Memory);
 	}
 
 	void VulkanBuffer::Bind()

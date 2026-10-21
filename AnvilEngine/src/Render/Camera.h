@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Scene/Components/Transform2D.h"
+#include "../Scene/Components/Transform2d.h"
 
 #include <glm/glm.hpp>
 

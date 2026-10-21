@@ -10,7 +10,9 @@ namespace anv_log
 		{
 			m_Path = _path;
 			CheckExists();
-			Write(AnvLog::m_CreationInfo.fileBanner);
+			#ifndef RELEASE
+            Write(AnvLog::m_CreationInfo.fileBanner);
+#endif
 		}
 
 		void Write(std::string _content)
@@ -18,7 +20,9 @@ namespace anv_log
 			auto file = std::fstream(m_Path, std::ios::app);
 			if (!file)
 			{
-				std::cout << "LogError: Failed to open log file for output: " << m_Path << '\n';
+				#ifndef RELEASE
+                std::cerr << "LogError: Failed to open log file for output: " << m_Path << '\n';
+#endif
 				return;
 			}
 
@@ -33,7 +37,9 @@ namespace anv_log
 				std::ofstream newFile(m_Path);
 				if (!newFile)
 				{
-					std::cout << "Failed to find and create file: " << m_Path << '\n';
+					#ifndef RELEASE
+                    std::cerr << "Failed to find and create file: " << m_Path << '\n';
+#endif
 				}
 			}
 
@@ -49,14 +55,22 @@ namespace anv_log
 	void AnvLog::Init(const LogCreateInfo _info)
 	{
 		m_CreationInfo = _info;
-		if (_info.fileOutput)
+#ifdef RELEASE
+        m_CreationInfo.consoleOutput = false;
+        m_CreationInfo.fileOutput = true;
+#endif
+		if (m_CreationInfo.fileOutput)
 		{
-			m_File = std::make_unique<LogFile>(_info.logFilePath + _info.logFileName);
+			m_File = std::make_unique<LogFile>(m_CreationInfo.logFilePath + m_CreationInfo.logFileName);
 		}
 	}
 
 	void AnvLog::LOG_CUST(TermColor _col, LogLevel _lev, const std::string _str, ...)
 	{
+#ifdef RELEASE
+        if (_lev != LogLevel::LL_ERROR && _lev != LogLevel::LL_FATAL)
+            return;
+#endif
 		va_list args;
 		va_start(args, _str);
 
@@ -94,6 +108,9 @@ namespace anv_log
 
 	void AnvLog::LOG_INFO(const std::string _str, ...)
 	{
+#ifdef RELEASE
+        return;
+#endif
 		va_list args;
 		va_start(args, _str);
 
@@ -127,6 +144,9 @@ namespace anv_log
 
 	void AnvLog::LOG_DEBUG(const std::string _str, ...)
 	{
+#ifdef RELEASE
+        return;
+#endif
 		va_list args;
 		va_start(args, _str);
 
@@ -160,6 +180,9 @@ namespace anv_log
 
 	void AnvLog::LOG_WARN(const std::string _str, ...)
 	{
+#ifdef RELEASE
+        return;
+#endif
 		va_list args;
 		va_start(args, _str);
 

@@ -32,6 +32,16 @@ namespace anv
         m_RenderAPI->DrawScene(renderTarget, camera);
     }
 
+    void Renderer2D::DrawScene(Ref<RenderTarget> target, _shared<Camera2D> camera, const RenderOverlays& overlays)
+    {
+        m_RenderAPI->DrawScene(target, camera, overlays);
+    }
+
+    void Renderer2D::DrawMainScene(_shared<Camera2D> camera)
+    {
+        m_RenderAPI->DrawMainScene(camera);
+    }
+
     void Renderer2D::EndScene()
     {
         m_RenderAPI->EndScene();

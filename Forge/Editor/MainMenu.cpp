@@ -3,7 +3,7 @@
 
 void MainMenu::Draw()
 {
-    static Windows& windows = EditorLayer::GetInstance()->GetWindowSettings();
+    Windows& windows = EditorLayer::GetInstance()->GetWindowSettings();
     if (!ImGui::BeginMainMenuBar())
         return;
 
@@ -54,10 +54,28 @@ void MainMenu::Draw()
 
     if (ImGui::BeginMenu("View"))
     {
-        ImGui::MenuItem("Asset Registry", nullptr, windows.showAssetRegistry);
-        ImGui::MenuItem("Dev Notes", nullptr, windows.showCodeEditor);
-        ImGui::MenuItem("Stats", nullptr, windows.showStats);
-        ImGui::MenuItem("Console", nullptr, windows.showConsole);
+        if (ImGui::BeginMenu("Scene"))
+        {
+            ImGui::MenuItem("Scene Viewport", nullptr, &windows.showViewport);
+            ImGui::MenuItem("Game Viewport", nullptr, &windows.showGameViewport);
+            ImGui::MenuItem("Scene Hierarchy", nullptr, &windows.showHierarchy);
+            ImGui::MenuItem("Inspector", nullptr, &windows.showInspector);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Tools"))
+        {
+            ImGui::MenuItem("Files", nullptr, &windows.showFiles);
+            ImGui::MenuItem("Asset Registry", nullptr, &windows.showAssetRegistry);
+            ImGui::MenuItem("Code Editor", nullptr, &windows.showCodeEditor);
+            ImGui::MenuItem("Console", nullptr, &windows.showConsole);
+            ImGui::MenuItem("Performance Stats", nullptr, &windows.showStats);
+            ImGui::EndMenu();
+        }
+        ImGui::Separator();
+        if (ImGui::MenuItem("Show All Windows"))
+            windows.ShowAll();
+        if (ImGui::MenuItem("Restore Default Windows"))
+            windows.RestoreDefaults();
         ImGui::EndMenu();
     }
 

@@ -59,6 +59,16 @@ namespace anv
             void Deserialize(Serializer& ser) { ser.Field("Value", value); }
         };
 
+        // Persistent parent reference; a missing component denotes a root entity.
+        // Entity UUIDs remain stable across save/load unlike entt handles.
+        struct Relationship
+        {
+            std::string parentUUID;
+
+            void Serialize(Serializer& ser) { ser.Field("Parent", parentUUID); }
+            void Deserialize(Serializer& ser) { ser.FieldOr<std::string>("Parent", parentUUID, ""); }
+        };
+
         struct UID
         {
             uuid::EntityUUID uid;

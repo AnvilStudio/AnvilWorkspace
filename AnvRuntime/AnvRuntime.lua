@@ -1,15 +1,16 @@
+
 project "AnvRuntime"
 
-    -- NOTE --
-    -- Windows: VS2022 automatically sets the working dir to the 
-    -- start projects directory. 
+    -- NOTE:
+    -- Windows: VS2022 automatically sets the working directory
+    -- to the startup project's directory.
 
     kind "ConsoleApp"
     language "C++"
     cppdialect "C++20"
 
     targetdir("bin/" .. outdir .. "/%{prj.name}")
-    objdir( "bin-int/" .. outdir .. "/%{prj.name}")
+    objdir("bin-int/" .. outdir .. "/%{prj.name}")
 
     location(".")
 
@@ -19,10 +20,10 @@ project "AnvRuntime"
         "**.h"
     }
 
-    includedirs 
+    includedirs
     {
         "%{ROOTDIR}AnvilEngine/include",
-        "%{ROOTDIR}AnvilEngine/vendor/glm", -- TODO: Remove
+        "%{ROOTDIR}AnvilEngine/vendor/glm"
     }
 
     links
@@ -31,16 +32,21 @@ project "AnvRuntime"
         "Box2D"
     }
 
+    -- Runtime resources
     postbuildcommands
     {
         '{MKDIR} "%{cfg.targetdir}/Anvil"',
-        '{COPYDIR} "%{wks.location}/AnvilEngine/Resources" "%{cfg.targetdir}/Anvil"'
+        '{COPYDIR} "%{ROOTDIR}AnvilEngine/Resources" "%{cfg.targetdir}/Anvil"'
     }
 
-filter "system:macosx"
-    architecture "arm64"
 
-    local pythonLinkFlags = os.outputof("python3-config --embed --ldflags")
+-- ============================================================
+-- macOS
+-- ============================================================
+
+filter "system:macosx"
+
+    architecture "arm64"
 
     defines
     {
@@ -52,7 +58,7 @@ filter "system:macosx"
     {
         "%{ROOTDIR}AnvilEngine/bin/" .. outdir .. "/AnvilEngine",
         "%{ROOTDIR}AnvilEngine/vendor/GLFW/bin/" .. outdir .. "/GLFW",
-        "%{ROOTDIR}AnvilEngine/vendor/Box2d/bin/" .. outdir .. "/Box2D",
+        "%{ROOTDIR}AnvilEngine/vendor/Box2d/bin/" .. outdir .. "/Box2D"
     }
 
     links
@@ -65,14 +71,59 @@ filter "system:macosx"
         "CoreFoundation.framework"
     }
 
-    if MACOS_RENDERER == "vulkan" then
+    buildoptions
+    {
+        "-fobjc-arc"
+    }
+
+    -- Locate and link the embedded Python interpreter.
+    local pythonIncludes = os.outputof("python3-config --includes")
+    local pythonLinkFlags = os.outputof("python3-config --embed --ldflags")
+
+    if not pythonIncludes or not pythonIncludes:match("%S") then
+        error("Failed to retrieve Python include flags on macOS")
+    end
+
+    if not pythonLinkFlags or not pythonLinkFlags:match("%S") then
+        error("Failed to retrieve Python embedding linker flags on macOS")
+    end
+
+    -- Keep compiler and linker options separate.
+    -- Preserve complete output so paired framework arguments work.
+    buildoptions
+    {
+        pythonIncludes
+    }
+
+    linkoptions
+    {
+        pythonLinkFlags
+    }
+
+
+-- ============================================================
+-- macOS Rendering Backend
+-- ============================================================
+
+if MACOS_RENDERER == "vulkan" then
+
+    filter "system:macosx"
+
         defines
         {
             "ANV_RENDERER_VULKAN",
             "PLATFORM_APPLE_VK"
         }
-        includedirs { "%{VULKAN_SDK}" }
-        libdirs { "%{VULKAN_LIB}" }
+
+        includedirs
+        {
+            "%{VULKAN_SDK}"
+        }
+
+        libdirs
+        {
+            "%{VULKAN_LIB}"
+        }
 
         links
         {
@@ -80,21 +131,20 @@ filter "system:macosx"
             "shaderc_combined"
         }
 
-        -- The LunarG Vulkan loader is installed with an @rpath install name.
-        -- Add the selected SDK's lib directory so dyld can resolve
-        -- libvulkan.1.dylib when Forge is launched outside the SDK shell.
+        -- Allow dyld to locate the Vulkan loader.
         linkoptions
         {
             "-Wl,-rpath," .. VULKAN_LIB
         }
 
-        -- TODO: Needs to get working.
-        postbuildcommands
+else
+
+    filter "system:macosx"
+
+        defines
         {
-            "export VK_DRIVER_FILES=\"$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json\"" -- we use MoltenVK
+            "ANV_RENDERER_METAL"
         }
-    else
-        defines { "ANV_RENDERER_METAL" }
 
         links
         {
@@ -102,66 +152,152 @@ filter "system:macosx"
             "MetalKit.framework"
         }
 
-        buildoptions { "-fobjc-arc" }
-    end
+end
 
-    if pythonLinkFlags ~= nil and pythonLinkFlags ~= "" then
-        linkoptions
-        {
-            pythonLinkFlags
-        }
-    end
+
+-- ============================================================
+-- Windows
+-- ============================================================
 
 filter "system:windows"
+
+    architecture "x86_64"
+
+    defines
+    {
+        "PLATFORM_WIN64",
+        "PLATFORM_WINDOWS",
+        "ANV_RENDERER_VULKAN"
+    }
+
+    local pythonVersion = PYTHON_VERSION or "313"
+    local pythonDir = "%{ROOTDIR}AnvilEngine/Resources/Python"
+
+    includedirs
+    {
+        pythonDir .. "/include"
+    }
+
     libdirs
     {
         "%{ROOTDIR}AnvilEngine/vendor/GLFW/" .. outdir .. "/GLFW",
-        "%{VULKAN_LIB}"
+        "%{VULKAN_LIB}",
+        pythonDir .. "/libs"
     }
 
     links
     {
         "GLFW",
         "vulkan-1",
-        "shaderc_combined"
+        "shaderc_combined",
+        "python" .. pythonVersion
     }
+
+    buildoptions
+    {
+        "/MP"
+    }
+
+
+-- ============================================================
+-- DebugG Configuration
+-- ============================================================
 
 filter "configurations:DebugG"
-    defines {
+
+    defines
+    {
         "DEBUG",
-        "DEBUG_G" -- Graphics
+        "DEBUG_G"
     }
 
     symbols "on"
+    optimize "off"
 
-    filter { "system:windows" }
-        linkoptions { "/SUBSYSTEM:CONSOLE" }
-        buildoptions { "/MP" } -- windows only
+filter { "system:windows", "configurations:DebugG" }
 
-    filter { "system:macosx" }
-        linkoptions { "-Wl,-rpath,@loader_path" } -- macOS rpath for shared libraries
+    kind "ConsoleApp"
 
+    linkoptions
+    {
+        "/SUBSYSTEM:CONSOLE"
+    }
+
+filter { "system:macosx", "configurations:DebugG" }
+
+    linkoptions
+    {
+        "-Wl,-rpath,@loader_path"
+    }
+
+
+-- ============================================================
+-- Debug Configuration
+-- ============================================================
 
 filter "configurations:Debug"
-    defines "DEBUG"
+
+    defines
+    {
+        "DEBUG"
+    }
+
     symbols "on"
+    optimize "off"
 
-    filter { "system:windows" }
-        linkoptions { "/SUBSYSTEM:CONSOLE" }
-        buildoptions { "/MP" } -- windows only
+filter { "system:windows", "configurations:Debug" }
 
-    filter { "system:macosx" }
-        linkoptions { "-Wl,-rpath,@loader_path" } -- macOS rpath for shared libraries
+    kind "ConsoleApp"
 
+    linkoptions
+    {
+        "/SUBSYSTEM:CONSOLE"
+    }
+
+filter { "system:macosx", "configurations:Debug" }
+
+    linkoptions
+    {
+        "-Wl,-rpath,@loader_path"
+    }
+
+
+-- ============================================================
+-- Release Configuration
+-- ============================================================
 
 filter "configurations:Release"
-    defines "RELEASE"
+
+    defines
+    {
+        "RELEASE"
+    }
+
     optimize "on"
-    kind "WindowedApp" -- Change to WindowedApp for GUI applications
+    symbols "off"
 
-    filter { "system:windows" }
-            --linkoptions { "/SUBSYSTEM:WINDOWS" }
-            buildoptions { "/MP" } -- windows only
+filter { "system:windows", "configurations:Release" }
 
-    filter { "system:macosx" }
-        linkoptions { "-Wl,-rpath,@loader_path" } -- macOS rpath for shared libraries
+    kind "WindowedApp"
+
+    -- Requires WinMain/wWinMain entry point.
+    linkoptions
+    {
+        "/SUBSYSTEM:WINDOWS"
+    }
+
+filter { "system:macosx", "configurations:Release" }
+
+    kind "WindowedApp"
+
+    linkoptions
+    {
+        "-Wl,-rpath,@loader_path"
+    }
+
+
+-- ============================================================
+-- Reset Premake filters
+-- ============================================================
+
+filter {}

@@ -9,13 +9,13 @@ namespace anv
         ScopedTimer(float& result)
             : m_Result(result)
         {
-            m_Start = std::chrono::high_resolution_clock::now();
+            m_Start = std::chrono::steady_clock::now();
         }
 
         ~ScopedTimer()
         {
             auto end =
-                std::chrono::high_resolution_clock::now();
+                std::chrono::steady_clock::now();
 
             m_Result =
                 std::chrono::duration<float, std::milli>(
@@ -24,7 +24,7 @@ namespace anv
         }
 
     private:
-        std::chrono::high_resolution_clock::time_point m_Start;
+        std::chrono::steady_clock::time_point m_Start;
         float& m_Result;
     };
 }

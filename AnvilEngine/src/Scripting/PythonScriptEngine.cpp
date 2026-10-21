@@ -322,6 +322,12 @@ namespace anv
 #endif
     }
 
+    /////////////////////////////////////////////////////////////
+    //                      SCRIPT ENGINE                      //
+    /////////////////////////////////////////////////////////////
+
+    ScriptingStats PythonScriptEngine::s_Stats = {};
+
     bool PythonScriptEngine::Initialize(const std::filesystem::path &_projectDirectory)
     {
         if (s_Initialized)
@@ -329,7 +335,7 @@ namespace anv
 
         s_ProjectDirectory = _projectDirectory;
         s_ScriptsDirectory = s_ProjectDirectory / "Scripts";
-        s_PythonModuleDirectory = s_ExecDir / "Anvil" / "Resources" / "Python";
+        s_PythonModuleDirectory = FileSystem::s_ExecDir / "Anvil" / "Resources" / "Python";
 
         if (!std::filesystem::exists(s_PythonModuleDirectory))
         {
@@ -425,7 +431,8 @@ namespace anv
 
     void PythonScriptEngine::UpdateScene(Scene &_scene, float _deltaTime)
     {
-#ifndef ANV_ENABLE_PYTHON
+        TIME_SCOPE(s_Stats.updateTimer)
+#ifndef ANV_ENABLE_PYTHON   
         (void)_scene;
         (void)_deltaTime;
 #else

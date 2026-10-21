@@ -46,6 +46,8 @@ namespace anv
             return it != m_Bodies.end() ? &it->second.body : nullptr;
         }
 
+        static float m_StepTimer;
+
     private:
         struct RuntimeBody2D
         {

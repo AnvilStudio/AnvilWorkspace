@@ -9,7 +9,7 @@ namespace anv
         : m_Path(std::move(_path)), m_Mode(_mode), m_Dir(_dir)
     {
         ANV_PROFILE_SCOPE()
-            std::string mode, dir;
+        std::string mode, dir;
 
         if (m_Mode == Mode::SER_MODE_TOML)
         {
@@ -33,7 +33,7 @@ namespace anv
         }
 
         ANV_LOG_INFO("Opening Serializable File %s\n - In Mode %s\n - with direction %s",
-            m_Path.c_str(), mode.c_str(), dir.c_str())
+                     m_Path.c_str(), mode.c_str(), dir.c_str())
     }
 
     Serializer::Serializer(std::filesystem::path _path, Mode _mode, Direction _dir)
@@ -64,50 +64,56 @@ namespace anv
         }
 
         ANV_LOG_INFO("Opening Serializable File %s\n - In Mode %s\n - with direction %s",
-            m_Path.c_str(), mode.c_str(), dir.c_str())
+                     m_Path.c_str(), mode.c_str(), dir.c_str())
     }
 
     anv::Serializer::Serializer(Ref<File> _file, Mode _mode, Direction _dir)
         : m_Path(_file->Path()), m_Mode(_mode), m_Dir(_dir)
     {
         ANV_PROFILE_SCOPE()
-            std::string mode, dir;
+        std::string mode, dir;
 
-            if (m_Mode == Mode::SER_MODE_TOML)
-            {
-                mode = "TOML";
-                m_TomlStack.clear();
-                m_TomlStack.push_back(&m_TomlRoot);
+        if (m_Mode == Mode::SER_MODE_TOML)
+        {
+            mode = "TOML";
+            m_TomlStack.clear();
+            m_TomlStack.push_back(&m_TomlRoot);
 
-                dir = "Write";
-                if (IsReading())
-                    dir = "Read";
-                    toml_load();
-            }
+            dir = "Write";
+            if (IsReading())
+                dir = "Read";
+            toml_load();
+        }
 
-            else
-            {
-                mode = "Bin";
-                dir = "Write";
-                if (IsReading())
-                    mode = "Read";
-                    bin_load();
-            }
+        else
+        {
+            mode = "Bin";
+            dir = "Write";
+            if (IsReading())
+                mode = "Read";
+            bin_load();
+        }
 
-            ANV_LOG_INFO("Opening Serializable File %s\n - In Mode %s\n - with direction %s", 
-                m_Path.c_str(), mode.c_str(), dir.c_str())
+        ANV_LOG_INFO("Opening Serializable File %s\n - In Mode %s\n - with direction %s",
+                     m_Path.c_str(), mode.c_str(), dir.c_str())
     }
 
     Serializer::~Serializer()
     {
-        try { Close(); }
-        catch (...) { /* don’t throw in dtor */ }
+        try
+        {
+            Close();
+        }
+        catch (...)
+        { /* donï¿½t throw in dtor */
+        }
         ANV_LOG_DEBUG("Closing Serializable File %s", m_Path.c_str())
     }
 
     void Serializer::Close()
     {
-        if (m_Closed) return;
+        if (m_Closed)
+            return;
         m_Closed = true;
 
         if (IsWriting())
@@ -119,7 +125,7 @@ namespace anv
         }
     }
 
-    bool Serializer::HasObject(const std::string& name) const
+    bool Serializer::HasObject(const std::string &name) const
     {
         if (m_Mode == Mode::SER_MODE_TOML)
             return toml_has_table(name);
@@ -127,7 +133,7 @@ namespace anv
         return false; // for bin later on
     }
 
-    void Serializer::RemoveObject(const std::string& name)
+    void Serializer::RemoveObject(const std::string &name)
     {
         if (m_Mode == Mode::SER_MODE_TOML)
         {
@@ -141,12 +147,59 @@ namespace anv
 
     void Serializer::toml_load()
     {
-        // Read whole file and parse as TOML
         File f(m_Path);
         const auto bytes = f.ReadAs<uint8_t>();
-        const std::string text(reinterpret_cast<const char*>(bytes.data()), bytes.size());
 
-        m_TomlRoot = toml::parse(text);
+        ANV_LOG_INFO(
+            "TOML loading: %s | Size: %i bytes",
+            m_Path.c_str(),
+            bytes.size());
+
+        if (bytes.empty())
+        {
+            ANV_LOG_ERROR("TOML file is empty: %s", m_Path.c_str());
+            return;
+        }
+
+        auto nullByte = std::find(
+            bytes.begin(),
+            bytes.end(),
+            uint8_t{0});
+
+        if (nullByte != bytes.end())
+        {
+            size_t offset = std::distance(bytes.begin(), nullByte);
+
+            ANV_LOG_ERROR(
+                "NULL BYTE detected in TOML file: %s at offset %i",
+                m_Path.c_str(),
+                offset);
+
+            ANV_LOG_ERROR(
+                "File size: %i bytes",
+                bytes.size());
+
+            return;
+        }
+
+        const std::string text(
+            reinterpret_cast<const char *>(bytes.data()),
+            bytes.size());
+
+        try
+        {
+            m_TomlRoot = toml::parse(text);
+        }
+        catch (const toml::parse_error &e)
+        {
+            ANV_LOG_ERROR(
+                "TOML parse error in %s: %s",
+                m_Path.c_str(),
+                e.what());
+
+            throw;
+        }
+
         m_TomlStack.clear();
         m_TomlStack.push_back(&m_TomlRoot);
     }
@@ -154,27 +207,27 @@ namespace anv
     void Serializer::toml_save()
     {
         std::ostringstream oss;
-        oss << m_TomlRoot;   // toml++ stream serializer
+        oss << m_TomlRoot; // toml++ stream serializer
 
         File f(m_Path);
         f.Write(oss.str());
     }
 
-    void Serializer::push_toml_table(const std::string& name, toml::table& childOut)
+    void Serializer::push_toml_table(const std::string &name, toml::table &childOut)
     {
         // insert and then push pointer to it
         (*m_TomlStack.back()).insert_or_assign(name, childOut);
 
-        auto* node = (*m_TomlStack.back()).get(name);
+        auto *node = (*m_TomlStack.back()).get(name);
         if (!node || !node->is_table())
             ANV_LOG_ERROR("TOML failed to create table: " + name);
 
         m_TomlStack.push_back(node->as_table());
     }
 
-    void Serializer::push_toml_table_for_read(const std::string& name)
+    void Serializer::push_toml_table_for_read(const std::string &name)
     {
-        auto* node = (*m_TomlStack.back()).get(name);
+        auto *node = (*m_TomlStack.back()).get(name);
         if (!node || !node->is_table())
             ANV_LOG_ERROR("TOML missing table: " + name);
 
@@ -188,18 +241,18 @@ namespace anv
         m_TomlStack.pop_back();
     }
 
-    bool Serializer::toml_has_table(const std::string& name) const
+    bool Serializer::toml_has_table(const std::string &name) const
     {
-        auto* node = (*m_TomlStack.back()).get(name);
+        auto *node = (*m_TomlStack.back()).get(name);
         return node && node->is_table();
     }
 
-    void anv::Serializer::push_or_create_toml_table(const std::string& name)
+    void anv::Serializer::push_or_create_toml_table(const std::string &name)
     {
-        // current stack top is the table we’re writing into
-        auto& cur = *m_TomlStack.back();
+        // current stack top is the table weï¿½re writing into
+        auto &cur = *m_TomlStack.back();
 
-        auto* node = cur.get(name);
+        auto *node = cur.get(name);
         if (!node)
         {
             cur.insert_or_assign(name, toml::table{});
@@ -212,11 +265,11 @@ namespace anv
         m_TomlStack.push_back(node->as_table());
     }
 
-    void anv::Serializer::push_or_create_toml_keyed_table(const std::string& key)
+    void anv::Serializer::push_or_create_toml_keyed_table(const std::string &key)
     {
-        auto& cur = *m_TomlStack.back();
+        auto &cur = *m_TomlStack.back();
 
-        auto* node = cur.get(key);
+        auto *node = cur.get(key);
         if (!node)
         {
             cur.insert_or_assign(key, toml::table{});
@@ -229,15 +282,14 @@ namespace anv
         m_TomlStack.push_back(node->as_table());
     }
 
-    void anv::Serializer::push_toml_table_for_read_keyed(toml::table& parent, const std::string& key)
+    void anv::Serializer::push_toml_table_for_read_keyed(toml::table &parent, const std::string &key)
     {
-        auto* node = parent.get(key);
+        auto *node = parent.get(key);
         if (!node || !node->is_table())
             throw std::runtime_error("TOML missing keyed table: " + key);
 
         m_TomlStack.push_back(node->as_table());
     }
-
 
     // -------------------------
     // Binary backend
@@ -256,13 +308,13 @@ namespace anv
         f.WriteAs(m_BinBuffer);
     }
 
-    void Serializer::bin_write_bytes(const void* data, size_t n)
+    void Serializer::bin_write_bytes(const void *data, size_t n)
     {
-        const auto* b = reinterpret_cast<const uint8_t*>(data);
+        const auto *b = reinterpret_cast<const uint8_t *>(data);
         m_BinBuffer.insert(m_BinBuffer.end(), b, b + n);
     }
 
-    void Serializer::bin_read_bytes(void* out, size_t n)
+    void Serializer::bin_read_bytes(void *out, size_t n)
     {
         if (m_BinCursor + n > m_BinBuffer.size())
             ANV_LOG_ERROR("Binary read out of bounds");
@@ -296,7 +348,7 @@ namespace anv
         return static_cast<BinTag>(b);
     }
 
-    void Serializer::bin_write_name(const std::string& name)
+    void Serializer::bin_write_name(const std::string &name)
     {
         bin_write_u64(static_cast<uint64_t>(name.size()));
         if (!name.empty())
@@ -313,7 +365,7 @@ namespace anv
         return s;
     }
 
-    void Serializer::bin_write_obj_begin(const std::string& name)
+    void Serializer::bin_write_obj_begin(const std::string &name)
     {
         bin_write_tag(BinTag::ObjectBegin);
         bin_write_name(name);
@@ -324,7 +376,7 @@ namespace anv
         bin_write_tag(BinTag::ObjectEnd);
     }
 
-    void Serializer::bin_read_obj_begin(const std::string& expectedName)
+    void Serializer::bin_read_obj_begin(const std::string &expectedName)
     {
         const BinTag tag = bin_read_tag();
         if (tag != BinTag::ObjectBegin)
@@ -346,12 +398,14 @@ namespace anv
     // String + string vector
     // -------------------------
 
-    void Serializer::field_str(const std::string& name, std::string& value)
+    void Serializer::field_str(const std::string &name, std::string &value)
     {
         if (m_Mode == Mode::SER_MODE_TOML)
         {
-            if (IsWriting()) TomlWriteValue(name, value);
-            else toml_read_value(name, value);
+            if (IsWriting())
+                TomlWriteValue(name, value);
+            else
+                toml_read_value(name, value);
             return;
         }
 
@@ -380,7 +434,7 @@ namespace anv
         }
     }
 
-    void Serializer::vec_string(const std::string& name, _vec<std::string>& v)
+    void Serializer::vec_string(const std::string &name, _vec<std::string> &v)
     {
         if (m_Mode == Mode::SER_MODE_TOML)
         {
@@ -388,22 +442,24 @@ namespace anv
             {
                 toml::array arr;
                 arr.reserve(v.size());
-                for (auto& s : v) arr.push_back(s);
+                for (auto &s : v)
+                    arr.push_back(s);
                 (*m_TomlStack.back()).insert_or_assign(name, std::move(arr));
             }
             else
             {
-                auto* node = (*m_TomlStack.back()).get(name);
+                auto *node = (*m_TomlStack.back()).get(name);
                 if (!node || !node->is_array())
                     ANV_LOG_ERROR("TOML missing/invalid array: " + name);
 
-                auto& arr = *node->as_array();
+                auto &arr = *node->as_array();
                 v.clear();
                 v.reserve(arr.size());
-                for (auto& it : arr)
+                for (auto &it : arr)
                 {
                     auto val = it.value<std::string>();
-                    if (!val) ANV_LOG_ERROR("TOML array type mismatch: " + name);
+                    if (!val)
+                        ANV_LOG_ERROR("TOML array type mismatch: " + name);
                     v.push_back(*val);
                 }
             }
@@ -415,7 +471,7 @@ namespace anv
             bin_write_name(name);
             bin_write_tag(BinTag::VecString);
             bin_write_u64(static_cast<uint64_t>(v.size()));
-            for (auto& s : v)
+            for (auto &s : v)
             {
                 bin_write_u64(static_cast<uint64_t>(s.size()));
                 if (!s.empty())

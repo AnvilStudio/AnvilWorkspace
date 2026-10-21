@@ -34,6 +34,11 @@ namespace anv
         return m_Texture;
     }
 
+    void* MetalTexture::GetImGuiTextureID()
+    {
+        return GetNativeHandle();
+    }
+
     void MetalTexture::Upload()
     {
         Destroy();

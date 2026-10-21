@@ -16,6 +16,7 @@ namespace anv
 
         bool IsGPUReady() const override;
         void* GetNativeHandle() const override;
+        void* GetImGuiTextureID() override;
 
         VkImage GetImage() const { return m_Image; }
         VkImageView GetImageView() const { return m_ImageView; }
@@ -42,5 +43,6 @@ namespace anv
         VkDescriptorSetLayout m_DescriptorSetLayout = VK_NULL_HANDLE;
         VkDescriptorPool m_DescriptorPool = VK_NULL_HANDLE;
         VkDescriptorSet m_DescriptorSet = VK_NULL_HANDLE;
+        VkDescriptorSet m_ImGuiDescriptor = VK_NULL_HANDLE;
     };
 }
