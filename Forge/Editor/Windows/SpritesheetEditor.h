@@ -99,29 +99,54 @@ public:
         ImGui::Spacing();
         ImGui::TextDisabled("%d columns  /  %d rows  /  %d sprites", columns, rows, columns * rows);
         ImGui::SameLine();
+
+        // Reserve space for the selected-cell preview and action bar.
+        const float footerHeight = 130.0f;
+        const float controlsHeight = ImGui::GetFrameHeightWithSpacing() + 10.0f;
+        const ImVec2 available = ImGui::GetContentRegionAvail();
+        const float canvasHeight = std::max(100.0f, available.y - footerHeight - controlsHeight);
+
         if (ImGui::SmallButton("Fit"))
         {
-            const ImVec2 avail = ImGui::GetContentRegionAvail();
-            m_Zoom = std::clamp(std::min((avail.x - 20.0f) / width,
-                (avail.y - 135.0f) / height), 0.1f, 8.0f);
+            const float canvasWidth = std::max(100.0f, available.x - 28.0f);
+            m_Zoom = std::clamp(std::min(canvasWidth / width,
+                std::max(80.0f, canvasHeight - 28.0f) / height), 0.1f, 8.0f);
         }
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(125.0f);
+        if (ImGui::SmallButton("-##SheetZoom"))
+            m_Zoom = std::max(0.1f, m_Zoom / 1.25f);
+        ImGui::SameLine();
+        if (ImGui::SmallButton("+##SheetZoom"))
+            m_Zoom = std::min(8.0f, m_Zoom * 1.25f);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(115.0f);
         ImGui::SliderFloat("##SheetZoom", &m_Zoom, 0.1f, 8.0f, "%.2fx");
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Spritesheet preview zoom");
+            ImGui::SetTooltip("Zoom the spritesheet preview; mouse wheel also works over the canvas.");
 
-        // Reserve an always-visible footer; only the image canvas scrolls.
-        const float footerHeight = ImGui::GetFrameHeightWithSpacing() * 3.5f;
-        const float canvasHeight = std::max(100.0f, ImGui::GetContentRegionAvail().y - footerHeight);
         ImGui::BeginChild("##SpritesheetCanvas", ImVec2(0.0f, canvasHeight),
             ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
+
+        // Wheel-zoom only when the canvas is hovered, not anywhere in Forge.
+        if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+        {
+            const float wheel = ImGui::GetIO().MouseWheel;
+            if (wheel != 0.0f)
+                m_Zoom = std::clamp(m_Zoom * std::pow(1.15f, wheel), 0.1f, 8.0f);
+        }
 
         void* imageID = texture->GetImGuiTextureID();
         if (imageID)
         {
-            const ImVec2 topLeft = ImGui::GetCursorScreenPos();
             const ImVec2 imageSize(width * m_Zoom, height * m_Zoom);
+            const ImVec2 canvasAvailable = ImGui::GetContentRegionAvail();
+            // Center smaller images while retaining native scrolling for larger ones.
+            if (canvasAvailable.x > imageSize.x)
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (canvasAvailable.x - imageSize.x) * 0.5f);
+            if (canvasAvailable.y > imageSize.y)
+                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (canvasAvailable.y - imageSize.y) * 0.5f);
+
+            const ImVec2 topLeft = ImGui::GetCursorScreenPos();
             ImGui::Image(imageID, imageSize, ImVec2(0, 1), ImVec2(1, 0));
             const ImVec2 mouse = ImGui::GetIO().MousePos;
             if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
@@ -145,21 +170,21 @@ public:
 
             ImDrawList* draw = ImGui::GetWindowDrawList();
             const ImU32 gridColor = IM_COL32(140, 165, 188, 85);
-            // Clip all decoration to the canvas, including at high zoom.
-            const ImVec2 clipMin = ImGui::GetWindowPos();
-            const ImVec2 clipMax(clipMin.x + ImGui::GetWindowSize().x, clipMin.y + ImGui::GetWindowSize().y);
-            draw->PushClipRect(clipMin, clipMax, true);
+            // Image bounds + child clip keep grid decoration inside the preview.
+            draw->PushClipRect(topLeft,
+                ImVec2(topLeft.x + imageSize.x, topLeft.y + imageSize.y), true);
             for (int row = 0; row < rows && row < 1024; ++row)
                 for (int col = 0; col < columns && col < 1024; ++col)
                 {
                     const float x = topLeft.x + (m_Margin + col * (m_CellWidth + m_Spacing)) * m_Zoom;
                     const float y = topLeft.y + (m_Margin + row * (m_CellHeight + m_Spacing)) * m_Zoom;
-                    const ImVec2 a(x, y);
-                    const ImVec2 b(x + m_CellWidth * m_Zoom, y + m_CellHeight * m_Zoom);
+                    const ImVec2 cellMin(x, y);
+                    const ImVec2 cellMax(x + m_CellWidth * m_Zoom, y + m_CellHeight * m_Zoom);
                     const bool selected = col == m_SelectedColumn && row == m_SelectedRow;
                     if (selected)
-                        draw->AddRectFilled(a, b, IM_COL32(90, 165, 235, 38));
-                    draw->AddRect(a, b, selected ? IM_COL32(88, 179, 255, 255) : gridColor,
+                        draw->AddRectFilled(cellMin, cellMax, IM_COL32(90, 165, 235, 38));
+                    draw->AddRect(cellMin, cellMax,
+                        selected ? IM_COL32(88, 179, 255, 255) : gridColor,
                         0.0f, 0, selected ? 2.0f : 1.0f);
                 }
             draw->PopClipRect();
@@ -174,12 +199,28 @@ public:
                               1.0f - static_cast<float>(y) / height);
 
         ImGui::Separator();
-        ImGui::Text("Selected  %d, %d", m_SelectedColumn, m_SelectedRow);
-        ImGui::SameLine();
-        ImGui::TextDisabled("|  UV  %.3f, %.3f  -  %.3f, %.3f",
-            uvMin.x, uvMin.y, uvMax.x, uvMax.y);
+        ImGui::TextDisabled("SELECTED SPRITE");
+        // Image UVs are inverted vertically to match the existing canvas.
+        if (imageID)
+        {
+            const float ratio = static_cast<float>(m_CellWidth) / m_CellHeight;
+            const ImVec2 previewSize(ratio >= 1.0f ? 72.0f : 72.0f * ratio,
+                                     ratio >= 1.0f ? 72.0f / ratio : 72.0f);
+            ImGui::Image(imageID, previewSize,
+                ImVec2(uvMin.x, uvMax.y), ImVec2(uvMax.x, uvMin.y));
+            ImGui::SameLine(0.0f, 12.0f);
+        }
+        ImGui::BeginGroup();
+        ImGui::Text("Cell %d, %d", m_SelectedColumn, m_SelectedRow);
+        ImGui::TextDisabled("%d x %d px  |  Origin %d, %d", m_CellWidth, m_CellHeight, x, y);
+        ImGui::TextDisabled("UV Min  %.3f, %.3f", uvMin.x, uvMin.y);
+        ImGui::TextDisabled("UV Max  %.3f, %.3f", uvMax.x, uvMax.y);
+        ImGui::EndGroup();
 
-        if (ImGui::Button("Apply Selected Cell"))
+        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_TabActive));
+        const bool apply = ImGui::Button("Apply Selected Cell");
+        ImGui::PopStyleColor();
+        if (apply)
         {
             sprite.uvMin = uvMin;
             sprite.uvMax = uvMax;
