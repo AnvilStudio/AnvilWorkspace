@@ -2,6 +2,10 @@
 #include "../EditorLayer.h"
 
 #include <cstring>
+#include <vector>
+#include <cstdint>
+#include <unordered_map>
+#include <algorithm>
 
 SceneHierarchy::SceneHierarchy(Ref<Scene> scene)
 {
@@ -88,90 +92,271 @@ void SceneHierarchy::Draw()
     const auto selectedEntity =
         EditorLayer::GetInstance()->GetSelectedEntity();
 
-    auto view = scene->Registry().view<Component::Tag>();
+    // Build a single adjacency index per frame instead of scanning for every row.
+    ChildMap children;
+    std::unordered_map<std::string, entt::entity> byUUID;
+    auto ids = scene->Registry().view<uuid::EntityUUID>();
+    byUUID.reserve(scene->Registry().storage<uuid::EntityUUID>().size());
+    for (auto entity : ids)
+        byUUID.emplace(ids.get<uuid::EntityUUID>(entity).uuid, entity);
 
-    for (const auto entity : view)
+    auto relationships = scene->Registry().view<Component::Relationship>();
+    for (auto entity : relationships)
     {
-        auto& tag = view.get<Component::Tag>(entity);
-        const bool selected = selectedEntity == entity;
+        const auto& parentID = relationships.get<Component::Relationship>(entity).parentUUID;
+        const auto parent = byUUID.find(parentID);
+        if (parent != byUUID.end())
+            children[parent->second].push_back(entity);
+    }
 
-        ImGui::PushID(static_cast<uint32_t>(entity));
-        handle_rename(entity, tag, selected);
+    auto view = scene->Registry().view<Component::Tag>();
+    std::vector<entt::entity> roots;
+    for (const auto entity : view)
+        if (!scene->HasComponent<Component::Relationship>(entity) ||
+            !byUUID.contains(scene->GetComponent<Component::Relationship>(entity).parentUUID))
+            roots.push_back(entity);
 
-        if (ImGui::BeginPopupContextItem())
+    m_VisibleEntities.clear();
+    for (auto entity : roots)
+        collect_visible(entity, children, 0);
+    for (auto entity : roots)
+        draw_entity(scene, entity, selectedEntity, 0, children);
+
+    // Dropping on empty hierarchy space makes an entity a root.
+    ImGui::Dummy(ImVec2(-1.0f, 12.0f));
+    if (ImGui::BeginDragDropTarget())
+    {
+        if (const auto* payload = ImGui::AcceptDragDropPayload("ANV_HIERARCHY_ENTITIES"))
         {
-            if (ImGui::MenuItem("Rename"))
+            if (payload->DataSize > 0 && payload->DataSize % sizeof(entt::entity) == 0)
             {
-                EditorLayer::GetInstance()->SetSelectedEntity(entity);
-                begin_rename(entity, tag.Get());
+                auto* data = static_cast<const entt::entity*>(payload->Data);
+                std::vector<entt::entity> entities(data, data + payload->DataSize / sizeof(entt::entity));
+                if (reparent_selection(scene, entities, entt::null)) scene->Save();
             }
-
-            if (!scene->HasComponent<Component::Camera2D>(entity) &&
-                ImGui::MenuItem("Add Camera 2D"))
-            {
-                scene->AddComponent<Component::Camera2D>(entity);
-                if (scene->GetActiveCameraEntity() == entt::null)
-                    scene->SetActiveCamera(entity);
-                scene->Save();
-            }
-
-            if (scene->HasComponent<Component::Camera2D>(entity) &&
-                scene->GetActiveCameraEntity() != entity &&
-                ImGui::MenuItem("Set As Active Camera"))
-            {
-                scene->SetActiveCamera(entity);
-                scene->Save();
-            }
-
-            if (ImGui::BeginMenu("Physics"))
-            {
-                if (!scene->HasComponent<Component::Rigidbody2D>(entity))
-                {
-                    if (ImGui::MenuItem("Add Dynamic Rigidbody2D"))
-                    {
-                        auto& body = scene->AddComponent<Component::Rigidbody2D>(entity);
-                        body.type = Component::Rigidbody2DType::Dynamic;
-                    }
-
-                    if (ImGui::MenuItem("Add Static Rigidbody2D"))
-                    {
-                        auto& body = scene->AddComponent<Component::Rigidbody2D>(entity);
-                        body.type = Component::Rigidbody2DType::Static;
-                    }
-                }
-
-                if (!scene->HasComponent<Component::BoxCollider2D>(entity) &&
-                    ImGui::MenuItem("Add BoxCollider2D"))
-                {
-                    scene->AddComponent<Component::BoxCollider2D>(entity);
-                }
-
-                ImGui::EndMenu();
-            }
-
-            if (ImGui::MenuItem("Delete"))
-                m_EntityToDelete = entity;
-
-            ImGui::EndPopup();
         }
-
-        ImGui::PopID();
+        ImGui::EndDragDropTarget();
     }
 
     if (m_EntityToDelete != entt::null)
     {
         const entt::entity deletedEntity = m_EntityToDelete;
         scene->DestroyEntity(deletedEntity);
+        scene->Save();
         m_EntityToDelete = entt::null;
 
-        if (selectedEntity == deletedEntity)
-            EditorLayer::GetInstance()->ClearSelection();
+        EditorLayer::GetInstance()->RemoveFromSelection(deletedEntity);
 
         if (m_RenamedEntity == deletedEntity)
             cancel_rename();
     }
 
     ImGui::End();
+}
+
+void SceneHierarchy::draw_entity(Ref<Scene> scene,
+                                 entt::entity entity,
+                                 entt::entity selected,
+                                 int depth, const ChildMap& children)
+{
+    if (depth > 256 || !scene->Registry().valid(entity) ||
+        !scene->HasComponent<Component::Tag>(entity)) return;
+
+    auto& tag = scene->GetComponent<Component::Tag>(entity);
+    const auto foundChildren = children.find(entity);
+    ImGui::PushID(static_cast<uint32_t>(entity));
+    const bool renaming = m_IsRenaming && m_RenamedEntity == entity;
+    const bool hasChildren = foundChildren != children.end() && !foundChildren->second.empty();
+    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow |
+        ImGuiTreeNodeFlags_SpanAvailWidth;
+    if (EditorLayer::GetInstance()->IsEntitySelected(entity)) flags |= ImGuiTreeNodeFlags_Selected;
+    if (!hasChildren) flags |= ImGuiTreeNodeFlags_Leaf |
+                               ImGuiTreeNodeFlags_NoTreePushOnOpen;
+
+    bool open = false;
+    if (renaming)
+    {
+        if (hasChildren) ImGui::SetNextItemOpen(true);
+        open = ImGui::TreeNodeEx("##Entity", flags, "%s", "");
+        ImGui::SameLine();
+        handle_rename(entity, tag, entity == selected);
+    }
+    else
+    {
+        open = ImGui::TreeNodeEx("##Entity", flags, "%s", tag.Get().c_str());
+        // Select on release, not mouse-down: mouse-down on an existing
+        // multi-selection must not collapse it before drag/drop starts.
+        if (ImGui::IsItemHovered() &&
+            ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
+            !ImGui::IsMouseDragging(ImGuiMouseButton_Left) &&
+            !ImGui::IsItemToggledOpen())
+            apply_selection(entity);
+    }
+
+    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+    {
+        auto* editor = EditorLayer::GetInstance();
+        // Preserve every selected entity when dragging any selected row.
+        // Dragging a row outside the selection moves only that row.
+        std::vector<entt::entity> dragEntities;
+        if (editor->IsEntitySelected(entity))
+            dragEntities = editor->GetSelectedEntities();
+        else
+            dragEntities.push_back(entity);
+        ImGui::SetDragDropPayload("ANV_HIERARCHY_ENTITIES",
+            dragEntities.data(), dragEntities.size() * sizeof(entt::entity));
+        if (dragEntities.size() == 1)
+            ImGui::Text("Move %s", tag.Get().c_str());
+        else
+            ImGui::Text("Move %zu selected entities", dragEntities.size());
+        ImGui::EndDragDropSource();
+    }
+    if (ImGui::BeginDragDropTarget())
+    {
+        if (const auto* payload = ImGui::AcceptDragDropPayload("ANV_HIERARCHY_ENTITIES"))
+        {
+            if (payload->DataSize > 0 && payload->DataSize % sizeof(entt::entity) == 0)
+            {
+                auto* data = static_cast<const entt::entity*>(payload->Data);
+                std::vector<entt::entity> entities(data, data + payload->DataSize / sizeof(entt::entity));
+                if (reparent_selection(scene, entities, entity)) scene->Save();
+            }
+        }
+        ImGui::EndDragDropTarget();
+    }
+
+    if (ImGui::BeginPopupContextItem())
+    {
+        if (ImGui::MenuItem("Rename"))
+        {
+            EditorLayer::GetInstance()->SetSelectedEntity(entity);
+            begin_rename(entity, tag.Get());
+        }
+        if (scene->GetParent(entity) != entt::null && ImGui::MenuItem("Unparent"))
+            if (scene->SetParent(entity, entt::null)) scene->Save();
+        if (ImGui::MenuItem("Create Child"))
+        {
+            const auto child = scene->CreateEntity("New Entity");
+            scene->SetParent(child, entity, false);
+            EditorLayer::GetInstance()->SetSelectedEntity(child);
+            begin_rename(child, "New Entity");
+            scene->Save();
+        }
+        if (!scene->HasComponent<Component::Camera2D>(entity) &&
+            ImGui::MenuItem("Add Camera 2D"))
+        {
+            scene->AddComponent<Component::Camera2D>(entity);
+            if (scene->GetActiveCameraEntity() == entt::null)
+                scene->SetActiveCamera(entity);
+            scene->Save();
+        }
+
+        if (scene->HasComponent<Component::Camera2D>(entity) &&
+            scene->GetActiveCameraEntity() != entity &&
+            ImGui::MenuItem("Set As Active Camera"))
+        {
+            scene->SetActiveCamera(entity);
+            scene->Save();
+        }
+
+        if (ImGui::BeginMenu("Physics"))
+        {
+            if (!scene->HasComponent<Component::Rigidbody2D>(entity))
+            {
+                if (ImGui::MenuItem("Add Dynamic Rigidbody2D"))
+                {
+                    auto& body = scene->AddComponent<Component::Rigidbody2D>(entity);
+                    body.type = Component::Rigidbody2DType::Dynamic;
+                }
+
+                if (ImGui::MenuItem("Add Static Rigidbody2D"))
+                {
+                    auto& body = scene->AddComponent<Component::Rigidbody2D>(entity);
+                    body.type = Component::Rigidbody2DType::Static;
+                }
+            }
+
+            if (!scene->HasComponent<Component::BoxCollider2D>(entity) &&
+                ImGui::MenuItem("Add BoxCollider2D"))
+            {
+                scene->AddComponent<Component::BoxCollider2D>(entity);
+            }
+
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::MenuItem("Delete")) m_EntityToDelete = entity;
+        ImGui::EndPopup();
+    }
+
+    if (hasChildren && open)
+    {
+        for (auto child : foundChildren->second)
+            draw_entity(scene, child, selected, depth + 1, children);
+        ImGui::TreePop();
+    }
+    ImGui::PopID();
+}
+
+void SceneHierarchy::collect_visible(entt::entity entity, const ChildMap& children, int depth)
+{
+    if (depth > 256) return;
+    m_VisibleEntities.push_back(entity);
+    auto it = children.find(entity);
+    if (it == children.end()) return;
+    for (auto child : it->second)
+        collect_visible(child, children, depth + 1);
+}
+
+void SceneHierarchy::apply_selection(entt::entity entity)
+{
+    auto* editor = EditorLayer::GetInstance();
+    const ImGuiIO& io = ImGui::GetIO();
+    if (io.KeyShift && m_SelectionAnchor != entt::null)
+    {
+        const auto a = std::find(m_VisibleEntities.begin(), m_VisibleEntities.end(), m_SelectionAnchor);
+        const auto b = std::find(m_VisibleEntities.begin(), m_VisibleEntities.end(), entity);
+        if (a != m_VisibleEntities.end() && b != m_VisibleEntities.end())
+        {
+            auto ia = std::distance(m_VisibleEntities.begin(), a);
+            auto ib = std::distance(m_VisibleEntities.begin(), b);
+            if (ia > ib) std::swap(ia, ib);
+            editor->SetSelectedEntities({m_VisibleEntities.begin() + ia,
+                m_VisibleEntities.begin() + ib + 1});
+            return;
+        }
+    }
+    if (io.KeyCtrl || io.KeySuper)
+        editor->ToggleSelectedEntity(entity);
+    else
+        editor->SetSelectedEntity(entity);
+    m_SelectionAnchor = entity;
+}
+
+bool SceneHierarchy::reparent_selection(Ref<Scene> scene,
+    const std::vector<entt::entity>& selection, entt::entity parent)
+{
+    if (!scene || (parent != entt::null && !scene->Registry().valid(parent)))
+        return false;
+    std::vector<entt::entity> roots;
+    for (auto entity : selection)
+    {
+        if (!scene->Registry().valid(entity) || entity == parent ||
+            (parent != entt::null && scene->IsDescendant(parent, entity)))
+            return false;
+        // Moving a selected ancestor implicitly moves its descendants.
+        bool nested = false;
+        for (auto other : selection)
+            if (entity != other && scene->IsDescendant(entity, other))
+            { nested = true; break; }
+        if (!nested) roots.push_back(entity);
+    }
+    bool changed = false;
+    for (auto entity : roots)
+        if (scene->GetParent(entity) != parent &&
+            scene->SetParent(entity, parent, true))
+            changed = true;
+    return changed;
 }
 
 void SceneHierarchy::begin_rename(
@@ -241,6 +426,8 @@ void SceneHierarchy::finish_rename(Component::Tag& tag)
     if (m_RenameBuffer[0] != '\0')
         tag.value = m_RenameBuffer.data();
 
+    auto scene = App::GetInstance()->GetSceneManager()->GetActive();
+    if (scene) scene->Save();
     cancel_rename();
 }
 

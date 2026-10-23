@@ -7,8 +7,8 @@ void ProjectSettings::Draw()
     if(ImGui::Begin("Project Settings", &m_DoDraw))
     {
 
-        ImGui::End();
     }
+    ImGui::End();
     
 }
 

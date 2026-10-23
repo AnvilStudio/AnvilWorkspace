@@ -323,6 +323,12 @@ namespace anv
 #endif
     }
 
+    /////////////////////////////////////////////////////////////
+    //                      SCRIPT ENGINE                      //
+    /////////////////////////////////////////////////////////////
+
+    ScriptingStats PythonScriptEngine::s_Stats = {};
+
     bool PythonScriptEngine::Initialize(const std::filesystem::path &_projectDirectory)
     {
         if (s_Initialized)
@@ -330,7 +336,7 @@ namespace anv
 
         s_ProjectDirectory = _projectDirectory;
         s_ScriptsDirectory = s_ProjectDirectory / "Scripts";
-        s_PythonModuleDirectory = App::GetInstance()->GetFS().GetExecDir() / "Anvil" / "Resources" / "Python";
+        s_PythonModuleDirectory = FileSystem::s_ExecDir / "Anvil" / "Resources" / "Python";
 
         if (!std::filesystem::exists(s_PythonModuleDirectory))
         {
@@ -426,7 +432,8 @@ namespace anv
 
     void PythonScriptEngine::UpdateScene(Scene &_scene, float _deltaTime)
     {
-#ifndef ANV_ENABLE_PYTHON
+        TIME_SCOPE(s_Stats.updateTimer)
+#ifndef ANV_ENABLE_PYTHON   
         (void)_scene;
         (void)_deltaTime;
 #else
@@ -509,34 +516,27 @@ namespace anv
 
         if (!get_entity_id(_scene, _entity, entityID))
         {
-            Component::Tag& tag = _scene.GetComponent<Component::Tag>(_entity);
-
             ANV_LOG_ERROR(
-                "Failed to resolve entity for on_collision invocation: %s",
-                tag.value.c_str());
+                "Failed to resolve entity for on_collision invocation: %u",
+                static_cast<uint32_t>(_entity));
 
             return;
         }
 
         if (!get_entity_id(_scene, _other, otherID))
         {
-            Component::Tag& otherTag = _scene.GetComponent<Component::Tag>(_other);
             ANV_LOG_ERROR(
-                "Failed to resolve other entity for on_collision invocation: %s",
-                otherTag.value.c_str());
+                "Failed to resolve other entity for on_collision invocation: %u",
+                static_cast<uint32_t>(_other));
 
             return;
         }
 
         // Find script instance belonging to this entity.
-         auto iterator = s_Instances.find(entityID);
+        auto iterator = s_Instances.find(entityID);
 
         if (iterator == s_Instances.end())
-        {
-            Component::Tag& tag = _scene.GetComponent<Component::Tag>(_entity);
-            ANV_LOG_ERROR("[Python] Failed to Invoke on_collision for %s. Script not found in script instance registry!", tag.value.c_str());
             return;
-        }
 
         RuntimeInstance &instance = iterator->second;
 

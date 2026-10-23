@@ -2,8 +2,8 @@
 
 #ifdef ANV_ENABLE_PYTHON
 #include "../ScriptEntityContext.h"
-#include "../../Scene/Component.h"
-#include "../../Scene/Scene.h"
+#include <Scene/Component.h>
+#include <Scene/Scene.h>
 
 namespace anv::python
 {
@@ -16,7 +16,7 @@ namespace anv::python
         const auto context = ResolveScriptEntity(entityID ? entityID : "");
         if (!context || !context.scene->HasComponent<Component::Transform2D>(context.entity))
         {
-            PyErr_SetString(PyExc_KeyError, "Entity or Transform2d component was not found");
+            PyErr_SetString(PyExc_KeyError, "Entity or Transform2D component was not found");
             return nullptr;
         }
 
@@ -36,7 +36,7 @@ namespace anv::python
         const auto context = ResolveScriptEntity(entityID ? entityID : "");
         if (!context || !context.scene->HasComponent<Component::Transform2D>(context.entity))
         {
-            PyErr_SetString(PyExc_KeyError, "Entity or Transform2d component was not found");
+            PyErr_SetString(PyExc_KeyError, "Entity or Transform2D component was not found");
             return nullptr;
         }
 
@@ -53,7 +53,7 @@ namespace anv::python
         const auto context = ResolveScriptEntity(entityID ? entityID : "");
         if (!context || !context.scene->HasComponent<Component::Transform2D>(context.entity))
         {
-            PyErr_SetString(PyExc_KeyError, "Entity or Transform2d component was not found");
+            PyErr_SetString(PyExc_KeyError, "Entity or Transform2D component was not found");
             return nullptr;
         }
 
@@ -72,7 +72,7 @@ namespace anv::python
         const auto context = ResolveScriptEntity(entityID ? entityID : "");
         if (!context || !context.scene->HasComponent<Component::Transform2D>(context.entity))
         {
-            PyErr_SetString(PyExc_KeyError, "Entity or Transform2d component was not found");
+            PyErr_SetString(PyExc_KeyError, "Entity or Transform2D component was not found");
             return nullptr;
         }
 

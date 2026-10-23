@@ -13,6 +13,7 @@ namespace anv
 
         bool IsGPUReady() const override;
         void* GetNativeHandle() const override;
+        void* GetImGuiTextureID() override;
 
     private:
         void Upload();

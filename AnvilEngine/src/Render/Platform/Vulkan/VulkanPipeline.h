@@ -61,6 +61,7 @@ namespace anv
 		void SetRenderPass(const Ref<RenderPass> _rps)                           override;
 		void SetDescriptorSetLayouts(const _vec<VkDescriptorSetLayout>& layouts={});
 		void SetPushConstantRange(VkShaderStageFlags _stage=NULL, uint32_t _size=0);
+        void SetPushConstants(const PushConstantRange& range) override;
 		void Build()                                                                                      override;
 		void Bind(Ref<CommandBuffer> _cmd)                                        override;
 

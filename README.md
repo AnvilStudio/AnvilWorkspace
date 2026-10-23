@@ -229,6 +229,12 @@ Architecture flexibility for future platforms
 
 ## Important Notices
 
+Windows
+---
+The windows build is severely behind the MacOS build. As of Oct 11 2026, Windows is the priority OS.
+Until the windows build catches up, there will be no new features implemented. est. time of complete catch up Oct 21, 2026.
+New branch specifically for the updates is windows-fix
+
 MacOS
 ---
 as of Vulkan SDK version 1.4.335.0. A new driver for Vulkan-on-Metal has came out ("KosmicKrisp"). 

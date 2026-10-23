@@ -34,7 +34,8 @@ project "Forge"
     postbuildcommands
     {
         '{MKDIR} "%{cfg.targetdir}/Anvil"',
-        '{COPYDIR} "%{wks.location}/AnvilEngine/Resources" "%{cfg.targetdir}/Anvil/Resources"'
+        '{COPYDIR} "%{wks.location}/AnvilEngine/Resources" "%{cfg.targetdir}/Anvil/Resources"',
+        '{COPYDIR} "%{wks.location}/Forge/Resources" "%{cfg.targetdir}/ForgeResources"'
         -- Windows Python runtime copying is defined in the system filter.
     }
 
@@ -88,12 +89,7 @@ filter "system:macosx"
         {
             "-Wl,-rpath," .. VULKAN_LIB
         }
-
-        -- TODO: Needs to get working.
-        --postbuildcommands
-        --{
-        --    "export VK_DRIVER_FILES=\"$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json\"" -- we use MoltenVK
-        --}
+        
     else
         defines { "ANV_RENDERER_METAL" }
 

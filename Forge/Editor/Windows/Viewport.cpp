@@ -1,4 +1,5 @@
 #include "Viewport.h"
+#include "../Grid/EditorGrid.h"
 #include "../EditorLayer.h"
 
 #include <algorithm>
@@ -6,6 +7,7 @@
 #include <cctype>
 #include <cmath>
 #include <limits>
+#include <filesystem>
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -42,129 +44,352 @@ Viewport::Viewport()
 
     m_EditorCamera = std::make_shared<anv::Camera2D>();
     m_Controller.SetCamera(m_EditorCamera);
+    m_EditorGrid.Initialize(m_ViewportTarget);
 }
 
 void Viewport::Draw()
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-    ImGui::Begin("Viewport");
-
-    auto sceneManager = anv::App::GetInstance()->GetSceneManager();
-    auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
-
-    if (scene)
+    if (ImGui::Begin("Viewport"))
     {
-        const ImVec2 currentSize = ImGui::GetContentRegionAvail();
-        if (m_EditorCamera && currentSize.x > 0.0f && currentSize.y > 0.0f)
-            m_EditorCamera->SetAspectRatio(currentSize.x / currentSize.y);
+        auto sceneManager = anv::App::GetInstance()->GetSceneManager();
+        auto scene = sceneManager ? sceneManager->GetActive() : nullptr;
 
-        bool camInputEn =
-            (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
-             ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows));
+        if (scene)
+        {
+            const ImVec2 currentSize = ImGui::GetContentRegionAvail();
+            if (m_EditorCamera && currentSize.x > 0.0f && currentSize.y > 0.0f)
+                m_EditorCamera->SetAspectRatio(currentSize.x / currentSize.y);
 
-        m_Controller.SetInputEnabled(camInputEn);
+            bool camInputEn =
+                (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+                 ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows));
 
-        m_Controller.Update(anv::Time::DeltaTime());
+            m_Controller.SetInputEnabled(camInputEn);
 
-        update_operation(
-            ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows));
-    }
+            m_Controller.Update(anv::Time::DeltaTime());
 
-    const ImVec2 viewportSize = ImGui::GetContentRegionAvail();
-    const bool validSize = viewportSize.x > 0.0f && viewportSize.y > 0.0f;
-    const ImVec2 framebufferScale = ImGui::GetIO().DisplayFramebufferScale;
+            update_operation(
+                ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows));
+        }
 
-    const uint32_t targetWidth = validSize
-                                     ? static_cast<uint32_t>(viewportSize.x * framebufferScale.x)
-                                     : 0;
+        const ImVec2 viewportSize = ImGui::GetContentRegionAvail();
+        const bool validSize = viewportSize.x > 0.0f && viewportSize.y > 0.0f;
+        const ImVec2 framebufferScale = ImGui::GetIO().DisplayFramebufferScale;
 
-    const uint32_t targetHeight = validSize
-                                      ? static_cast<uint32_t>(viewportSize.y * framebufferScale.y)
-                                      : 0;
+        const uint32_t targetWidth = validSize
+                                         ? static_cast<uint32_t>(viewportSize.x * framebufferScale.x)
+                                         : 0;
 
-    const bool sizeChanged =
-        validSize && targetWidth > 0 && targetHeight > 0 &&
-        (m_LastTargetWidth != targetWidth ||
-         m_LastTargetHeight != targetHeight);
+        const uint32_t targetHeight = validSize
+                                          ? static_cast<uint32_t>(viewportSize.y * framebufferScale.y)
+                                          : 0;
 
-    if (sizeChanged && m_ViewportTarget)
-    {
-        anv::Renderer2D::WaitIdle();
-        m_ViewportTarget->Resize(targetWidth, targetHeight);
-        m_LastTargetWidth = targetWidth;
-        m_LastTargetHeight = targetHeight;
+        const bool sizeChanged =
+            validSize && targetWidth > 0 && targetHeight > 0 &&
+            (m_LastTargetWidth != targetWidth ||
+             m_LastTargetHeight != targetHeight);
 
-        if (m_EditorCamera)
-            m_EditorCamera->SetAspectRatio(viewportSize.x / viewportSize.y);
-    }
+        if (sizeChanged && m_ViewportTarget)
+        {
+            anv::Renderer2D::WaitIdle();
+            m_ViewportTarget->Resize(targetWidth, targetHeight);
+            m_LastTargetWidth = targetWidth;
+            m_LastTargetHeight = targetHeight;
 
-    if (validSize && m_ViewportTarget)
-    {
-        anv::Renderer2D::DrawScene(m_ViewportTarget, m_EditorCamera);
+            if (m_EditorCamera)
+                m_EditorCamera->SetAspectRatio(viewportSize.x / viewportSize.y);
+        }
+
+        if (validSize && m_ViewportTarget)
+        {
+            push_billboards(scene);
+            anv::RenderOverlays overlays;
+#if defined(PLATFORM_WIN64) || defined(PLATFORM_APPLE_VK)
+            if (m_EditorCamera)
+            {
+                // Match camera state used in DrawScene's queued submission.
+                m_EditorCamera->Update(0.0f);
+                const glm::mat4 viewProjection =
+                    m_EditorCamera->GetProjection() * m_EditorCamera->GetView();
+                m_EditorGrid.Submit(overlays, viewProjection);
+            }
+#endif
+            anv::Renderer2D::DrawScene(m_ViewportTarget, m_EditorCamera, overlays);
 
 #if defined(PLATFORM_APPLE_VK) || defined(PLATFORM_WIN64)
-        const ImVec2 uv0(0.0f, 1.0f);
-        const ImVec2 uv1(1.0f, 0.0f);
+            const ImVec2 uv0(0.0f, 1.0f);
+            const ImVec2 uv1(1.0f, 0.0f);
 #else
-        const ImVec2 uv0(0.0f, 0.0f);
-        const ImVec2 uv1(1.0f, 1.0f);
+            const ImVec2 uv0(0.0f, 0.0f);
+            const ImVec2 uv1(1.0f, 1.0f);
 #endif
 
-        ImGui::Image(
-            m_ViewportTarget->GetImGuiTextureID(),
-            viewportSize,
-            uv0,
-            uv1);
+            ImGui::Image(
+                m_ViewportTarget->GetImGuiTextureID(),
+                viewportSize,
+                uv0,
+                uv1);
 
-        set_gizmo_bounds();
-        
-        if (ImGui::BeginDragDropTarget())
-        {
-            if (const ImGuiPayload *payload =
-                    ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
+            set_gizmo_bounds();
+            const ImVec2 imageMin = ImGui::GetItemRectMin();
+            ImGui::SetCursorScreenPos(ImVec2(imageMin.x + 10.0f, imageMin.y + 10.0f));
+            draw_toolbar(imageMin);
+
+            if (ImGui::BeginDragDropTarget())
             {
-                const auto *pathData =
-                    static_cast<const char *>(payload->Data);
-                const std::filesystem::path assetPath(
-                    pathData ? pathData : "");
-
-                if (scene && IsTextureFile(assetPath))
+                if (const ImGuiPayload *payload =
+                        ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
                 {
-                    auto assetManager =
-                        anv::App::GetInstance()->GetAssetManager();
-                    auto texture =
-                        assetManager->GetOrCreateTexture(assetPath);
+                    const auto *pathData =
+                        static_cast<const char *>(payload->Data);
+                    const std::filesystem::path assetPath(
+                        pathData ? pathData : "");
 
-                    if (texture && texture->IsGPUReady())
+                    if (scene && IsTextureFile(assetPath))
                     {
-                        const entt::entity entity =
-                            scene->CreateEntity(assetPath.stem().string());
+                        auto assetManager =
+                            anv::App::GetInstance()->GetAssetManager();
+                        auto texture =
+                            assetManager->GetOrCreateTexture(assetPath);
 
-                        auto &sprite =
-                            scene->AddComponent<
-                                anv::Component::SpriteRenderer>(entity);
+                        if (texture && texture->IsGPUReady())
+                        {
+                            const entt::entity entity =
+                                scene->CreateEntity(assetPath.stem().string());
 
-                        sprite.texture = texture->GetAssetID();
-                        scene->Save();
+                            auto &sprite =
+                                scene->AddComponent<
+                                    anv::Component::SpriteRenderer>(entity);
+
+                            sprite.texture = texture->GetAssetID();
+                            scene->Save();
+                        }
                     }
                 }
+
+                ImGui::EndDragDropTarget();
             }
-
-            ImGui::EndDragDropTarget();
         }
+
+        draw_selection_overlay(scene);
+
+        ImGuizmo::SetOrthographic(true);
+        ImGuizmo::SetDrawlist();
+        draw_gizmo();
+
+        if (scene)
+            pick_entity(scene);
     }
-    
-    draw_selection_overlay(scene);
-
-    ImGuizmo::SetOrthographic(true);
-    ImGuizmo::SetDrawlist();
-    draw_gizmo();
-
-    if (scene)
-        pick_entity(scene);
-
     ImGui::End();
     ImGui::PopStyleVar();
+}
+
+void Viewport::initialize_toolbar_icons()
+{
+    if (m_ToolbarIconsInitialized)
+        return;
+    if (!ImGui::GetCurrentContext() || !ImGui::GetIO().BackendRendererUserData)
+        return;
+
+    const auto base = anv::App::GetInstance()->GetFS().GetExecDir()
+        / "ForgeResources" / "Resources"/ "Icons";
+    static const char* filenames[] = {
+        "3232Translate.png", "3232Rotate.png",
+        "3232Scale.png", "3232viewport_grid.png"
+    };
+
+    for (int i = 0; i < 4; ++i)
+    {
+        const auto path = base / filenames[i];
+        if (!std::filesystem::exists(path))
+        {
+            ANV_LOG_WARN("Viewport toolbar icon missing: %s", path.string().c_str());
+            continue;
+        }
+
+        auto texture = anv::Texture::Create(path);
+        if (!texture || !texture->IsGPUReady())
+            continue;
+
+        m_ToolbarIcons[i].texture = texture;
+    }
+    m_ToolbarIconsInitialized = true;
+}
+
+bool Viewport::toolbar_icon_button(const char* id, int index, bool selected, const char* tooltip)
+{
+    const ImVec2 buttonSize(30.0f, 30.0f);
+    const ImVec2 iconSize(22.0f, 22.0f);
+    auto& icon = m_ToolbarIcons[index];
+    void* imguiID = icon.texture ? icon.texture->GetImGuiTextureID() : nullptr;
+
+    ImGui::PushID(id);
+    if (selected)
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.24f, 0.42f, 0.62f, 1.0f));
+
+    bool pressed = false;
+    if (imguiID)
+    {
+        // Frame padding (4 px each side) yields a 30px button.
+        pressed = ImGui::ImageButton("##icon", imguiID, iconSize,
+                                    ImVec2(0, 0), ImVec2(1, 1),
+                                    ImVec4(0, 0, 0, 0));
+    }
+    else
+    {
+        pressed = ImGui::Button(id, buttonSize);
+    }
+
+    if (selected)
+        ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", tooltip);
+    ImGui::PopID();
+    return pressed;
+}
+
+void Viewport::draw_toolbar(const ImVec2& imageMin)
+{
+    initialize_toolbar_icons();
+
+    auto& grid = m_EditorGrid.GetSettings();
+
+    ImGui::SetNextWindowPos(
+        ImVec2(imageMin.x + 10.0f, imageMin.y + 10.0f),
+        ImGuiCond_Always
+    );
+
+    ImGui::SetNextWindowBgAlpha(0.94f);
+
+    ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_AlwaysAutoResize;
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 4.0f);
+    ImGui::PushStyleVar(
+        ImGuiStyleVar_WindowPadding,
+        ImVec2(5.0f, 5.0f)
+    );
+    ImGui::PushStyleVar(
+        ImGuiStyleVar_ItemSpacing,
+        ImVec2(5.0f, 0.0f)
+    );
+
+    if (ImGui::Begin("##ViewportFloatingToolbar", nullptr, flags))
+    {
+        if (toolbar_icon_button(
+                "Translate", 0,
+                m_Operation == ImGuizmo::TRANSLATE,
+                "Move (1)"))
+        {
+            m_Operation = ImGuizmo::TRANSLATE;
+        }
+
+        ImGui::SameLine();
+
+        if (toolbar_icon_button(
+                "Rotate", 1,
+                m_Operation == ImGuizmo::ROTATE,
+                "Rotate (2)"))
+        {
+            m_Operation = ImGuizmo::ROTATE;
+        }
+
+        ImGui::SameLine();
+
+        if (toolbar_icon_button(
+                "Scale", 2,
+                m_Operation == ImGuizmo::SCALE,
+                "Scale (3)"))
+        {
+            m_Operation = ImGuizmo::SCALE;
+        }
+
+        ImGui::SameLine();
+
+        if (toolbar_icon_button(
+                "Grid", 3, grid.visible,
+                "Grid Settings"))
+        {
+            ImGui::OpenPopup("##GridSettings");
+        }
+
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+            grid.visible = !grid.visible;
+
+        ImGui::SameLine();
+        if (ImGui::Button(m_SnapEnabled ? "Snap: On" : "Snap: Off"))
+            m_SnapEnabled = !m_SnapEnabled;
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+            ImGui::OpenPopup("##SnapSettings");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Toggle gizmo snapping (right-click for increments)");
+
+        if (ImGui::BeginPopup("##SnapSettings"))
+        {
+            ImGui::TextUnformatted("Transform Snapping");
+            ImGui::Separator();
+            ImGui::Checkbox("Enable Snapping", &m_SnapEnabled);
+            ImGui::SetNextItemWidth(120.0f);
+            ImGui::DragFloat("Move Step", &m_TranslationSnap, 0.05f, 0.001f, 1000.0f, "%.3f");
+            ImGui::SetNextItemWidth(120.0f);
+            ImGui::DragFloat("Rotate Step", &m_RotationSnap, 1.0f, 0.1f, 180.0f, "%.1f deg");
+            ImGui::SetNextItemWidth(120.0f);
+            ImGui::DragFloat("Scale Step", &m_ScaleSnap, 0.01f, 0.001f, 10.0f, "%.3f");
+            m_TranslationSnap = std::clamp(m_TranslationSnap, 0.001f, 1000.0f);
+            m_RotationSnap = std::clamp(m_RotationSnap, 0.1f, 180.0f);
+            m_ScaleSnap = std::clamp(m_ScaleSnap, 0.001f, 10.0f);
+            ImGui::EndPopup();
+        }
+
+        if (ImGui::BeginPopup("##GridSettings"))
+        {
+            ImGui::Checkbox("Visible", &grid.visible);
+
+            ImGui::DragFloat(
+                "Cell Size", &grid.cellSize,
+                0.05f, 0.001f, 1000.0f
+            );
+
+            ImGui::DragFloat(
+                "Major Interval", &grid.majorInterval,
+                0.1f, 1.0f, 100.0f
+            );
+
+            ImGui::DragFloat(
+                "Line Width", &grid.lineWidth,
+                0.05f, 0.1f, 8.0f
+            );
+
+            ImGui::ColorEdit4(
+                "Minor Color",
+                glm::value_ptr(grid.minorColor)
+            );
+
+            ImGui::ColorEdit4(
+                "Major Color",
+                glm::value_ptr(grid.majorColor)
+            );
+
+            grid.cellSize = std::clamp(grid.cellSize, 0.001f, 1000.0f);
+            grid.majorInterval = std::clamp(grid.majorInterval, 1.0f, 100.0f);
+            grid.lineWidth = std::clamp(grid.lineWidth, 0.1f, 8.0f);
+
+            ImGui::EndPopup();
+        }
+
+        m_ToolbarHovered =
+            ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) ||
+            ImGui::IsPopupOpen("##GridSettings");
+    }
+
+    ImGui::End();
+    ImGui::PopStyleVar(3);
 }
 
 bool Viewport::world_to_viewport(
@@ -218,8 +443,8 @@ void Viewport::draw_selection_overlay(
         return;
     }
 
-    const auto &transform =
-        scene->GetComponent<anv::Component::Transform2D>(entity);
+    anv::Component::Transform2D transform;
+    transform.SetFromMatrix(scene->GetWorldTransform(entity));
 
     ImDrawList *drawList = ImGui::GetWindowDrawList();
     if (!drawList)
@@ -228,7 +453,6 @@ void Viewport::draw_selection_overlay(
     const ImU32 outlineColor = IM_COL32(255, 214, 10, 255);
     const ImU32 activeCameraColor = IM_COL32(80, 220, 120, 255);
     const ImU32 shadowColor = IM_COL32(0, 0, 0, 190);
-    const ImU32 iconFillColor = IM_COL32(45, 45, 50, 235);
     constexpr float outlineThickness = 2.0f;
     constexpr float shadowThickness = 4.0f;
     constexpr float pivotRadius = 5.0f;
@@ -323,56 +547,10 @@ void Viewport::draw_selection_overlay(
                 cameraColor,
                 1.0f);
         }
-
-        constexpr float iconHalfWidth = 10.0f;
-        constexpr float iconHalfHeight = 7.0f;
-        constexpr float lensLength = 7.0f;
-
-        const ImVec2 bodyMin{
-            pivot.x - iconHalfWidth,
-            pivot.y - iconHalfHeight};
-        const ImVec2 bodyMax{
-            pivot.x + iconHalfWidth,
-            pivot.y + iconHalfHeight};
-
-        drawList->AddRectFilled(
-            bodyMin,
-            bodyMax,
-            iconFillColor,
-            2.0f);
-        drawList->AddRect(
-            bodyMin,
-            bodyMax,
-            cameraColor,
-            2.0f,
-            0,
-            outlineThickness);
-
-        const std::array<ImVec2, 3> lens = {
-            ImVec2{bodyMax.x, pivot.y - 5.0f},
-            ImVec2{bodyMax.x + lensLength, pivot.y - 9.0f},
-            ImVec2{bodyMax.x + lensLength, pivot.y + 9.0f}};
-
-        drawList->AddTriangleFilled(
-            lens[0],
-            lens[1],
-            lens[2],
-            iconFillColor);
-        drawList->AddPolyline(
-            lens.data(),
-            static_cast<int>(lens.size()),
-            cameraColor,
-            ImDrawFlags_Closed,
-            outlineThickness);
-
-        drawList->AddCircleFilled(
-            ImVec2{pivot.x - 3.0f, pivot.y},
-            2.5f,
-            cameraColor);
     }
     else
     {
-        const glm::mat4 model = transform.GetTransform();
+        const glm::mat4 model = scene->GetWorldTransform(entity);
 
         constexpr std::array<glm::vec4, 4> localCorners = {
             glm::vec4{-0.5f, -0.5f, 0.0f, 1.0f},
@@ -440,6 +618,40 @@ void Viewport::draw_selection_overlay(
     drawList->PopClipRect();
 }
 
+void Viewport::push_billboards(const anv::Ref<anv::Scene> &scene)
+{
+    if (!scene)
+        return;
+
+    auto assetManager = anv::App::GetInstance()->GetAssetManager();
+    if (!assetManager)
+        return;
+
+    auto view = scene->Registry().view<anv::Component::Transform2D, anv::Component::SpriteRenderer>();
+
+    for (const auto entity : view)
+    {
+        const auto &sprite = view.get<anv::Component::SpriteRenderer>(entity);
+        // Game-visible sprites were already queued by SceneLayer.
+        if (!sprite.visibleInEditor || sprite.visibleInGame)
+            continue;
+
+        if (sprite.texture.uuid.empty())
+            continue;
+
+        auto texture = assetManager->GetAs<anv::Texture>(sprite.texture);
+
+        if (!texture || !texture->IsGPUReady())
+            continue;
+
+        anv::Component::Transform2D worldPose;
+        worldPose.SetFromMatrix(scene->GetWorldTransform(entity));
+        anv::Renderer2D::DrawQuad(
+            worldPose.position, worldPose.rotation, worldPose.scale,
+            sprite.color, texture, sprite.drawLayer);
+    }
+}
+
 void Viewport::pick_entity(
     const anv::Ref<anv::Scene> &scene)
 {
@@ -452,7 +664,7 @@ void Viewport::pick_entity(
         return;
     }
 
-    if (!m_ViewportHovered ||
+    if (m_ToolbarHovered || !m_ViewportHovered ||
         !ImGui::IsMouseClicked(ImGuiMouseButton_Left) ||
         ImGuizmo::IsOver() ||
         ImGuizmo::IsUsing())
@@ -512,7 +724,7 @@ void Viewport::pick_entity(
             view.get<anv::Component::SpriteRenderer>(entity);
 
         const glm::mat4 inverseTransform =
-            glm::inverse(transform.GetTransform());
+            glm::inverse(scene->GetWorldTransform(entity));
 
         const glm::vec4 localPosition =
             inverseTransform * glm::vec4(
@@ -608,20 +820,33 @@ void Viewport::draw_gizmo()
     auto &transform =
         scene->GetComponent<anv::Component::Transform2D>(entity);
 
-    glm::mat4 transformMatrix = transform.GetTransform();
+    glm::mat4 transformMatrix = scene->GetWorldTransform(entity);
 
     const glm::mat4 view = m_EditorCamera->GetView();
     const glm::mat4 projection = m_EditorCamera->GetProjection();
 
-    //ImGuizmo::BeginFrame();
+    // ImGuizmo::BeginFrame();
+
+    // ImGuizmo expects snapping in world units for translation,
+    // degrees for rotation, and scale-factor increments for scaling.
+    float snap[3] = {1.0f, 1.0f, 1.0f};
+    if (m_SnapEnabled)
+    {
+        const float increment = m_Operation == ImGuizmo::TRANSLATE
+            ? m_TranslationSnap
+            : (m_Operation == ImGuizmo::ROTATE ? m_RotationSnap : m_ScaleSnap);
+        snap[0] = snap[1] = snap[2] = increment;
+    }
 
     ImGuizmo::Manipulate(
         glm::value_ptr(view),
         glm::value_ptr(projection),
         m_Operation,
         ImGuizmo::LOCAL,
-        glm::value_ptr(transformMatrix));
+        glm::value_ptr(transformMatrix),
+        nullptr,
+        m_SnapEnabled ? snap : nullptr);
 
     if (ImGuizmo::IsUsing())
-        transform.SetFromMatrix(transformMatrix);
+        scene->SetWorldTransform(entity, transformMatrix);
 }

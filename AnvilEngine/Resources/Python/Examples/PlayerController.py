@@ -16,7 +16,6 @@ class PlayerController(anvil.Script):
     acceleration: float = 2
 
     def on_collision(self, event: PhysicsCollisionEvent2D):
-        anvil.log("Hit")
         name = event.entity.get_component(TagComponent).value
         if event.kind == CollisionEventKind2D.CONTACT:
             if event.phase == CollisionEventPhase2D.BEGIN:

@@ -62,10 +62,7 @@ namespace anv
             newEvent.kind = CollisionEventKind2D::Contact;
             newEvent.phase = CollisionEventPhase2D::End;
 
-            if (!dispatch_event(newEvent))
-            {
-                ANV_LOG_ERROR("Failed to dispatch Physics2DCollisionEvent!")
-            }
+            dispatch_event(newEvent);
         }
     }
 
@@ -82,10 +79,7 @@ namespace anv
             newEvent.kind = CollisionEventKind2D::Sensor;
             newEvent.phase = CollisionEventPhase2D::Begin;
 
-            if (!dispatch_event(newEvent))
-            {
-                ANV_LOG_ERROR("Failed to dispatch Physics2DCollisionEvent!")
-            }
+            dispatch_event(newEvent);
         }
     }
 
@@ -101,10 +95,7 @@ namespace anv
             newEvent.kind = CollisionEventKind2D::Sensor;
             newEvent.phase = CollisionEventPhase2D::End;
 
-            if (!dispatch_event(newEvent))
-            {
-                ANV_LOG_ERROR("Failed to dispatch Physics2DCollisionEvent!")
-            }
+            dispatch_event(newEvent);
         }
     }
 
@@ -125,29 +116,13 @@ namespace anv
         void *userB = b2Body_GetUserData(bodyB);
 
         if (!userA || !userB)
-        {
-            ANV_LOG_ERROR("[Physics Collision Dispatcher] Failed to resolve body user data!")
             return false;
-        }
 
-		// Windows: uintptr_t is 64-bit on x64, so we subtract 1 to avoid null pointer issues
-        auto resolveEntity = [](b2BodyId body) -> entt::entity
-            {
-                void* userData = b2Body_GetUserData(body);
+        entt::entity entityA = static_cast<entt::entity>(
+            reinterpret_cast<uintptr_t>(userA));
 
-                if (!userData)
-                    return entt::null;
-
-                uintptr_t entityID =
-                    reinterpret_cast<uintptr_t>(userData) - 1;
-
-                return static_cast<entt::entity>(
-                    static_cast<entt::id_type>(entityID)
-                    );
-            };
-
-        entt::entity entityA = resolveEntity(bodyA);
-        entt::entity entityB = resolveEntity(bodyB);
+        entt::entity entityB = static_cast<entt::entity>(
+            reinterpret_cast<uintptr_t>(userB));
 
         if (m_CurrentScene->HasComponent<Component::Script>(entityA))
         {

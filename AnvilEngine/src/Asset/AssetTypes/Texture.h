@@ -19,6 +19,8 @@ namespace anv
 
         virtual bool IsGPUReady() const = 0;
         virtual void* GetNativeHandle() const = 0;
+        // Opaque UI texture handle; the backend owns registration and lifetime.
+        virtual void* GetImGuiTextureID() = 0;
 
     protected:
         explicit Texture(const std::filesystem::path& path);

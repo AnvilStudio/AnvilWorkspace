@@ -2,6 +2,7 @@
 #include "../Util/UMacros.h"
 #include "CommandBuffer.h"
 #include <vector>
+#include <chrono>
 
 namespace anv
 {
@@ -32,6 +33,7 @@ namespace anv
 
         m_StopProc.store(true, std::memory_order_release);
         m_CV.notify_one();
+        m_CompleteCV.notify_all();
 
         if (m_ProcThread.joinable())
             m_ProcThread.join();
@@ -52,16 +54,42 @@ namespace anv
             return;
 
         std::swap(m_Front, m_Back);
+        m_SpriteTaskTimings = {};
         m_WorkAvailable.store(true, std::memory_order_release);
         m_ProcComplete.store(false, std::memory_order_release);
         m_CV.notify_one();
     }
 
-    void QueueChain::WaitForProcessComplete() {
-        while (!m_ProcComplete.load(std::memory_order_acquire) &&
-            !m_StopProc.load(std::memory_order_acquire)) {
-            std::this_thread::yield();
-        }
+    void QueueChain::WaitForProcessComplete()
+    {
+        std::unique_lock<std::mutex> lock(m_Mutex);
+        m_CompleteCV.wait(lock, [&] {
+            return m_ProcComplete.load(std::memory_order_acquire) ||
+                   m_StopProc.load(std::memory_order_acquire);
+        });
+    }
+
+    QueueChain::WorkerTimings QueueChain::GetWorkerTimings() const
+    {
+        // Called on the main thread after WaitForProcessComplete().
+        return m_WorkerTimings;
+    }
+
+    void QueueChain::AccumulateSpriteTaskTimings(const SpriteTaskTimings& timings)
+    {
+        // Invoked on the worker while executing queued sprite tasks.
+        // The mutex is also used for the completion notification.
+        std::lock_guard<std::mutex> lock(m_Mutex);
+        m_SpriteTaskTimings.sort += timings.sort;
+        m_SpriteTaskTimings.build += timings.build;
+        m_SpriteTaskTimings.upload += timings.upload;
+        m_SpriteTaskTimings.commands += timings.commands;
+    }
+
+    QueueChain::SpriteTaskTimings QueueChain::GetSpriteTaskTimings() const
+    {
+        // Only called on main thread after WaitForProcessComplete().
+        return m_SpriteTaskTimings;
     }
 
     void QueueChain::ProcessFrontQueue()
@@ -88,6 +116,8 @@ namespace anv
                 ANV_LOG_ERROR("[QueueChain] No active CommandBuffer set");
                 m_WorkAvailable.store(false, std::memory_order_release);
                 m_ProcComplete.store(true, std::memory_order_release);
+                lock.unlock();
+                m_CompleteCV.notify_all();
                 continue;
             }
 
@@ -99,9 +129,13 @@ namespace anv
             // recording can invalidate raw Vulkan handles before MoltenVK encodes
             // the command buffer inside vkQueueSubmit().
             std::vector<Task> retainedTasks;
-
-            // ---- record commands ----
+            WorkerTimings timings{};
+            using Clock = std::chrono::steady_clock;
+            const auto totalStart = Clock::now();
+            auto beginAt = Clock::now();
             cmd->Begin();
+            timings.begin = std::chrono::duration<float, std::milli>(Clock::now() - beginAt).count();
+            const auto tasksAt = Clock::now();
 
             while (true)
             {
@@ -123,22 +157,29 @@ namespace anv
                 }
             }
 
+            timings.tasks = std::chrono::duration<float, std::milli>(Clock::now() - tasksAt).count();
+            const auto endAt = Clock::now();
             cmd->End();
+            timings.end = std::chrono::duration<float, std::milli>(Clock::now() - endAt).count();
 
-            // ---- submit (Vulkan-only logic via callback) ----
+            const auto submitAt = Clock::now();
             if (submitFn)
                 submitFn(cmd);
+            timings.submit = std::chrono::duration<float, std::milli>(Clock::now() - submitAt).count();
 
             // retainedTasks intentionally stays alive until after submitFn()
             // returns, then releases its captured Ref<> resources here.
             retainedTasks.clear();
+            timings.total = std::chrono::duration<float, std::milli>(Clock::now() - totalStart).count();
 
             // ---- mark batch complete ----
             {
                 std::lock_guard<std::mutex> qlock(m_Mutex);
+                m_WorkerTimings = timings;
                 m_WorkAvailable.store(false, std::memory_order_release);
                 m_ProcComplete.store(true, std::memory_order_release);
             }
+            m_CompleteCV.notify_all();
         }
     }
 

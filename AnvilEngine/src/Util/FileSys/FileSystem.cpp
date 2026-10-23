@@ -26,7 +26,7 @@
 
 namespace anv
 {
-    std::filesystem::path FileSystem::s_ExecDir = std::filesystem::path();
+    std::filesystem::path FileSystem::s_ExecDir{};
 
     anv::FileSystem::FileSystem(std::string _rootDir)
         : m_RootDir(std::move(_rootDir)), m_WorkDir(m_RootDir)

@@ -4,6 +4,8 @@
 #include "Core/Window.h"
 #include "VulkanContext.h"
 #include "VulkanUtil.h"
+#include <imgui.h>
+#include <backends/imgui_impl_vulkan.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -60,6 +62,17 @@ namespace anv
     void* VulkanTexture::GetNativeHandle() const
     {
         return (void*)m_ImageView;
+    }
+
+    void* VulkanTexture::GetImGuiTextureID()
+    {
+        if (!IsGPUReady() || !ImGui::GetCurrentContext() ||
+            !ImGui::GetIO().BackendRendererUserData)
+            return nullptr;
+        if (m_ImGuiDescriptor == VK_NULL_HANDLE)
+            m_ImGuiDescriptor = ImGui_ImplVulkan_AddTexture(
+                m_Sampler, m_ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        return (void*)m_ImGuiDescriptor;
     }
 
     void VulkanTexture::Upload()
@@ -364,6 +377,12 @@ namespace anv
 
         vkctx->IdleDevice();
         VkDevice device = vkctx->GetDevice();
+        if (m_ImGuiDescriptor != VK_NULL_HANDLE)
+        {
+            if (ImGui::GetCurrentContext() && ImGui::GetIO().BackendRendererUserData)
+                ImGui_ImplVulkan_RemoveTexture(m_ImGuiDescriptor);
+            m_ImGuiDescriptor = VK_NULL_HANDLE;
+        }
 
         if (m_DescriptorPool != VK_NULL_HANDLE)
             vkDestroyDescriptorPool(device, m_DescriptorPool, nullptr);

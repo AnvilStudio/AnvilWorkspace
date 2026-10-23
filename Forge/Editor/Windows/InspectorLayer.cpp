@@ -44,6 +44,25 @@ void InspectorLayer::Draw(
                 }
             });
 
+        // Relationship is scene metadata rather than an add/remove component.
+        const entt::entity parent = scene->GetParent(selectedEntity);
+        if (parent != entt::null)
+        {
+            std::string parentName = "Entity";
+            if (scene->HasComponent<Component::Tag>(parent))
+                parentName = scene->GetComponent<Component::Tag>(parent).Get();
+            ImGui::Text("Parent: %s", parentName.c_str());
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Unparent"))
+                if (scene->SetParent(selectedEntity, entt::null))
+                    scene->Save();
+        }
+        else
+        {
+            ImGui::TextDisabled("Parent: None (root)");
+        }
+        ImGui::TextDisabled("Transforms are local to the parent");
+
         draw_component<Component::Transform2D>(
             "Transform2D",
             selectedEntity,
@@ -127,7 +146,7 @@ void InspectorLayer::Draw(
                                                    ? currentTexture->GetName().c_str()
                                                    : "None — drop texture here";
 
-                    ImGui::Button("##TextureSlot", ImVec2(-1.0f, 0.0f));
+                    ImGui::Button(textureLabel, ImVec2(-1.0f, 0.0f));
 
                     if (ImGui::BeginDragDropTarget())
                     {
@@ -214,6 +233,20 @@ void InspectorLayer::Draw(
                     property_color4("Color", &sprite.color.x);
                     ImGui::TableNextRow();
                     property_int("Draw Layer", &sprite.drawLayer);
+
+                    ImGui::TableNextRow();
+                    if (property_float2("UV Min", &sprite.uvMin.x))
+                    {
+                        sprite.uvMin = glm::clamp(sprite.uvMin, glm::vec2(0.0f), glm::vec2(1.0f));
+                        scene->Save();
+                    }
+
+                    ImGui::TableNextRow();
+                    if (property_float2("UV Max", &sprite.uvMax.x))
+                    {
+                        sprite.uvMax = glm::clamp(sprite.uvMax, glm::vec2(0.0f), glm::vec2(1.0f));
+                        scene->Save();
+                    }
                     ImGui::EndTable();
                 }
             });
