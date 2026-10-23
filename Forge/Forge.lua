@@ -34,7 +34,8 @@ project "Forge"
     postbuildcommands
     {
         '{MKDIR} "%{cfg.targetdir}/Anvil"',
-        '{COPYDIR} "%{wks.location}/AnvilEngine/Resources" "%{cfg.targetdir}/Anvil/Resources"'
+        '{COPYDIR} "%{wks.location}/AnvilEngine/Resources" "%{cfg.targetdir}/Anvil/Resources"',
+        '{COPYDIR} "%{wks.location}/Forge/Resources" "%{cfg.targetdir}/ForgeResources"'
         -- Windows Python runtime copying is defined in the system filter.
     }
 
