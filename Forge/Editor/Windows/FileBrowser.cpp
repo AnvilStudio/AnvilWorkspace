@@ -209,10 +209,10 @@ void FileBrowser::InitializeIcons()
     if (m_IconsInitialized || !ImGui::GetCurrentContext() ||
         !ImGui::GetIO().BackendRendererUserData) return;
     const auto base = anv::App::GetInstance()->GetFS().GetExecDir()
-        / "ForgeResources" / "Resources" / "Icons" / "Files";
+        / "ForgeResources" / "Resources" / "Icons" / "FileBrowser";
     constexpr const char* names[] = {
-        "folder.png", "file.png", "image.png", "python.png",
-        "cpp.png", "header.png", "scene.png"
+        "FolderIcon.png", "file.png", "image.png", "PyScriptIcon.png",
+        "cpp.png", "header.png", "SceneIcon.png"
     };
     for (size_t i = 0; i < IconCount; ++i)
     {
