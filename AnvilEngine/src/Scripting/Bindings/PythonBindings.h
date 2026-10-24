@@ -12,6 +12,10 @@ namespace anv::python
     PyObject* IsKeyPressed(PyObject* self, PyObject* args);
     PyObject* IsKeyJustPressed(PyObject* self, PyObject* args);
 
+    PyObject* AnimatorPlayState(PyObject* self, PyObject* args);
+    PyObject* AnimatorPause(PyObject* self, PyObject* args);
+    PyObject* AnimatorStop(PyObject* self, PyObject* args);
+    PyObject* AnimatorCurrentState(PyObject* self, PyObject* args);
     PyObject* HasComponent(PyObject* self, PyObject* args);
     PyObject* FindEntityByName(PyObject* self, PyObject* args);
 

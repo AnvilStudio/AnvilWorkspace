@@ -30,6 +30,8 @@ namespace anv::python
             hasComponent = context.scene->HasComponent<Component::Rigidbody2D>(context.entity);
         else if (name == "BoxCollider2D")
             hasComponent = context.scene->HasComponent<Component::BoxCollider2D>(context.entity);
+        else if (name == "Animator2D")
+            hasComponent = context.scene->HasComponent<Component::Animator2D>(context.entity);
         else if (name == "TagComponent")
             hasComponent = context.scene->HasComponent<Component::Tag>(context.entity);
         else
@@ -39,6 +41,61 @@ namespace anv::python
         }
 
         return PyBool_FromLong(hasComponent ? 1 : 0);
+    }
+
+    static Component::Animator2D* ResolveAnimator(const char* entityID)
+    {
+        const auto context = ResolveScriptEntity(entityID ? entityID : "");
+        if (!context || !context.scene->HasComponent<Component::Animator2D>(context.entity))
+        {
+            PyErr_SetString(PyExc_KeyError, "Entity has no Animator2D component");
+            return nullptr;
+        }
+        return &context.scene->GetComponent<Component::Animator2D>(context.entity);
+    }
+
+    PyObject* AnimatorPlayState(PyObject*, PyObject* args)
+    {
+        const char* entityID = nullptr;
+        const char* state = nullptr;
+        if (!PyArg_ParseTuple(args, "ss", &entityID, &state)) return nullptr;
+        auto* animator = ResolveAnimator(entityID);
+        if (!animator) return nullptr;
+        if (!animator->PlayState(state))
+        {
+            PyErr_Format(PyExc_ValueError, "Unknown or unassigned Animator2D state '%s'", state);
+            return nullptr;
+        }
+        Py_RETURN_NONE;
+    }
+
+    PyObject* AnimatorPause(PyObject*, PyObject* args)
+    {
+        const char* entityID = nullptr;
+        if (!PyArg_ParseTuple(args, "s", &entityID)) return nullptr;
+        auto* animator = ResolveAnimator(entityID);
+        if (!animator) return nullptr;
+        animator->Pause();
+        Py_RETURN_NONE;
+    }
+
+    PyObject* AnimatorStop(PyObject*, PyObject* args)
+    {
+        const char* entityID = nullptr;
+        if (!PyArg_ParseTuple(args, "s", &entityID)) return nullptr;
+        auto* animator = ResolveAnimator(entityID);
+        if (!animator) return nullptr;
+        animator->Stop();
+        Py_RETURN_NONE;
+    }
+
+    PyObject* AnimatorCurrentState(PyObject*, PyObject* args)
+    {
+        const char* entityID = nullptr;
+        if (!PyArg_ParseTuple(args, "s", &entityID)) return nullptr;
+        auto* animator = ResolveAnimator(entityID);
+        if (!animator) return nullptr;
+        return PyUnicode_FromString(animator->currentState.c_str());
     }
 
     PyObject* FindEntityByName(PyObject*, PyObject* args)

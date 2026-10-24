@@ -7,6 +7,7 @@ from .key import Key
 from .transform import Transform2D
 from .physics import *
 from .collider import BoxCollider2D
+from .animator import Animator2D
 
 __all__ = [
     "Entity",
@@ -18,6 +19,7 @@ __all__ = [
     "CollisionEventPhase2D",
     "PhysicsCollisionEvent2D",
     "BoxCollider2D",
+    "Animator2D",
     "Key",
     "input",
     "log",
