@@ -55,6 +55,8 @@ private:
     void DrawEntry(const Entry& _entry);
     void AcceptMoveDrop(const std::filesystem::path& destination);
     void MoveEntry(const std::filesystem::path& source, const std::filesystem::path& destination);
+    void DrawCreateMenu();
+    void BeginCreate(int kind, const std::filesystem::path& directory);
     void DrawCreatePopup();
     void DrawDeletePopup();
 
@@ -119,6 +121,8 @@ private:
     char m_SearchBuffer[256]{};
     char m_NewFileName[256]{};
     bool m_OpenCreatePopup = false;
+    int m_CreateKind = 0; // 0 generic file, 1 folder, 2 scene, 3 Python, 4 C++, 5 header
+    std::filesystem::path m_CreateDirectory;
     bool m_OpenDeletePopup = false;
     std::string m_ErrorMessage;
 };

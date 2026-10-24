@@ -140,13 +140,6 @@ void FileBrowser::DrawToolbar()
     ImGui::EndDisabled();
 
     ImGui::SameLine();
-    if (ImGui::Button("Add"))
-    {
-        m_NewFileName[0] = '\0';
-        m_OpenCreatePopup = true;
-    }
-
-    ImGui::SameLine();
     const bool canDelete = !m_SelectedPath.empty();
     ImGui::BeginDisabled(!canDelete);
     if (ImGui::Button("Delete"))
@@ -280,6 +273,12 @@ void FileBrowser::DrawEntries()
     const ImVec2 remaining = ImGui::GetContentRegionAvail();
     ImGui::InvisibleButton("##MoveToCurrentFolder", ImVec2(std::max(1.0f, remaining.x), std::max(30.0f, remaining.y)));
     AcceptMoveDrop(m_CurrentDirectory);
+    if (ImGui::BeginPopupContextItem("##FileGridBackground", ImGuiPopupFlags_MouseButtonRight))
+    {
+        m_CreateDirectory = m_CurrentDirectory;
+        DrawCreateMenu();
+        ImGui::EndPopup();
+    }
     ImGui::EndChild();
     if (!m_PendingDirectory.empty())
     {
@@ -375,6 +374,8 @@ void FileBrowser::DrawEntry(const Entry& e)
         if (e.isDirectory)
         {
             if (ImGui::MenuItem("Open")) m_PendingDirectory = e.path;
+            m_CreateDirectory = e.path;
+            DrawCreateMenu();
         }
         else if (ImGui::MenuItem("Open in Code Editor") && m_OpenFileCallback)
             m_OpenFileCallback(e.path);
@@ -471,33 +472,61 @@ void FileBrowser::MoveEntry(const std::filesystem::path& source,
         from.string().c_str(), target.string().c_str());
 }
 
+void FileBrowser::BeginCreate(int kind, const std::filesystem::path& directory)
+{
+    const auto targetDirectory = directory;
+    m_CreateKind = kind;
+    m_CreateDirectory = targetDirectory;
+    const char* defaults[] = {
+        "NewFile.txt", "NewFolder", "NewScene.ascn", "NewScript.py",
+        "NewSource.cpp", "NewHeader.h"
+    };
+    std::snprintf(m_NewFileName, sizeof(m_NewFileName), "%s", defaults[kind]);
+    m_OpenCreatePopup = true;
+}
+
+void FileBrowser::DrawCreateMenu()
+{
+    if (ImGui::BeginMenu("Create"))
+    {
+        // Folder context menus create inside that folder; blank-space menus use cwd.
+        const auto& directory = m_CreateDirectory.empty() ? m_CurrentDirectory : m_CreateDirectory;
+        if (ImGui::MenuItem("Folder")) BeginCreate(1, directory);
+        if (ImGui::MenuItem("Scene")) BeginCreate(2, directory);
+        if (ImGui::MenuItem("Python Script")) BeginCreate(3, directory);
+        if (ImGui::MenuItem("C++ Source")) BeginCreate(4, directory);
+        if (ImGui::MenuItem("C++ Header")) BeginCreate(5, directory);
+        ImGui::Separator();
+        if (ImGui::MenuItem("Empty File")) BeginCreate(0, directory);
+        ImGui::EndMenu();
+    }
+}
+
 void FileBrowser::DrawCreatePopup()
 {
     if (m_OpenCreatePopup)
     {
-        ImGui::OpenPopup("Create File");
+        ImGui::OpenPopup("Create Project Item");
         m_OpenCreatePopup = false;
     }
-
-    if (!ImGui::BeginPopupModal("Create File", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    if (!ImGui::BeginPopupModal("Create Project Item", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
         return;
 
-    ImGui::InputTextWithHint(
-        "##NewFileName",
-        "File name, including extension",
-        m_NewFileName,
-        sizeof(m_NewFileName));
-
+    static constexpr const char* titles[] = {
+        "File name", "Folder name", "Scene name", "Python script name",
+        "C++ source name", "C++ header name"
+    };
+    ImGui::TextUnformatted(titles[m_CreateKind]);
+    ImGui::SetNextItemWidth(300.0f);
+    ImGui::InputText("##NewItemName", m_NewFileName, sizeof(m_NewFileName));
+    if (ImGui::IsWindowAppearing()) ImGui::SetKeyboardFocusHere(-1);
     if (ImGui::Button("Create"))
     {
         create_file();
-        if (m_ErrorMessage.empty())
-            ImGui::CloseCurrentPopup();
+        if (m_ErrorMessage.empty()) ImGui::CloseCurrentPopup();
     }
     ImGui::SameLine();
-    if (ImGui::Button("Cancel"))
-        ImGui::CloseCurrentPopup();
-
+    if (ImGui::Button("Cancel")) ImGui::CloseCurrentPopup();
     ImGui::EndPopup();
 }
 
@@ -532,29 +561,74 @@ void FileBrowser::create_file()
 {
     m_ErrorMessage.clear();
     const std::filesystem::path name(m_NewFileName);
-    if (name.empty() || name.has_parent_path() || name.filename() == "." || name.filename() == "..")
+    if (name.empty() || name.has_parent_path() ||
+        name.filename() == "." || name.filename() == "..")
     {
-        m_ErrorMessage = "Enter a valid file name without directory separators.";
+        m_ErrorMessage = "Enter a valid name without directory separators.";
         return;
     }
 
-    const std::filesystem::path path = m_CurrentDirectory / name;
-    if (!IsInsideRoot(path) || std::filesystem::exists(path))
+    const std::filesystem::path directory =
+        m_CreateDirectory.empty() ? m_CurrentDirectory : m_CreateDirectory;
+    const std::filesystem::path path = directory / name;
+    if (!IsInsideRoot(directory) || !IsInsideRoot(path) ||
+        !std::filesystem::is_directory(directory) || std::filesystem::exists(path))
     {
-        m_ErrorMessage = "That file already exists or is outside the project root.";
+        m_ErrorMessage = "Item already exists or is outside the project root.";
         return;
     }
 
-    std::ofstream stream(path, std::ios::binary);
-    if (!stream)
+    const char* extensions[] = {"", "", ".ascn", ".py", ".cpp", ".h"};
+    if (m_CreateKind >= 2 && name.extension() != extensions[m_CreateKind])
     {
-        m_ErrorMessage = "Unable to create file: " + path.string();
+        m_ErrorMessage = std::string("Expected extension ") + extensions[m_CreateKind];
         return;
+    }
+
+    if (m_CreateKind == 1)
+    {
+        // Prefer Anvil's sandboxed directory-creation API.
+        auto* app = anv::App::GetInstance();
+        if (!app || !app->GetFS().CreateDir(path.string()))
+        {
+            m_ErrorMessage = "Unable to create folder (filesystem sandbox or permissions).";
+            return;
+        }
+    }
+    else if (m_CreateKind == 2)
+    {
+        auto* app = anv::App::GetInstance();
+        auto scenes = app ? app->GetSceneManager() : nullptr;
+        if (!scenes || !scenes->CreateScene(path))
+        {
+            m_ErrorMessage = "Unable to create scene.";
+            return;
+        }
+    }
+    else
+    {
+        std::ofstream stream(path, std::ios::binary);
+        if (!stream)
+        {
+            m_ErrorMessage = "Unable to create file: " + path.string();
+            return;
+        }
+        if (m_CreateKind == 3)
+            stream << "# " << name.stem().string() << "\n";
+        else if (m_CreateKind == 4)
+            stream << "// " << name.filename().string() << "\n";
+        else if (m_CreateKind == 5)
+            stream << "#pragma once\n";
+        if (!stream)
+        {
+            m_ErrorMessage = "Unable to write file: " + path.string();
+            return;
+        }
     }
 
     m_SelectedPath = path;
     Refresh();
-    if (m_OpenFileCallback)
+    if (m_CreateKind >= 3 && m_OpenFileCallback)
         m_OpenFileCallback(path);
 }
 
