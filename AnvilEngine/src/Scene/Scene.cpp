@@ -456,8 +456,10 @@ namespace anv
                 Ref<Texture> texture = assetManager && !sprite.texture.uuid.empty()
                     ? assetManager->GetAs<Texture>(sprite.texture) : nullptr;
                 items.push_back({entity, {}, texture, sprite.color, sprite.drawLayer,
-                    sprite.flipX ? glm::vec2(sprite.uvMax.x, sprite.uvMin.y) : sprite.uvMin,
-                    sprite.flipY ? glm::vec2(sprite.uvMin.x, sprite.uvMax.y) : sprite.uvMax});
+                    {sprite.flipX ? sprite.uvMax.x : sprite.uvMin.x,
+                     sprite.flipY ? sprite.uvMax.y : sprite.uvMin.y},
+                    {sprite.flipX ? sprite.uvMin.x : sprite.uvMax.x,
+                     sprite.flipY ? sprite.uvMin.y : sprite.uvMax.y}});
             }
         }
 
