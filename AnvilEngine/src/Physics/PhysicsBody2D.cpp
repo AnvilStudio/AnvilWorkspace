@@ -101,6 +101,21 @@ namespace anv
         b2Body_SetTransform(m_Body, {x, y}, b2MakeRot(rotationRadians));
     }
 
+    bool PhysicsBody2D::GetFixedRotation() const
+    {
+        return IsValid() && b2Body_GetMotionLocks(m_Body).angularZ;
+    }
+
+    void PhysicsBody2D::SetFixedRotation(bool fixed)
+    {
+        if (!IsValid()) return;
+        auto locks = b2Body_GetMotionLocks(m_Body);
+        locks.angularZ = fixed;
+        b2Body_SetMotionLocks(m_Body, locks);
+        if (fixed) b2Body_SetAngularVelocity(m_Body, 0.0f);
+        b2Body_SetAwake(m_Body, true);
+    }
+
     void PhysicsBody2D::SetAwake(bool awake)
     {
         if (!IsValid())

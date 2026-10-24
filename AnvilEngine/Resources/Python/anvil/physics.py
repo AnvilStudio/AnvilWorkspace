@@ -17,6 +17,14 @@ class RigidBody2D:
         self._entity_id = entity_id
 
     @property
+    def fixed_rotation(self) -> bool:
+        return bool(_anvil._rigid_body_get_fixed_rotation(self._entity_id))
+
+    @fixed_rotation.setter
+    def fixed_rotation(self, value: bool):
+        _anvil._rigid_body_set_fixed_rotation(self._entity_id, bool(value))
+
+    @property
     def linear_velocity(self):
         return _anvil._rigid_body_get_linear_velocity(self._entity_id)
 

@@ -93,6 +93,8 @@ namespace anv
             {"_set_tag", python::SetTag, METH_VARARGS, nullptr},
             {"_is_key_pressed", python::IsKeyPressed, METH_VARARGS, nullptr},
             {"_is_key_just_pressed", python::IsKeyJustPressed, METH_VARARGS, nullptr},
+            {"_rigid_body_get_fixed_rotation", python::RigidBodyGetFixedRotation, METH_VARARGS, nullptr},
+            {"_rigid_body_set_fixed_rotation", python::RigidBodySetFixedRotation, METH_VARARGS, nullptr},
             {"_rigid_body_add_force", python::RigidBodyAddForce, METH_VARARGS, nullptr},
             {"_rigid_body_apply_impulse", python::RigidBodyApplyImpulse, METH_VARARGS, nullptr},
             {"_rigid_body_get_linear_velocity", python::RigidBodyGetLinearVelocity, METH_VARARGS, nullptr},

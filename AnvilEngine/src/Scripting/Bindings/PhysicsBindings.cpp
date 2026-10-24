@@ -93,6 +93,41 @@ namespace anv::python
         Py_RETURN_NONE;
     }
 
+    PyObject* RigidBodyGetFixedRotation(PyObject*, PyObject* args)
+    {
+        const char* id = nullptr;
+        if (!PyArg_ParseTuple(args, "s", &id)) return nullptr;
+        const auto context = ResolveScriptEntity(id ? id : "");
+        if (!context || !context.scene->HasComponent<Component::Rigidbody2D>(context.entity))
+        {
+            PyErr_SetString(PyExc_KeyError, "Entity has no Rigidbody2D");
+            return nullptr;
+        }
+        const bool fixed = context.scene->GetComponent<Component::Rigidbody2D>(context.entity).fixedRotation;
+        return PyBool_FromLong(fixed);
+    }
+
+    PyObject* RigidBodySetFixedRotation(PyObject*, PyObject* args)
+    {
+        const char* id = nullptr;
+        int fixed = 0;
+        if (!PyArg_ParseTuple(args, "sp", &id, &fixed)) return nullptr;
+        const auto context = ResolveScriptEntity(id ? id : "");
+        if (!context || !context.scene->HasComponent<Component::Rigidbody2D>(context.entity))
+        {
+            PyErr_SetString(PyExc_KeyError, "Entity has no Rigidbody2D");
+            return nullptr;
+        }
+        auto& component = context.scene->GetComponent<Component::Rigidbody2D>(context.entity);
+        component.fixedRotation = fixed != 0;
+        if (auto* system = context.scene->GetPhysicsSystem2D(); system && system->IsRunning())
+        {
+            if (auto* body = system->GetBody(context.entity); body && body->IsValid())
+                body->SetFixedRotation(component.fixedRotation);
+        }
+        Py_RETURN_NONE;
+    }
+
     PyObject* RigidBodyGetLinearVelocity(PyObject*, PyObject* args)
     {
         const char* entityID = nullptr;
