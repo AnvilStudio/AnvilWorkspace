@@ -361,25 +361,30 @@ namespace anv
         {
             auto& animator = view.get<Component::Animator2D>(entity);
             auto& sprite = view.get<Component::SpriteRenderer>(entity);
-            if (!animator.enabled || animator.clipPath.empty()) continue;
+            if (!animator.enabled) continue;
+            if (!animator.states.empty() && animator.currentState.empty())
+                animator.currentState = animator.defaultState.empty()
+                    ? animator.states.front().name : animator.defaultState;
+            const std::string activePath = animator.ActiveClip();
+            if (activePath.empty()) continue;
 
-            if (animator.loadedPath != animator.clipPath)
+            if (animator.loadedPath != activePath)
             {
-                animator.loadedPath = animator.clipPath;
+                animator.loadedPath = activePath;
                 animator.frame = 0;
                 animator.elapsed = 0.0f;
-                animator.playing = animator.autoplay;
+                animator.playing = animator.autoplay || animator.playing;
             }
 
-            auto it = m_AnimationClips.find(animator.clipPath);
+            auto it = m_AnimationClips.find(activePath);
             if (it == m_AnimationClips.end())
             {
                 SpriteAnimationClip clip;
-                std::filesystem::path path(animator.clipPath);
+                std::filesystem::path path(activePath);
                 if (path.is_relative())
                     path = std::filesystem::path(m_Path).parent_path() / path;
                 if (!clip.Load(path)) continue;
-                it = m_AnimationClips.emplace(animator.clipPath, std::move(clip)).first;
+                it = m_AnimationClips.emplace(activePath, std::move(clip)).first;
             }
 
             const auto& clip = it->second;

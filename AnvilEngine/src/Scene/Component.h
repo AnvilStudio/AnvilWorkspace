@@ -163,22 +163,55 @@ namespace anv
 
         struct Animator2D
         {
+            struct State
+            {
+                std::string name;
+                std::string clip;
+            };
+
+            // Legacy clip remains supported for scenes without named states.
             std::string clipPath;
+            std::vector<State> states;
+            std::string defaultState;
+            std::string currentState;
             bool autoplay = true;
             bool enabled = true;
 
-            // Transient playback state, deliberately not serialized.
             bool playing = false;
             size_t frame = 0;
             float elapsed = 0.0f;
             std::string loadedPath;
 
-            void Play()
+            std::string ActiveClip() const
             {
-                playing = true;
-                frame = 0;
-                elapsed = 0.0f;
+                if (!states.empty())
+                {
+                    for (const auto& state : states)
+                        if (state.name == currentState) return state.clip;
+                    return {};
+                }
+                return clipPath;
             }
+
+            bool PlayState(const std::string& name)
+            {
+                for (const auto& state : states)
+                    if (state.name == name && !state.clip.empty())
+                    {
+                        if (currentState != name || !playing)
+                        {
+                            currentState = name;
+                            loadedPath.clear();
+                            frame = 0;
+                            elapsed = 0.0f;
+                        }
+                        playing = true;
+                        return true;
+                    }
+                return false;
+            }
+
+            void Play() { playing = true; }
             void Pause() { playing = false; }
             void Stop()
             {
@@ -191,12 +224,35 @@ namespace anv
                 ser.Field("Clip", clipPath);
                 ser.Field("Autoplay", autoplay);
                 ser.Field("Enabled", enabled);
+                ser.Field("DefaultState", defaultState);
+                for (size_t i = 0; i < states.size(); ++i)
+                {
+                    const auto& state = states[i];
+                    const std::string n = std::to_string(i);
+                    const std::string key = std::string(n.size() < 8 ? 8-n.size() : 0, '0') + n;
+                    ser.ObjectKeyed("States", key, [&]
+                    {
+                        std::string name = state.name, clip = state.clip;
+                        ser.Field("Name", name);
+                        ser.Field("Clip", clip);
+                    });
+                }
             }
             void Deserialize(Serializer& ser)
             {
                 ser.FieldOr<std::string>("Clip", clipPath, "");
                 ser.FieldOr<bool>("Autoplay", autoplay, true);
                 ser.FieldOr<bool>("Enabled", enabled, true);
+                ser.FieldOr<std::string>("DefaultState", defaultState, "");
+                states.clear();
+                ser.ForEachTable("States", [&](const std::string&)
+                {
+                    State state;
+                    ser.FieldOr<std::string>("Name", state.name, "");
+                    ser.FieldOr<std::string>("Clip", state.clip, "");
+                    if (!state.name.empty()) states.push_back(std::move(state));
+                });
+                currentState = defaultState;
                 playing = false;
                 frame = 0;
                 elapsed = 0.0f;

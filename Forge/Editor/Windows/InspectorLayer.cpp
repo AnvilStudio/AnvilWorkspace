@@ -321,6 +321,94 @@ void InspectorLayer::Draw(
                         scene->Save();
                     ImGui::EndTable();
                 }
+                ImGui::SeparatorText("Animation States");
+                static char newStateName[96] = {};
+                ImGui::SetNextItemWidth(160);
+                ImGui::InputText("##NewAnimatorState", newStateName, sizeof(newStateName));
+                ImGui::SameLine();
+                if (ImGui::Button("Add State") && newStateName[0])
+                {
+                    const std::string name(newStateName);
+                    const bool exists = std::any_of(animator.states.begin(), animator.states.end(),
+                        [&](const auto& state) { return state.name == name; });
+                    if (!exists)
+                    {
+                        animator.states.push_back({name, {}});
+                        if (animator.defaultState.empty())
+                            animator.defaultState = name;
+                        animator.currentState.clear();
+                        animator.loadedPath.clear();
+                        scene->Save();
+                        newStateName[0] = '\0';
+                    }
+                }
+                int removeIndex = -1;
+                for (size_t i = 0; i < animator.states.size(); ++i)
+                {
+                    auto& state = animator.states[i];
+                    ImGui::PushID(static_cast<int>(i));
+                    ImGui::TextUnformatted(state.name.c_str());
+                    ImGui::SameLine();
+                    const std::string clipName = state.clip.empty()
+                        ? "Drop .aanim here" : std::filesystem::path(state.clip).filename().string();
+                    ImGui::Button(clipName.c_str(), ImVec2(-90, 0));
+                    if (ImGui::BeginDragDropTarget())
+                    {
+                        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
+                        {
+                            if (payload->Data && payload->DataSize > 1 &&
+                                static_cast<const char*>(payload->Data)[payload->DataSize-1] == '\0')
+                            {
+                                const std::filesystem::path path(static_cast<const char*>(payload->Data));
+                                if (path.extension() == ".aanim" && std::filesystem::is_regular_file(path))
+                                {
+                                    state.clip = path.string();
+                                    animator.loadedPath.clear();
+                                    scene->Save();
+                                }
+                            }
+                        }
+                        ImGui::EndDragDropTarget();
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("X")) removeIndex = static_cast<int>(i);
+                    ImGui::PopID();
+                }
+                if (removeIndex >= 0)
+                {
+                    const auto removedName = animator.states[removeIndex].name;
+                    animator.states.erase(animator.states.begin()+removeIndex);
+                    if (animator.defaultState == removedName)
+                        animator.defaultState = animator.states.empty() ? "" : animator.states.front().name;
+                    if (animator.currentState == removedName)
+                        animator.currentState.clear();
+                    animator.loadedPath.clear();
+                    scene->Save();
+                }
+                if (!animator.states.empty())
+                {
+                    const std::string preview = animator.defaultState.empty()
+                        ? "Select default" : animator.defaultState;
+                    if (ImGui::BeginCombo("Default State", preview.c_str()))
+                    {
+                        for (const auto& state : animator.states)
+                            if (ImGui::Selectable(state.name.c_str(), animator.defaultState == state.name))
+                            {
+                                animator.defaultState = state.name;
+                                animator.currentState.clear();
+                                animator.loadedPath.clear();
+                                scene->Save();
+                            }
+                        ImGui::EndCombo();
+                    }
+                    if (ImGui::BeginCombo("Current State", animator.currentState.c_str()))
+                    {
+                        for (const auto& state : animator.states)
+                            if (ImGui::Selectable(state.name.c_str(), animator.currentState == state.name))
+                                animator.PlayState(state.name);
+                        ImGui::EndCombo();
+                    }
+                }
                 ImGui::TextDisabled("Frame %zu", animator.frame);
             });
 
