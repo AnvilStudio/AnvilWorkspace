@@ -128,7 +128,20 @@ void MainMenu::build_project()
 
     const fs::path assetsDir = app->GetFS().GetKeyVal("Assets");
     const fs::path projectDir = assetsDir.parent_path();
-    const fs::path projectFile = projectDir / "Project.anv";
+    fs::path projectFile;
+    for (fs::directory_iterator it(projectDir, ec), end; !ec && it != end; it.increment(ec))
+    {
+        if (it->is_regular_file() && it->path().extension() == ".anv")
+        {
+            if (!projectFile.empty())
+            {
+                m_BuildFailed = true;
+                m_BuildStatus = "Multiple .anv project files found. Keep only the active project file in the project root.";
+                return;
+            }
+            projectFile = it->path();
+        }
+    }
     const fs::path runtimeDir = app->GetFS().GetExecDir().parent_path() / "AnvRuntime";
 #ifdef PLATFORM_WIN64
     const fs::path executable = runtimeDir / "AnvRuntime.exe";
@@ -142,9 +155,9 @@ void MainMenu::build_project()
         ANV_LOG_ERROR("Project build: %s", message.c_str());
     };
 
-    if (!fs::is_regular_file(projectFile, ec))
+    if (projectFile.empty() || !fs::is_regular_file(projectFile, ec))
     {
-        fail("Project.anv was not found at " + projectFile.string());
+        fail("No <ProjectName>.anv file found in " + projectDir.string());
         return;
     }
     ec.clear();
@@ -165,10 +178,10 @@ void MainMenu::build_project()
         fs::copy_file(source, target, fs::copy_options::overwrite_existing, ec);
         return !ec;
     };
-    if (!copyFile(projectFile, destination / "Project.anv") ||
+    if (!copyFile(projectFile, destination / projectFile.filename()) ||
         !copyFile(executable, destination / executable.filename()))
     {
-        fail("Failed to copy Project.anv or the runtime executable: " + ec.message());
+        fail("Failed to copy project .anv or the runtime executable: " + ec.message());
         return;
     }
 
