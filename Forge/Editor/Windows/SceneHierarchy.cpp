@@ -35,6 +35,19 @@ void SceneHierarchy::Draw()
             paste_entities(scene);
         if (ImGui::MenuItem("Import Prefab..."))
             m_OpenPrefabLoad = true;
+        if (ImGui::MenuItem("Refresh All Prefab Instances"))
+        {
+            std::vector<entt::entity> instances;
+            auto refs = scene->Registry().view<Component::PrefabInstance>();
+            for (auto instance : refs) instances.push_back(instance);
+            for (auto instance : instances)
+            {
+                if (!scene->Registry().valid(instance)) continue;
+                forge::EntityPrefab prefab;
+                const auto source = scene->GetComponent<Component::PrefabInstance>(instance).sourcePath;
+                if (prefab.Load(source)) prefab.Refresh(scene, instance);
+            }
+        }
         ImGui::Separator();
 
         if (ImGui::MenuItem("Create Empty"))
@@ -158,7 +171,7 @@ void SceneHierarchy::Draw()
                 forge::EntityPrefab prefab;
                 if (prefab.Load(path))
                 {
-                    auto roots = prefab.Instantiate(scene);
+                    auto roots = prefab.Instantiate(scene, path);
                     if (!roots.empty()) EditorLayer::GetInstance()->SetSelectedEntities(roots);
                 }
             }
@@ -280,6 +293,20 @@ void SceneHierarchy::draw_entity(Ref<Scene> scene,
         {
             copy_entities(scene, entity);
             paste_entities(scene);
+        }
+        if (scene->HasComponent<Component::PrefabInstance>(entity))
+        {
+            if (ImGui::MenuItem("Refresh From Prefab"))
+            {
+                forge::EntityPrefab prefab;
+                const auto source = scene->GetComponent<Component::PrefabInstance>(entity).sourcePath;
+                if (prefab.Load(source)) prefab.Refresh(scene, entity);
+            }
+            if (ImGui::MenuItem("Unlink Prefab"))
+            {
+                scene->RemoveComponent<Component::PrefabInstance>(entity);
+                scene->Save();
+            }
         }
         if (ImGui::MenuItem("Save as Prefab..."))
         {

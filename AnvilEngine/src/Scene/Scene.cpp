@@ -111,6 +111,7 @@ namespace anv
                     DeserializeIfPresent<Component::BoxCollider2D>(m_Registry, entity, ser, "BoxCollider2D");
                     DeserializeIfPresent<Component::Script>(m_Registry, entity, ser, "Script");
                     DeserializeIfPresent<Component::Relationship>(m_Registry, entity, ser, "Relationship");
+                    DeserializeIfPresent<Component::PrefabInstance>(m_Registry, entity, ser, "PrefabInstance");
                 });
             });
         }
@@ -174,6 +175,7 @@ namespace anv
                 SerializeIfPresent<Component::BoxCollider2D>(m_Registry, entity, ser, "BoxCollider2D");
                 SerializeIfPresent<Component::Script>(m_Registry, entity, ser, "Script");
                 SerializeIfPresent<Component::Relationship>(m_Registry, entity, ser, "Relationship");
+                SerializeIfPresent<Component::PrefabInstance>(m_Registry, entity, ser, "PrefabInstance");
             });
         }
 

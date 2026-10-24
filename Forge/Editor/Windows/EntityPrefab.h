@@ -75,7 +75,7 @@ namespace forge
             }
         }
 
-        std::vector<entt::entity> Instantiate(anv::Ref<anv::Scene> scene) const
+        std::vector<entt::entity> Instantiate(anv::Ref<anv::Scene> scene, const std::filesystem::path& source = {}) const
         {
             std::vector<entt::entity> roots;
             if (!scene || nodes.empty()) return roots;
@@ -108,8 +108,73 @@ namespace forge
                     scene->SetParent(created[i], created[parent], false);
                 else roots.push_back(created[i]);
             }
+            if (!source.empty())
+                for (auto root : roots)
+                    scene->AddComponent<anv::Component::PrefabInstance>(root).sourcePath = source.string();
             scene->Save();
             return roots;
+        }
+
+        // Refresh an existing instance from its source asset. Preserve its root
+        // handle, UUID, parent and transform so external references remain stable.
+        // Descendants are reconstructed and receive fresh UUIDs in this v1 model.
+        bool Refresh(anv::Ref<anv::Scene> scene, entt::entity root) const
+        {
+            if (!scene || nodes.empty() || !scene->Registry().valid(root) ||
+                !scene->HasComponent<anv::Component::PrefabInstance>(root) ||
+                nodes[0].parent != -1)
+                return false;
+            const auto source = scene->GetComponent<anv::Component::PrefabInstance>(root).sourcePath;
+            const auto oldChildren = scene->GetChildren(root);
+            // Destroy deepest nodes first to prevent orphaning/reparenting side effects.
+            auto destroyTree = [&](auto&& self, entt::entity entity, int depth) -> void
+            {
+                if (depth > 256 || !scene->Registry().valid(entity)) return;
+                for (auto child : scene->GetChildren(entity))
+                    self(self, child, depth+1);
+                scene->DestroyEntity(entity);
+            };
+            for (auto child : oldChildren) destroyTree(destroyTree, child, 0);
+
+            const auto& n = nodes.front();
+            scene->GetComponent<anv::Component::Tag>(root).value = n.name;
+            // Keep root transform and root UUID across prefab updates.
+            auto sync = [&](auto typeTag, bool present, const auto& value)
+            {
+                using T = decltype(typeTag);
+                if (present) scene->AddComponent<T>(root) = value;
+                else scene->RemoveComponent<T>(root);
+            };
+            sync(anv::Component::Camera2D{}, n.camera, n.cameraData);
+            sync(anv::Component::SpriteRenderer{}, n.sprite, n.spriteData);
+            sync(anv::Component::Animator2D{}, n.animator, n.animatorData);
+            sync(anv::Component::Rigidbody2D{}, n.rigidbody, n.rigidbodyData);
+            sync(anv::Component::BoxCollider2D{}, n.collider, n.colliderData);
+            sync(anv::Component::Script{}, n.script, n.scriptData);
+
+            std::vector<entt::entity> created(nodes.size(), entt::null);
+            created[0] = root;
+            for (size_t i = 1; i < nodes.size(); ++i)
+            {
+                const auto& child = nodes[i];
+                auto entity = scene->CreateEntity(child.name);
+                if (child.transform)
+                    scene->GetComponent<anv::Component::Transform2D>(entity) = child.transformData;
+                if (child.camera) scene->AddComponent<anv::Component::Camera2D>(entity) = child.cameraData;
+                if (child.sprite) scene->AddComponent<anv::Component::SpriteRenderer>(entity) = child.spriteData;
+                if (child.animator) scene->AddComponent<anv::Component::Animator2D>(entity) = child.animatorData;
+                if (child.rigidbody) scene->AddComponent<anv::Component::Rigidbody2D>(entity) = child.rigidbodyData;
+                if (child.collider) scene->AddComponent<anv::Component::BoxCollider2D>(entity) = child.colliderData;
+                if (child.script) scene->AddComponent<anv::Component::Script>(entity) = child.scriptData;
+                created[i] = entity;
+                const int parent = child.parent;
+                scene->SetParent(entity,
+                    parent >= 0 && static_cast<size_t>(parent) < i ? created[parent] : root,
+                    false);
+            }
+            scene->GetComponent<anv::Component::PrefabInstance>(root).sourcePath = source;
+            scene->Save();
+            return true;
         }
 
         bool Save(const std::filesystem::path& path) const

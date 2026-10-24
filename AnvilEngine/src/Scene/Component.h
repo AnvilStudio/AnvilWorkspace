@@ -69,6 +69,14 @@ namespace anv
             void Deserialize(Serializer &ser) { ser.FieldOr<std::string>("Parent", parentUUID, ""); }
         };
 
+        // Root-only reference to a reusable prefab asset.
+        struct PrefabInstance
+        {
+            std::string sourcePath;
+            void Serialize(Serializer& ser) { ser.Field("Source", sourcePath); }
+            void Deserialize(Serializer& ser) { ser.FieldOr<std::string>("Source", sourcePath, ""); }
+        };
+
         struct UID
         {
             uuid::EntityUUID uid;
