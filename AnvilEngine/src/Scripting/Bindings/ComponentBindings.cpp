@@ -30,6 +30,8 @@ namespace anv::python
             hasComponent = context.scene->HasComponent<Component::Rigidbody2D>(context.entity);
         else if (name == "BoxCollider2D")
             hasComponent = context.scene->HasComponent<Component::BoxCollider2D>(context.entity);
+        else if (name == "SpriteRenderer")
+            hasComponent = context.scene->HasComponent<Component::SpriteRenderer>(context.entity);
         else if (name == "Animator2D")
             hasComponent = context.scene->HasComponent<Component::Animator2D>(context.entity);
         else if (name == "TagComponent")
