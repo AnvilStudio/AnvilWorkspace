@@ -325,6 +325,14 @@ void InspectorExtensionLayer::draw_add_component_menu(
         ImGui::CloseCurrentPopup();
     }
 
+    if (!_scene->HasComponent<Component::Animator2D>(_entity) &&
+        ImGui::MenuItem("Animator 2D"))
+    {
+        _scene->AddComponent<Component::Animator2D>(_entity);
+        _scene->Save();
+        ImGui::CloseCurrentPopup();
+    }
+
     if (!_scene->HasComponent<Component::Rigidbody2D>(_entity) &&
         ImGui::MenuItem("Rigidbody 2D"))
     {
