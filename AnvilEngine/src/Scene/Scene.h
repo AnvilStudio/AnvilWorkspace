@@ -30,7 +30,7 @@ namespace anv
 
         std::string GetName() { return m_Name; }
         uuid::AssetUUID GetUUID() { return m_UUID; }
-        std::string GetPath() { return m_Path; }
+        std::string GetPath() const { return m_Path; }
         _shared<Camera2D> GetActiveCamera();
         entt::entity GetActiveCameraEntity() const;
         void SetActiveCamera(entt::entity entity);
