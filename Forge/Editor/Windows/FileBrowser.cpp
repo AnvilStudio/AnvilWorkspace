@@ -68,7 +68,9 @@ void FileBrowser::Draw()
 void FileBrowser::Refresh()
 {
     m_Entries.clear();
-    m_ThumbnailCache.clear();
+    // Keep thumbnail textures alive across navigation/refresh. ImGui draw commands
+    // from this frame may still reference their Vulkan descriptor sets; releasing
+    // them here invalidates descriptors before the frame is submitted.
     m_ErrorMessage.clear();
 
     std::error_code error;
