@@ -172,6 +172,7 @@ void Viewport::Draw()
             }
         }
 
+        draw_collider_bounds(scene);
         draw_selection_overlay(scene);
 
         ImGuizmo::SetOrthographic(true);
@@ -330,6 +331,9 @@ void Viewport::draw_toolbar(const ImVec2& imageMin)
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Toggle gizmo snapping (right-click for increments)");
 
+        ImGui::SameLine();
+        ImGui::Checkbox("Colliders", &m_ShowColliderBounds);
+
         if (ImGui::BeginPopup("##SnapSettings"))
         {
             ImGui::TextUnformatted("Transform Snapping");
@@ -425,6 +429,61 @@ bool Viewport::world_to_viewport(
         (1.0f - (ndc.y * 0.5f + 0.5f)) * m_ViewportSize.y;
 
     return true;
+}
+
+void Viewport::draw_collider_bounds(const anv::Ref<anv::Scene>& scene)
+{
+    if (!m_ShowColliderBounds || !scene || !m_EditorCamera)
+        return;
+
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    if (!drawList) return;
+
+    const ImU32 solidColor = IM_COL32(80, 225, 130, 240);
+    const ImU32 sensorColor = IM_COL32(255, 170, 55, 240);
+
+    drawList->PushClipRect(
+        ImVec2(m_ViewportBounds[0].x, m_ViewportBounds[0].y),
+        ImVec2(m_ViewportBounds[1].x, m_ViewportBounds[1].y),
+        true);
+
+    auto view = scene->Registry().view<
+        anv::Component::Transform2D,
+        anv::Component::BoxCollider2D>();
+
+    for (auto entity : view)
+    {
+        const auto& collider = view.get<anv::Component::BoxCollider2D>(entity);
+        const glm::mat4 model = scene->GetWorldTransform(entity);
+        const glm::vec2 halfSize = glm::abs(collider.size) * 0.5f;
+
+        const std::array<glm::vec2, 4> corners = {{
+            collider.offset + glm::vec2(-halfSize.x, -halfSize.y),
+            collider.offset + glm::vec2( halfSize.x, -halfSize.y),
+            collider.offset + glm::vec2( halfSize.x,  halfSize.y),
+            collider.offset + glm::vec2(-halfSize.x,  halfSize.y)
+        }};
+
+        std::array<ImVec2, 4> screen{};
+        bool valid = true;
+        for (size_t i = 0; i < corners.size(); ++i)
+        {
+            const glm::vec4 world = model * glm::vec4(corners[i], 0.0f, 1.0f);
+            if (!world_to_viewport(glm::vec3(world), screen[i]))
+            {
+                valid = false;
+                break;
+            }
+        }
+        if (!valid) continue;
+
+        const ImU32 color = collider.sensor ? sensorColor : solidColor;
+        drawList->AddPolyline(screen.data(), 4, IM_COL32(0, 0, 0, 180),
+            ImDrawFlags_Closed, 3.5f);
+        drawList->AddPolyline(screen.data(), 4, color,
+            ImDrawFlags_Closed, 1.8f);
+    }
+    drawList->PopClipRect();
 }
 
 void Viewport::draw_selection_overlay(
