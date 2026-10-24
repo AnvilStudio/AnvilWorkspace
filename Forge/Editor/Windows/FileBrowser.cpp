@@ -179,6 +179,7 @@ void FileBrowser::DrawBreadcrumbs()
 
     if (ImGui::SmallButton(rootLabel.c_str()))
         NavigateTo(m_RootDirectory);
+    AcceptMoveDrop(m_RootDirectory);
 
     std::error_code error;
     const auto relativePath = std::filesystem::relative(
@@ -199,6 +200,7 @@ void FileBrowser::DrawBreadcrumbs()
         ImGui::PushID(accumulatedPath.string().c_str());
         if (ImGui::SmallButton(label.c_str()))
             NavigateTo(accumulatedPath);
+        AcceptMoveDrop(accumulatedPath);
         ImGui::PopID();
     }
 }
@@ -275,6 +277,9 @@ void FileBrowser::DrawEntries()
         }
         ImGui::EndTable();
     }
+    const ImVec2 remaining = ImGui::GetContentRegionAvail();
+    ImGui::InvisibleButton("##MoveToCurrentFolder", ImVec2(std::max(1.0f, remaining.x), std::max(30.0f, remaining.y)));
+    AcceptMoveDrop(m_CurrentDirectory);
     ImGui::EndChild();
     if (!m_PendingDirectory.empty())
     {
@@ -356,8 +361,9 @@ void FileBrowser::DrawEntry(const Entry& e)
     draw->AddText(ImVec2(pos.x + (tile.x - textWidth) * 0.5f, pos.y + tile.y - 25.0f),
         ImGui::GetColorU32(ImGuiCol_Text), label.c_str());
     if (hover) ImGui::SetTooltip("%s", filename.c_str());
+    if (e.isDirectory) AcceptMoveDrop(e.path);
 
-    if (!e.isDirectory && ImGui::BeginDragDropSource())
+    if (ImGui::BeginDragDropSource())
     {
         const std::string path = e.path.string();
         ImGui::SetDragDropPayload("ANV_ASSET_PATH", path.c_str(), path.size() + 1);
@@ -382,6 +388,94 @@ void FileBrowser::DrawEntry(const Entry& e)
         ImGui::EndPopup();
     }
     ImGui::PopID();
+}
+
+void FileBrowser::AcceptMoveDrop(const std::filesystem::path& destination)
+{
+    if (!ImGui::BeginDragDropTarget()) return;
+    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
+    {
+        if (payload->Data && payload->DataSize > 1)
+        {
+            const char* data = static_cast<const char*>(payload->Data);
+            if (data[payload->DataSize - 1] == '\0')
+                MoveEntry(std::filesystem::path(data), destination);
+        }
+    }
+    ImGui::EndDragDropTarget();
+}
+
+void FileBrowser::MoveEntry(const std::filesystem::path& source,
+                            const std::filesystem::path& destination)
+{
+    m_ErrorMessage.clear();
+    std::error_code ec;
+    const auto from = std::filesystem::weakly_canonical(source, ec);
+    if (ec || !std::filesystem::exists(from))
+    {
+        m_ErrorMessage = "Move failed: source no longer exists.";
+        return;
+    }
+    ec.clear();
+    const auto dir = std::filesystem::weakly_canonical(destination, ec);
+    if (ec || !std::filesystem::is_directory(dir) ||
+        !IsInsideRoot(from) || !IsInsideRoot(dir) || from == m_RootDirectory)
+    {
+        m_ErrorMessage = "Move blocked: invalid project path.";
+        return;
+    }
+    const auto target = dir / from.filename();
+    if (target == from) return;
+    const auto isWithin = [](const std::filesystem::path& child,
+                             const std::filesystem::path& parent)
+    {
+        auto c = child.begin(), p = parent.begin();
+        for (; p != parent.end() && c != child.end() && *c == *p; ++c, ++p) {}
+        return p == parent.end();
+    };
+    if (std::filesystem::is_directory(from) && isWithin(dir, from))
+    {
+        m_ErrorMessage = "Cannot move a folder into itself.";
+        return;
+    }
+    ec.clear();
+    if (std::filesystem::exists(target, ec) || ec)
+    {
+        m_ErrorMessage = "A file or folder with that name already exists.";
+        return;
+    }
+
+    // The asset registry indexes resources by path. Until AssetManager exposes a
+    // move/reindex operation, refuse registered resources to protect UUID links.
+    auto* app = anv::App::GetInstance();
+    auto assets = app ? app->GetAssetManager() : nullptr;
+    if (assets)
+    {
+        for (const auto& asset : assets->GetRegistrySnapshot())
+        {
+            if (asset.resource.empty()) continue;
+            ec.clear();
+            const auto resource = std::filesystem::weakly_canonical(asset.resource, ec);
+            if (ec) continue;
+            if (resource == from ||
+                (std::filesystem::is_directory(from) && isWithin(resource, from)))
+            {
+                m_ErrorMessage = "Registered asset cannot be moved yet: " + asset.name;
+                return;
+            }
+        }
+    }
+
+    std::filesystem::rename(from, target, ec);
+    if (ec)
+    {
+        m_ErrorMessage = "Move failed: " + ec.message();
+        return;
+    }
+    if (m_SelectedPath == from) m_SelectedPath = target;
+    Refresh();
+    ANV_LOG_INFO("File Browser moved '%s' to '%s'",
+        from.string().c_str(), target.string().c_str());
 }
 
 void FileBrowser::DrawCreatePopup()

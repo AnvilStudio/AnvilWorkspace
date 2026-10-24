@@ -53,6 +53,8 @@ private:
     anv::Ref<anv::Texture> GetThumbnail(const Entry& entry);
     bool IsImage(const Entry& entry) const;
     void DrawEntry(const Entry& _entry);
+    void AcceptMoveDrop(const std::filesystem::path& destination);
+    void MoveEntry(const std::filesystem::path& source, const std::filesystem::path& destination);
     void DrawCreatePopup();
     void DrawDeletePopup();
 
