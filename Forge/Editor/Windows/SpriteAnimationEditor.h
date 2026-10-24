@@ -112,7 +112,7 @@ public:
                     scene->HasComponent<anv::Component::Animator2D>(entity))
                 {
                     auto& animator = scene->GetComponent<anv::Component::Animator2D>(entity);
-                    animator.clipPath = m_ClipPath;
+                    animator.clipPath = path.string();
                     animator.loadedPath.clear();
                     animator.Stop();
                     scene->Save();
@@ -320,7 +320,13 @@ private:
     {
         std::filesystem::path path(raw ? raw : "");
         if (path.empty()) return {};
-        if (path.is_relative()) path = std::filesystem::path(scene->GetPath()).parent_path()/path;
+        if (path.is_relative())
+        {
+            // Clips are project assets, not children of the active scene folder.
+            const auto assetsRoot = anv::App::GetInstance()->GetFS().GetKeyVal("Assets");
+            path = assetsRoot / (path.begin()->string() == "Assets" ?
+                std::filesystem::path(path.string().substr(7)) : path);
+        }
         return path.lexically_normal();
     }
     anv::SpriteAnimationClip m_Clip;
