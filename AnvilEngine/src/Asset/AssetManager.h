@@ -53,6 +53,11 @@ namespace anv
         Ref<Asset> Get(const uuid::AssetUUID &id) const;
         Ref<Asset> GetByResource(const std::filesystem::path &resource) const;
 
+        // Move a file or directory and update registered resource paths without changing UUIDs.
+        bool MovePath(const std::filesystem::path &source,
+                      const std::filesystem::path &destination,
+                      std::string *errorMessage = nullptr);
+
         std::vector<AssetRegistryEntry>
         GetRegistrySnapshot() const
         {

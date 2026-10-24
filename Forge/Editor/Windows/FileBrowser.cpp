@@ -445,32 +445,25 @@ void FileBrowser::MoveEntry(const std::filesystem::path& source,
         return;
     }
 
-    // The asset registry indexes resources by path. Until AssetManager exposes a
-    // move/reindex operation, refuse registered resources to protect UUID links.
     auto* app = anv::App::GetInstance();
     auto assets = app ? app->GetAssetManager() : nullptr;
     if (assets)
     {
-        for (const auto& asset : assets->GetRegistrySnapshot())
+        std::string moveError;
+        if (!assets->MovePath(from, target, &moveError))
         {
-            if (asset.resource.empty()) continue;
-            ec.clear();
-            const auto resource = std::filesystem::weakly_canonical(asset.resource, ec);
-            if (ec) continue;
-            if (resource == from ||
-                (std::filesystem::is_directory(from) && isWithin(resource, from)))
-            {
-                m_ErrorMessage = "Registered asset cannot be moved yet: " + asset.name;
-                return;
-            }
+            m_ErrorMessage = "Move failed: " + moveError;
+            return;
         }
     }
-
-    std::filesystem::rename(from, target, ec);
-    if (ec)
+    else
     {
-        m_ErrorMessage = "Move failed: " + ec.message();
-        return;
+        std::filesystem::rename(from, target, ec);
+        if (ec)
+        {
+            m_ErrorMessage = "Move failed: " + ec.message();
+            return;
+        }
     }
     if (m_SelectedPath == from) m_SelectedPath = target;
     Refresh();

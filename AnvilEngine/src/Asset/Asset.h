@@ -80,6 +80,8 @@ namespace anv
         /** @brief Serializes the current asset state to its metadata file. */
         void Save();
 
+    friend class AssetManager;
+
     protected:
         /** @brief Configures this asset as a file-backed resource. */
         void set_resource(const std::filesystem::path& _path);
