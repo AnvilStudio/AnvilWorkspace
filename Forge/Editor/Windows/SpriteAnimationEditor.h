@@ -47,7 +47,8 @@ public:
             m_PreviewFrame = 0;
             m_PreviewTime = 0;
             m_Playing = false;
-            m_ClipPath[0] = '\0';
+            std::snprintf(m_ClipPath, sizeof(m_ClipPath), "%s", "Animations/NewAnimation.aanim");
+            m_Status.clear();
         }
 
         ImGui::TextUnformatted(texture->GetName().c_str());
@@ -55,6 +56,17 @@ public:
         ImGui::TextDisabled("| %d x %d", texture->Width(), texture->Height());
         ImGui::Separator();
 
+        if (ImGui::Button("New Clip"))
+        {
+            m_Clip = anv::SpriteAnimationClip{};
+            m_Clip.textureUUID = sprite.texture.uuid;
+            m_SelectedFrame = m_PreviewFrame = 0;
+            m_PreviewTime = 0.0f;
+            m_Playing = false;
+            std::snprintf(m_ClipPath, sizeof(m_ClipPath), "%s", "Animations/NewAnimation.aanim");
+            m_Status = "New clip ready. Add frames and click Save to create it.";
+        }
+        ImGui::SameLine();
         ImGui::SetNextItemWidth(265);
         ImGui::InputTextWithHint("##AnimationPath", "Assets/Animations/Run.aanim",
                                  m_ClipPath, sizeof(m_ClipPath));
@@ -81,11 +93,17 @@ public:
         ImGui::SameLine();
         if (ImGui::Button("Save"))
         {
+            std::filesystem::path requested(m_ClipPath);
+            if (!requested.empty() && requested.extension().empty())
+            {
+                requested += ".aanim";
+                std::snprintf(m_ClipPath, sizeof(m_ClipPath), "%s", requested.string().c_str());
+            }
             const auto path = ResolvePath(scene, m_ClipPath);
             if (path.extension() != ".aanim" || m_Clip.frames.empty())
                 m_Status = "Enter a .aanim path and add at least one frame.";
-            else if (!std::filesystem::is_directory(path.parent_path()))
-                m_Status = "Create the animation directory before saving.";
+            else if (std::error_code ec; !std::filesystem::create_directories(path.parent_path(), ec) && ec)
+                m_Status = "Could not create animation directory: " + ec.message();
             else
             {
                 m_Clip.textureUUID = sprite.texture.uuid;
