@@ -455,7 +455,9 @@ namespace anv
                 if (!sprite.visibleInGame) continue;
                 Ref<Texture> texture = assetManager && !sprite.texture.uuid.empty()
                     ? assetManager->GetAs<Texture>(sprite.texture) : nullptr;
-                items.push_back({entity, {}, texture, sprite.color, sprite.drawLayer, sprite.uvMin, sprite.uvMax});
+                items.push_back({entity, {}, texture, sprite.color, sprite.drawLayer,
+                    sprite.flipX ? glm::vec2(sprite.uvMax.x, sprite.uvMin.y) : sprite.uvMin,
+                    sprite.flipY ? glm::vec2(sprite.uvMin.x, sprite.uvMax.y) : sprite.uvMax});
             }
         }
 

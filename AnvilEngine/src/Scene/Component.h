@@ -115,6 +115,8 @@ namespace anv
             int drawLayer = 0;
             bool visibleInGame = true;
             bool visibleInEditor = true;
+            bool flipX = false;
+            bool flipY = false;
             glm::vec2 uvMin{0.0f, 0.0f};
             glm::vec2 uvMax{1.0f, 1.0f};
 
@@ -131,6 +133,8 @@ namespace anv
 
                 ser.Field("VisibleInGame", visibleInGame);
                 ser.Field("VisibleInEditor", visibleInEditor);
+                ser.Field("FlipX", flipX);
+                ser.Field("FlipY", flipY);
 
                 ser.Field("UVMinX", uvMin.x);
                 ser.Field("UVMinY", uvMin.y);
@@ -152,6 +156,8 @@ namespace anv
 
                 ser.FieldOr<bool>("VisibleInGame", visibleInGame, true);
                 ser.FieldOr<bool>("VisibleInEditor", visibleInEditor, true);
+                ser.FieldOr<bool>("FlipX", flipX, false);
+                ser.FieldOr<bool>("FlipY", flipY, false);
 
                 ser.FieldOr<float>("UVMinX", uvMin.x, 0.f);
                 ser.FieldOr<float>("UVMinY", uvMin.y, 0.f);

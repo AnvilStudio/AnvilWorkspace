@@ -77,6 +77,8 @@ namespace anv
             {"log", python::Log, METH_VARARGS, "Write an informational message to the Anvil log."},
             {"warn", python::Warn, METH_VARARGS, "Write a warning to the Anvil log."},
             {"error", python::Error, METH_VARARGS, "Write an error to the Anvil log."},
+            {"_sprite_get_flip", python::SpriteGetFlip, METH_VARARGS, nullptr},
+            {"_sprite_set_flip", python::SpriteSetFlip, METH_VARARGS, nullptr},
             {"_animator_play_state", python::AnimatorPlayState, METH_VARARGS, nullptr},
             {"_animator_pause", python::AnimatorPause, METH_VARARGS, nullptr},
             {"_animator_stop", python::AnimatorStop, METH_VARARGS, nullptr},

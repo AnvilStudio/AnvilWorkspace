@@ -12,6 +12,8 @@ namespace anv::python
     PyObject* IsKeyPressed(PyObject* self, PyObject* args);
     PyObject* IsKeyJustPressed(PyObject* self, PyObject* args);
 
+    PyObject* SpriteGetFlip(PyObject* self, PyObject* args);
+    PyObject* SpriteSetFlip(PyObject* self, PyObject* args);
     PyObject* AnimatorPlayState(PyObject* self, PyObject* args);
     PyObject* AnimatorPause(PyObject* self, PyObject* args);
     PyObject* AnimatorStop(PyObject* self, PyObject* args);

@@ -247,6 +247,16 @@ void InspectorLayer::Draw(
                         sprite.uvMax = glm::clamp(sprite.uvMax, glm::vec2(0.0f), glm::vec2(1.0f));
                         scene->Save();
                     }
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::TextUnformatted("Flip X");
+                    ImGui::TableSetColumnIndex(1);
+                    if (ImGui::Checkbox("##SpriteFlipX", &sprite.flipX)) scene->Save();
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::TextUnformatted("Flip Y");
+                    ImGui::TableSetColumnIndex(1);
+                    if (ImGui::Checkbox("##SpriteFlipY", &sprite.flipY)) scene->Save();
                     ImGui::EndTable();
                 }
             });

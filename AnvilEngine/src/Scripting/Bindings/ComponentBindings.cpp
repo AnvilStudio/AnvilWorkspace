@@ -98,6 +98,49 @@ namespace anv::python
         return PyUnicode_FromString(animator->currentState.c_str());
     }
 
+    PyObject* SpriteGetFlip(PyObject*, PyObject* args)
+    {
+        const char* id = nullptr;
+        const char* axis = nullptr;
+        if (!PyArg_ParseTuple(args, "ss", &id, &axis)) return nullptr;
+        const auto context = ResolveScriptEntity(id ? id : "");
+        if (!context || !context.scene->HasComponent<Component::SpriteRenderer>(context.entity))
+        {
+            PyErr_SetString(PyExc_KeyError, "Entity has no SpriteRenderer component");
+            return nullptr;
+        }
+        const auto& sprite = context.scene->GetComponent<Component::SpriteRenderer>(context.entity);
+        const std::string_view key(axis);
+        if (key == "x") return PyBool_FromLong(sprite.flipX);
+        if (key == "y") return PyBool_FromLong(sprite.flipY);
+        PyErr_SetString(PyExc_ValueError, "Sprite flip axis must be x or y");
+        return nullptr;
+    }
+
+    PyObject* SpriteSetFlip(PyObject*, PyObject* args)
+    {
+        const char* id = nullptr;
+        const char* axis = nullptr;
+        int value = 0;
+        if (!PyArg_ParseTuple(args, "ssp", &id, &axis, &value)) return nullptr;
+        const auto context = ResolveScriptEntity(id ? id : "");
+        if (!context || !context.scene->HasComponent<Component::SpriteRenderer>(context.entity))
+        {
+            PyErr_SetString(PyExc_KeyError, "Entity has no SpriteRenderer component");
+            return nullptr;
+        }
+        auto& sprite = context.scene->GetComponent<Component::SpriteRenderer>(context.entity);
+        const std::string_view key(axis);
+        if (key == "x") sprite.flipX = value != 0;
+        else if (key == "y") sprite.flipY = value != 0;
+        else
+        {
+            PyErr_SetString(PyExc_ValueError, "Sprite flip axis must be x or y");
+            return nullptr;
+        }
+        Py_RETURN_NONE;
+    }
+
     PyObject* FindEntityByName(PyObject*, PyObject* args)
     {
         const char* entityName = nullptr;

@@ -648,7 +648,11 @@ void Viewport::push_billboards(const anv::Ref<anv::Scene> &scene)
         worldPose.SetFromMatrix(scene->GetWorldTransform(entity));
         anv::Renderer2D::DrawQuad(
             worldPose.position, worldPose.rotation, worldPose.scale,
-            sprite.color, texture, sprite.drawLayer);
+            sprite.color, texture, sprite.drawLayer,
+            {sprite.flipX ? sprite.uvMax.x : sprite.uvMin.x,
+             sprite.flipY ? sprite.uvMax.y : sprite.uvMin.y},
+            {sprite.flipX ? sprite.uvMin.x : sprite.uvMax.x,
+             sprite.flipY ? sprite.uvMin.y : sprite.uvMax.y});
     }
 }
 
