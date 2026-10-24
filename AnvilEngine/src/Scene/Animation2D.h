@@ -17,6 +17,7 @@ namespace anv
         glm::vec2 uvMin{0.0f};
         glm::vec2 uvMax{1.0f};
         float duration = 0.1f;
+        std::string textureUUID;
     };
 
     struct SpriteAnimationClip
@@ -48,6 +49,7 @@ namespace anv
                     ser.FieldOr<float>("UVMaxX", frame.uvMax.x, 1.0f);
                     ser.FieldOr<float>("UVMaxY", frame.uvMax.y, 1.0f);
                     ser.FieldOr<float>("Duration", frame.duration, 0.1f);
+                    ser.FieldOr<std::string>("TextureID", frame.textureUUID, "");
                     frame.duration = std::max(frame.duration, 0.001f);
                     frames.push_back(frame);
                 });
@@ -85,6 +87,8 @@ namespace anv
                         ser.Field("UVMaxX", maxX);
                         ser.Field("UVMaxY", maxY);
                         ser.Field("Duration", duration);
+                        std::string frameTexture = frame.textureUUID;
+                        ser.Field("TextureID", frameTexture);
                     });
                 }
                 ser.Close();

@@ -410,6 +410,8 @@ namespace anv
                     }
                 }
             }
+            if (!clip.frames[animator.frame].textureUUID.empty())
+                sprite.texture.uuid = clip.frames[animator.frame].textureUUID;
             sprite.uvMin = clip.frames[animator.frame].uvMin;
             sprite.uvMax = clip.frames[animator.frame].uvMax;
         }

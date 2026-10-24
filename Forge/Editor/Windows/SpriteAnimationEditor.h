@@ -6,6 +6,8 @@
 #include <cstdio>
 #include <filesystem>
 #include <string>
+#include <vector>
+#include <cctype>
 
 // Forge-only authoring UI. The runtime reads the same SpriteAnimationClip format.
 class SpriteAnimationEditor
@@ -106,7 +108,6 @@ public:
                 m_Status = "Could not create animation directory: " + ec.message();
             else
             {
-                m_Clip.textureUUID = sprite.texture.uuid;
                 m_Status = m_Clip.Save(path) ? "Animation saved." : "Could not save animation.";
                 if (m_Status == "Animation saved." &&
                     scene->HasComponent<anv::Component::Animator2D>(entity))
@@ -138,6 +139,25 @@ public:
             ImGui::EndDragDropTarget();
         }
         if (!m_Status.empty()) ImGui::TextDisabled("%s", m_Status.c_str());
+
+        ImGui::SeparatorText("Image Sequence");
+        ImGui::TextDisabled("Drop a folder containing PNG frames below. Files are sorted by name.");
+        ImGui::Button("Drop animation folder here##ImageSequence", ImVec2(-1.0f, 35.0f));
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
+            {
+                if (payload->Data && payload->DataSize > 1 &&
+                    static_cast<const char*>(payload->Data)[payload->DataSize-1] == '\0')
+                    ImportSequence(std::filesystem::path(static_cast<const char*>(payload->Data)), assets);
+            }
+            ImGui::EndDragDropTarget();
+        }
+        ImGui::SetNextItemWidth(-1.0f);
+        ImGui::InputTextWithHint("##SequenceFolder", "Or enter folder path and click Import",
+            m_SequenceFolder, sizeof(m_SequenceFolder));
+        if (ImGui::Button("Import Folder"))
+            ImportSequence(ResolvePath(scene, m_SequenceFolder), assets);
 
         ImGui::SeparatorText("Spritesheet");
         if (ImGui::BeginTable("##AnimSheetSettings", 4, ImGuiTableFlags_SizingStretchSame))
@@ -249,7 +269,11 @@ public:
             m_PreviewFrame = std::min(m_PreviewFrame, m_Clip.frames.size()-1);
             const auto& frame = m_Clip.frames[m_PreviewFrame];
             ImGui::SameLine();
-            ImGui::Image(imageID, ImVec2(54,54),
+            auto frameTexture = !frame.textureUUID.empty() && assets
+                ? assets->GetAs<anv::Texture>(anv::uuid::AssetUUID{frame.textureUUID}) : texture;
+            void* previewID = frameTexture && frameTexture->IsGPUReady()
+                ? frameTexture->GetImGuiTextureID() : nullptr;
+            if (previewID) ImGui::Image(previewID, ImVec2(54,54),
                 ImVec2(frame.uvMin.x, frame.uvMax.y),
                 ImVec2(frame.uvMax.x, frame.uvMin.y));
         }
@@ -268,7 +292,11 @@ public:
                 ImGui::PushStyleColor(ImGuiCol_Button, selected ?
                     ImGui::GetStyleColorVec4(ImGuiCol_TabActive) :
                     ImGui::GetStyleColorVec4(ImGuiCol_Button));
-                if (ImGui::ImageButton("##AnimFrame", (ImTextureID)imageID, ImVec2(56,56),
+                auto frameTexture = !frame.textureUUID.empty() && assets
+                    ? assets->GetAs<anv::Texture>(anv::uuid::AssetUUID{frame.textureUUID}) : texture;
+                void* thumbID = frameTexture && frameTexture->IsGPUReady()
+                    ? frameTexture->GetImGuiTextureID() : imageID;
+                if (ImGui::ImageButton("##AnimFrame", (ImTextureID)thumbID, ImVec2(56,56),
                     ImVec2(frame.uvMin.x, frame.uvMax.y),
                     ImVec2(frame.uvMax.x, frame.uvMin.y)))
                 {
@@ -316,6 +344,51 @@ public:
     }
 
 private:
+    void ImportSequence(const std::filesystem::path& input, const decltype(anv::App::GetInstance()->GetAssetManager())& assets)
+    {
+        if (!assets) { m_Status = "Asset manager is unavailable."; return; }
+        std::error_code ec;
+        std::filesystem::path folder = input;
+        if (std::filesystem::is_regular_file(folder, ec)) folder = folder.parent_path();
+        if (!std::filesystem::is_directory(folder, ec))
+        {
+            m_Status = "Select a folder with animation frames.";
+            return;
+        }
+        std::vector<std::filesystem::path> files;
+        for (std::filesystem::directory_iterator it(folder, ec), end; !ec && it != end; it.increment(ec))
+        {
+            if (!it->is_regular_file(ec)) continue;
+            std::string ext = it->path().extension().string();
+            std::transform(ext.begin(), ext.end(), ext.begin(),
+                [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||
+                ext == ".bmp" || ext == ".tga") files.push_back(it->path());
+        }
+        std::sort(files.begin(), files.end());
+        if (ec || files.empty()) { m_Status = "No readable image files found."; return; }
+        std::vector<anv::SpriteAnimationFrame> imported;
+        for (const auto& file : files)
+        {
+            auto frameTexture = assets->GetOrCreateTexture(file);
+            if (!frameTexture || !frameTexture->IsGPUReady())
+            {
+                m_Status = "Failed to import texture: " + file.filename().string();
+                return;
+            }
+            anv::SpriteAnimationFrame frame;
+            frame.textureUUID = frameTexture->GetAssetID().uuid;
+            frame.duration = std::max(0.001f, m_DefaultDuration);
+            imported.push_back(std::move(frame));
+        }
+        // Replace only after every image has been loaded successfully.
+        m_Clip.frames = std::move(imported);
+        m_Clip.textureUUID.clear();
+        m_SelectedFrame = m_PreviewFrame = 0;
+        m_PreviewTime = 0;
+        m_Playing = false;
+        m_Status = "Imported " + std::to_string(m_Clip.frames.size()) + " frames.";
+    }
     static std::filesystem::path ResolvePath(const anv::Ref<anv::Scene>& scene, const char* raw)
     {
         std::filesystem::path path(raw ? raw : "");
@@ -332,6 +405,7 @@ private:
     anv::SpriteAnimationClip m_Clip;
     std::string m_TextureID;
     char m_ClipPath[512]{};
+    char m_SequenceFolder[512]{};
     std::string m_Status;
     int m_CellWidth = 32, m_CellHeight = 32, m_Margin = 0, m_Spacing = 0;
     float m_DefaultDuration = 0.1f, m_Zoom = 1.0f, m_PreviewTime = 0.0f;
