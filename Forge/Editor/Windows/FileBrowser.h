@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <functional>
 #include <array>
+#include <unordered_map>
 #include <string>
 #include <vector>
 
@@ -49,6 +50,8 @@ private:
     void DrawEntries();
     void InitializeIcons();
     size_t IconIndex(const Entry&) const;
+    anv::Ref<anv::Texture> GetThumbnail(const Entry& entry);
+    bool IsImage(const Entry& entry) const;
     void DrawEntry(const Entry& _entry);
     void DrawCreatePopup();
     void DrawDeletePopup();
@@ -70,6 +73,8 @@ private:
     enum IconKind : size_t { Folder, Generic, Image, Python, Cpp, Header, Scene, IconCount };
     std::array<anv::Ref<anv::Texture>, IconCount> m_Icons{};
     bool m_IconsInitialized = false;
+    float m_TileWidth = 112.0f;
+    std::unordered_map<std::string, anv::Ref<anv::Texture>> m_ThumbnailCache;
     std::vector<Entry> m_Entries;
     OpenFileCallback m_OpenFileCallback = [](const std::filesystem::path& _path)
     {

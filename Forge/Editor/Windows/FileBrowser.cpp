@@ -68,6 +68,7 @@ void FileBrowser::Draw()
 void FileBrowser::Refresh()
 {
     m_Entries.clear();
+    m_ThumbnailCache.clear();
     m_ErrorMessage.clear();
 
     std::error_code error;
@@ -155,6 +156,11 @@ void FileBrowser::DrawToolbar()
         Refresh();
 
     ImGui::SameLine();
+    ImGui::SetNextItemWidth(95.0f);
+    ImGui::SliderFloat("##FileTileSize", &m_TileWidth, 88.0f, 200.0f, "%.0f px");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("File tile size");
+
+    ImGui::SameLine();
     ImGui::SetNextItemWidth(-1.0f);
     ImGui::InputTextWithHint(
         "##FileBrowserSearch",
@@ -229,9 +235,28 @@ size_t FileBrowser::IconIndex(const Entry& e) const
     return Generic;
 }
 
+bool FileBrowser::IsImage(const Entry& e) const
+{
+    return !e.isDirectory && IconIndex(e) == Image;
+}
+
+anv::Ref<anv::Texture> FileBrowser::GetThumbnail(const Entry& e)
+{
+    if (!IsImage(e)) return nullptr;
+    const std::string key = e.path.string();
+    auto it = m_ThumbnailCache.find(key);
+    if (it != m_ThumbnailCache.end()) return it->second;
+
+    // Cache negative results too, avoiding repeated failed disk/GPU loads.
+    auto thumbnail = anv::Texture::Create(e.path);
+    if (!thumbnail || !thumbnail->IsGPUReady()) thumbnail = nullptr;
+    m_ThumbnailCache.emplace(key, thumbnail);
+    return thumbnail;
+}
+
 void FileBrowser::DrawEntries()
 {
-    const float tileWidth = 112.0f;
+    const float tileWidth = m_TileWidth;
     const float available = ImGui::GetContentRegionAvail().x;
     const int columns = std::max(1, (int)(available / (tileWidth + 8.0f)));
     ImGui::BeginChild("##FileGrid", ImVec2(0, 0));
@@ -261,7 +286,7 @@ void FileBrowser::DrawEntry(const Entry& e)
 {
     const std::string filename = e.path.filename().string();
     const bool selected = m_SelectedPath == e.path;
-    const ImVec2 tile(112.0f, 110.0f);
+    const ImVec2 tile(m_TileWidth, m_TileWidth);
     ImGui::PushID(e.path.string().c_str());
     const ImVec2 pos = ImGui::GetCursorScreenPos();
     ImGui::InvisibleButton("##Tile", tile);
@@ -284,19 +309,37 @@ void FileBrowser::DrawEntry(const Entry& e)
         if (selected) draw->AddRect(pos, ImVec2(pos.x + tile.x, pos.y + tile.y),
             IM_COL32(100, 180, 250, 255), 5.0f);
     }
-    const ImVec2 iconMin(pos.x + 30.0f, pos.y + 9.0f);
-    const ImVec2 iconMax(iconMin.x + 52.0f, iconMin.y + 52.0f);
-    auto& icon = m_Icons[IconIndex(e)];
-    void* texture = icon && icon->IsGPUReady() ? icon->GetImGuiTextureID() : nullptr;
+    const float visualSize = tile.x - 34.0f;
+    const ImVec2 visualMin(pos.x + 17.0f, pos.y + 10.0f);
+    const ImVec2 visualMax(visualMin.x + visualSize, visualMin.y + visualSize);
+    // Keep a fixed image area so wide and tall assets align consistently.
+    auto thumbnail = GetThumbnail(e);
+    auto& fallback = m_Icons[IconIndex(e)];
+    auto image = thumbnail ? thumbnail : fallback;
+    void* texture = image && image->IsGPUReady() ? image->GetImGuiTextureID() : nullptr;
     if (texture)
-        draw->AddImage((ImTextureID)texture, iconMin, iconMax,
+    {
+        ImVec2 min = visualMin, max = visualMax;
+        if (thumbnail && thumbnail->Width() > 0 && thumbnail->Height() > 0)
+        {
+            const float ratio = static_cast<float>(thumbnail->Width()) / thumbnail->Height();
+            const float w = ratio > 1.0f ? visualSize : visualSize * ratio;
+            const float h = ratio > 1.0f ? visualSize / ratio : visualSize;
+            min = ImVec2(pos.x + (tile.x - w) * 0.5f,
+                         visualMin.y + (visualSize - h) * 0.5f);
+            max = ImVec2(min.x + w, min.y + h);
+        }
+        draw->AddImage((ImTextureID)texture, min, max,
             ImVec2(0, 1), ImVec2(1, 0));
+    }
     else
     {
         const ImU32 color = e.isDirectory ? IM_COL32(206, 172, 104, 255)
                                           : IM_COL32(139, 164, 187, 255);
-        draw->AddRectFilled(ImVec2(iconMin.x + 8, iconMin.y + 10),
-            ImVec2(iconMax.x - 8, iconMax.y - 6), color, 3.0f);
+        draw->AddRectFilled(ImVec2(visualMin.x + visualSize * 0.2f,
+                                   visualMin.y + visualSize * 0.15f),
+            ImVec2(visualMax.x - visualSize * 0.2f,
+                   visualMax.y - visualSize * 0.15f), color, 3.0f);
     }
     std::string label = filename;
     while (label.size() > 1 && ImGui::CalcTextSize(label.c_str()).x > tile.x - 12)
@@ -308,7 +351,7 @@ void FileBrowser::DrawEntry(const Entry& e)
         label += "...";
     }
     const float textWidth = ImGui::CalcTextSize(label.c_str()).x;
-    draw->AddText(ImVec2(pos.x + (tile.x - textWidth) * 0.5f, pos.y + 77),
+    draw->AddText(ImVec2(pos.x + (tile.x - textWidth) * 0.5f, pos.y + tile.y - 25.0f),
         ImGui::GetColorU32(ImGuiCol_Text), label.c_str());
     if (hover) ImGui::SetTooltip("%s", filename.c_str());
 
