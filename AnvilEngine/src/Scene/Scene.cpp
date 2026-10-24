@@ -557,12 +557,14 @@ namespace anv
         m_WorldSnapshot.clear();
 
         auto ids = m_Registry.view<uuid::EntityUUID>();
-        m_UUIDIndex.reserve(m_Registry.storage<uuid::EntityUUID>()->size());
+        if (const auto* storage = m_Registry.storage<uuid::EntityUUID>())
+            m_UUIDIndex.reserve(storage->size());
         for (auto entity : ids)
             m_UUIDIndex.emplace(ids.get<uuid::EntityUUID>(entity).uuid, entity);
 
         auto relationships = m_Registry.view<Component::Relationship>();
-        m_ParentIndex.reserve(m_Registry.storage<Component::Relationship>()->size());
+        if (const auto* storage = m_Registry.storage<Component::Relationship>())
+            m_ParentIndex.reserve(storage->size());
         for (auto entity : relationships)
         {
             const auto& id = relationships.get<Component::Relationship>(entity).parentUUID;
