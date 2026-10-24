@@ -31,37 +31,54 @@ public:
 
         auto& sprite = scene->GetComponent<anv::Component::SpriteRenderer>(entity);
         auto assets = anv::App::GetInstance()->GetAssetManager();
-        auto texture = assets && !sprite.texture.uuid.empty()
-            ? assets->GetAs<anv::Texture>(sprite.texture) : nullptr;
-        if (!texture || !texture->IsGPUReady() || texture->Width() <= 0 || texture->Height() <= 0)
-        {
-            ImGui::TextDisabled("Assign a texture to the entity's Sprite Renderer first.");
-            ImGui::End();
-            return;
-        }
+        if (m_SourceTextureID.empty() && !sprite.texture.uuid.empty())
+            m_SourceTextureID = sprite.texture.uuid;
+        auto texture = assets && !m_SourceTextureID.empty()
+            ? assets->GetAs<anv::Texture>(anv::uuid::AssetUUID{m_SourceTextureID}) : nullptr;
 
-        if (m_TextureID != sprite.texture.uuid)
+        ImGui::TextUnformatted("Source Spritesheet");
+        const std::string sourceLabel = texture ? texture->GetName() : "Drop a spritesheet texture here";
+        ImGui::Button(sourceLabel.c_str(), ImVec2(-1.0f, 0.0f));
+        if (ImGui::BeginDragDropTarget())
         {
-            m_TextureID = sprite.texture.uuid;
-            m_Clip.textureUUID = m_TextureID;
-            m_Clip.frames.clear();
-            m_SelectedFrame = 0;
-            m_PreviewFrame = 0;
-            m_PreviewTime = 0;
-            m_Playing = false;
-            std::snprintf(m_ClipPath, sizeof(m_ClipPath), "%s", "Animations/NewAnimation.aanim");
-            m_Status.clear();
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
+            {
+                if (assets && payload->Data && payload->DataSize > 1 &&
+                    static_cast<const char*>(payload->Data)[payload->DataSize - 1] == '\0')
+                {
+                    const std::filesystem::path path(static_cast<const char*>(payload->Data));
+                    std::string ext = path.extension().string();
+                    std::transform(ext.begin(), ext.end(), ext.begin(),
+                        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+                    if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||
+                        ext == ".bmp" || ext == ".tga")
+                    {
+                        auto candidate = assets->GetOrCreateTexture(path);
+                        if (candidate && candidate->IsGPUReady())
+                        {
+                            m_SourceTextureID = candidate->GetAssetID().uuid;
+                            m_Clip.textureUUID = m_SourceTextureID;
+                            m_Clip.frames.clear();
+                            m_SelectedFrame = m_PreviewFrame = 0;
+                            m_PreviewTime = 0.0f;
+                            m_Playing = false;
+                            texture = candidate;
+                            m_Status = "Source spritesheet changed. Add frames to the new clip.";
+                        }
+                        else m_Status = "Could not load the dropped spritesheet.";
+                    }
+                }
+            }
+            ImGui::EndDragDropTarget();
         }
-
-        ImGui::TextUnformatted(texture->GetName().c_str());
-        ImGui::SameLine();
-        ImGui::TextDisabled("| %d x %d", texture->Width(), texture->Height());
+        if (texture && texture->IsGPUReady())
+            ImGui::TextDisabled("%d x %d px", texture->Width(), texture->Height());
         ImGui::Separator();
 
         if (ImGui::Button("New Clip"))
         {
             m_Clip = anv::SpriteAnimationClip{};
-            m_Clip.textureUUID = sprite.texture.uuid;
+            m_Clip.textureUUID = m_SourceTextureID;
             m_SelectedFrame = m_PreviewFrame = 0;
             m_PreviewTime = 0.0f;
             m_Playing = false;
@@ -78,12 +95,11 @@ public:
             anv::SpriteAnimationClip loaded;
             if (loaded.Load(ResolvePath(scene, m_ClipPath)))
             {
-                if (!loaded.textureUUID.empty() && loaded.textureUUID != sprite.texture.uuid)
-                    m_Status = "Clip texture differs from selected Sprite Renderer.";
-                else
                 {
                     m_Clip = std::move(loaded);
-                    m_Clip.textureUUID = sprite.texture.uuid;
+                    m_SourceTextureID = m_Clip.textureUUID;
+                    texture = assets && !m_SourceTextureID.empty()
+                        ? assets->GetAs<anv::Texture>(anv::uuid::AssetUUID{m_SourceTextureID}) : nullptr;
                     m_SelectedFrame = m_PreviewFrame = 0;
                     m_PreviewTime = 0;
                     m_Playing = false;
@@ -173,7 +189,7 @@ public:
             }
             ImGui::EndTable();
         }
-        const int width = texture->Width(), height = texture->Height();
+        const int width = texture ? texture->Width() : 1, height = texture ? texture->Height() : 1;
         m_CellWidth = std::clamp(m_CellWidth, 1, width);
         m_CellHeight = std::clamp(m_CellHeight, 1, height);
         m_Margin = std::clamp(m_Margin, 0, std::min(width, height) - 1);
@@ -185,7 +201,7 @@ public:
         ImGui::SetNextItemWidth(95);
         ImGui::SliderFloat("##AnimZoom", &m_Zoom, 0.2f, 5.0f, "%.2fx");
 
-        void* imageID = texture->GetImGuiTextureID();
+        void* imageID = texture && texture->IsGPUReady() ? texture->GetImGuiTextureID() : nullptr;
         if (imageID && rows > 0 && columns > 0)
         {
             ImGui::BeginChild("##AnimationSheetCanvas", ImVec2(0, std::max(120.0f, ImGui::GetContentRegionAvail().y * 0.48f)),
@@ -403,7 +419,7 @@ private:
         return path.lexically_normal();
     }
     anv::SpriteAnimationClip m_Clip;
-    std::string m_TextureID;
+    std::string m_SourceTextureID;
     char m_ClipPath[512]{};
     char m_SequenceFolder[512]{};
     std::string m_Status;
