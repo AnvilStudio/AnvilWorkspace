@@ -388,6 +388,14 @@ namespace anv
             }
 
             const auto& clip = it->second;
+            bool shouldLoop = clip.loop;
+            if (!animator.states.empty())
+                for (const auto& state : animator.states)
+                    if (state.name == animator.currentState)
+                    {
+                        shouldLoop = state.loop;
+                        break;
+                    }
             if (clip.frames.empty()) continue;
             if (!clip.textureUUID.empty())
                 sprite.texture.uuid = clip.textureUUID;
@@ -400,7 +408,7 @@ namespace anv
                     animator.elapsed -= clip.frames[animator.frame].duration;
                     if (animator.frame + 1 < clip.frames.size())
                         ++animator.frame;
-                    else if (clip.loop)
+                    else if (shouldLoop)
                         animator.frame = 0;
                     else
                     {

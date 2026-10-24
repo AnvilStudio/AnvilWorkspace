@@ -167,6 +167,7 @@ namespace anv
             {
                 std::string name;
                 std::string clip;
+                bool loop = true;
             };
 
             // Legacy clip remains supported for scenes without named states.
@@ -198,7 +199,7 @@ namespace anv
                 for (const auto& state : states)
                     if (state.name == name && !state.clip.empty())
                     {
-                        if (currentState != name || !playing)
+                        if (currentState != name)
                         {
                             currentState = name;
                             loadedPath.clear();
@@ -235,6 +236,8 @@ namespace anv
                         std::string name = state.name, clip = state.clip;
                         ser.Field("Name", name);
                         ser.Field("Clip", clip);
+                        bool loop = state.loop;
+                        ser.Field("Loop", loop);
                     });
                 }
             }
@@ -250,6 +253,7 @@ namespace anv
                     State state;
                     ser.FieldOr<std::string>("Name", state.name, "");
                     ser.FieldOr<std::string>("Clip", state.clip, "");
+                    ser.FieldOr<bool>("Loop", state.loop, true);
                     if (!state.name.empty()) states.push_back(std::move(state));
                 });
                 currentState = defaultState;

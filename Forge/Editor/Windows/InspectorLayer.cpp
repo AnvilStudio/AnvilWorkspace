@@ -323,6 +323,12 @@ void InspectorLayer::Draw(
                             ImGui::SetTooltip("%s", state.clip.c_str());
                         ImGui::SameLine();
                         if (ImGui::SmallButton("X")) removeIndex = static_cast<int>(i);
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::TextUnformatted("Loop");
+                        ImGui::TableSetColumnIndex(1);
+                        if (ImGui::Checkbox("##StateLoop", &state.loop)) scene->Save();
                         ImGui::PopID();
                     }
                     if (removeIndex >= 0)
