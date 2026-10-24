@@ -153,6 +153,49 @@ namespace anv
             }
         };
 
+        struct Animator2D
+        {
+            std::string clipPath;
+            bool autoplay = true;
+            bool enabled = true;
+
+            // Transient playback state, deliberately not serialized.
+            bool playing = false;
+            size_t frame = 0;
+            float elapsed = 0.0f;
+            std::string loadedPath;
+
+            void Play()
+            {
+                playing = true;
+                frame = 0;
+                elapsed = 0.0f;
+            }
+            void Pause() { playing = false; }
+            void Stop()
+            {
+                playing = false;
+                frame = 0;
+                elapsed = 0.0f;
+            }
+            void Serialize(Serializer& ser)
+            {
+                ser.Field("Clip", clipPath);
+                ser.Field("Autoplay", autoplay);
+                ser.Field("Enabled", enabled);
+            }
+            void Deserialize(Serializer& ser)
+            {
+                ser.FieldOr<std::string>("Clip", clipPath, "");
+                ser.FieldOr<bool>("Autoplay", autoplay, true);
+                ser.FieldOr<bool>("Enabled", enabled, true);
+                playing = false;
+                frame = 0;
+                elapsed = 0.0f;
+                loadedPath.clear();
+            }
+        };
+
         enum class Rigidbody2DType
         {
             Static = 0,

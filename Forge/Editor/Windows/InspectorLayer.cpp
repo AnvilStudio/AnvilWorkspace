@@ -251,6 +251,24 @@ void InspectorLayer::Draw(
                 }
             });
 
+        draw_component<Component::Animator2D>(
+            "Animator 2D", selectedEntity, scene,
+            [&](Component::Animator2D& animator)
+            {
+                char pathBuffer[512]{};
+                std::snprintf(pathBuffer, sizeof(pathBuffer), "%s", animator.clipPath.c_str());
+                if (ImGui::InputText("Clip (.aanim)", pathBuffer, sizeof(pathBuffer)))
+                {
+                    animator.clipPath = pathBuffer;
+                    animator.loadedPath.clear();
+                    scene->Save();
+                }
+                bool changed = ImGui::Checkbox("Autoplay", &animator.autoplay);
+                changed |= ImGui::Checkbox("Enabled##Animator", &animator.enabled);
+                if (changed) scene->Save();
+                ImGui::TextDisabled("Frame %zu", animator.frame);
+            });
+
         draw_component<Component::Rigidbody2D>(
             "Rigidbody 2D",
             selectedEntity,
@@ -385,6 +403,14 @@ void InspectorLayer::draw_add_component_menu(
             ImGui::MenuItem("Transform 2D"))
         {
             scene->AddComponent<Component::Transform2D>(entity);
+            ImGui::CloseCurrentPopup();
+        }
+
+        if (!scene->HasComponent<Component::Animator2D>(entity) &&
+            ImGui::MenuItem("Animator 2D"))
+        {
+            scene->AddComponent<Component::Animator2D>(entity);
+            scene->Save();
             ImGui::CloseCurrentPopup();
         }
 

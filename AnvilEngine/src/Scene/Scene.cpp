@@ -106,6 +106,7 @@ namespace anv
                     DeserializeIfPresent<Component::Transform2D>(m_Registry, entity, ser, "Transform2d");
                     DeserializeIfPresent<Component::Camera2D>(m_Registry, entity, ser, "Camera2D");
                     DeserializeIfPresent<Component::SpriteRenderer>(m_Registry, entity, ser, "SpriteRenderer");
+                     DeserializeIfPresent<Component::Animator2D>(m_Registry, entity, ser, "Animator2D");
                     DeserializeIfPresent<Component::Rigidbody2D>(m_Registry, entity, ser, "Rigidbody2D");
                     DeserializeIfPresent<Component::BoxCollider2D>(m_Registry, entity, ser, "BoxCollider2D");
                     DeserializeIfPresent<Component::Script>(m_Registry, entity, ser, "Script");
@@ -168,6 +169,7 @@ namespace anv
                 SerializeIfPresent<Component::Transform2D>(m_Registry, entity, ser, "Transform2d");
                 SerializeIfPresent<Component::Camera2D>(m_Registry, entity, ser, "Camera2D");
                 SerializeIfPresent<Component::SpriteRenderer>(m_Registry, entity, ser, "SpriteRenderer");
+                 SerializeIfPresent<Component::Animator2D>(m_Registry, entity, ser, "Animator2D");
                 SerializeIfPresent<Component::Rigidbody2D>(m_Registry, entity, ser, "Rigidbody2D");
                 SerializeIfPresent<Component::BoxCollider2D>(m_Registry, entity, ser, "BoxCollider2D");
                 SerializeIfPresent<Component::Script>(m_Registry, entity, ser, "Script");
@@ -344,6 +346,66 @@ namespace anv
 
         if (m_PhysicsSystem2D && m_PhysicsSystem2D->IsRunning())
             m_PhysicsSystem2D->Step(*this, deltaTime);
+
+        if (m_ScriptExecutionEnabled)
+            UpdateAnimations(deltaTime);
+    }
+
+    void Scene::UpdateAnimations(float deltaTime)
+    {
+        if (!(deltaTime > 0.0f) || !std::isfinite(deltaTime)) return;
+        auto view = m_Registry.view<Component::Animator2D, Component::SpriteRenderer>();
+        for (auto entity : view)
+        {
+            auto& animator = view.get<Component::Animator2D>(entity);
+            auto& sprite = view.get<Component::SpriteRenderer>(entity);
+            if (!animator.enabled || animator.clipPath.empty()) continue;
+
+            if (animator.loadedPath != animator.clipPath)
+            {
+                animator.loadedPath = animator.clipPath;
+                animator.frame = 0;
+                animator.elapsed = 0.0f;
+                animator.playing = animator.autoplay;
+            }
+
+            auto it = m_AnimationClips.find(animator.clipPath);
+            if (it == m_AnimationClips.end())
+            {
+                SpriteAnimationClip clip;
+                std::filesystem::path path(animator.clipPath);
+                if (path.is_relative())
+                    path = std::filesystem::path(m_Path).parent_path() / path;
+                if (!clip.Load(path)) continue;
+                it = m_AnimationClips.emplace(animator.clipPath, std::move(clip)).first;
+            }
+
+            const auto& clip = it->second;
+            if (clip.frames.empty()) continue;
+            if (!clip.textureUUID.empty())
+                sprite.texture.uuid = clip.textureUUID;
+            animator.frame = std::min(animator.frame, clip.frames.size() - 1);
+            if (animator.playing)
+            {
+                animator.elapsed += deltaTime;
+                while (animator.elapsed >= clip.frames[animator.frame].duration)
+                {
+                    animator.elapsed -= clip.frames[animator.frame].duration;
+                    if (animator.frame + 1 < clip.frames.size())
+                        ++animator.frame;
+                    else if (clip.loop)
+                        animator.frame = 0;
+                    else
+                    {
+                        animator.playing = false;
+                        animator.elapsed = 0.0f;
+                        break;
+                    }
+                }
+            }
+            sprite.uvMin = clip.frames[animator.frame].uvMin;
+            sprite.uvMax = clip.frames[animator.frame].uvMax;
+        }
     }
 
     void Scene::Render()

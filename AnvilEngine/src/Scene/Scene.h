@@ -3,6 +3,7 @@
 #include "../vendor/entt/single_include/entt/entt.hpp"
 #include "../Render/Camera.h"
 #include "SceneData.h"
+#include "Animation2D.h"
 #include "Components/Transform2d.h"
 #include <unordered_map>
 #include <unordered_set>
@@ -25,6 +26,7 @@ namespace anv
         void Shutdown();
         void OnUpdate(float deltaTime);
         void Render();
+        void UpdateAnimations(float deltaTime);
 
         std::string GetName() { return m_Name; }
         uuid::AssetUUID GetUUID() { return m_UUID; }
@@ -115,6 +117,7 @@ namespace anv
         uuid::AssetUUID m_UUID;
         entt::registry m_Registry;
         std::string m_Path;
+        std::unordered_map<std::string, SpriteAnimationClip> m_AnimationClips;
         _unique<PhysicsSystem2D> m_PhysicsSystem2D = nullptr;
 
         // Rebuilt at explicit frame boundaries, not across arbitrary mutations.
