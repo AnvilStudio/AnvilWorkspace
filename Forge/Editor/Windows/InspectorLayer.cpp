@@ -357,6 +357,9 @@ void InspectorLayer::Draw(
                 }
             });
 
+        ImGui::Spacing();
+        draw_add_component_menu(scene, selectedEntity);
+
         ImGui::PopID();
     }
     else
