@@ -255,17 +255,72 @@ void InspectorLayer::Draw(
             "Animator 2D", selectedEntity, scene,
             [&](Component::Animator2D& animator)
             {
-                char pathBuffer[512]{};
-                std::snprintf(pathBuffer, sizeof(pathBuffer), "%s", animator.clipPath.c_str());
-                if (ImGui::InputText("Clip (.aanim)", pathBuffer, sizeof(pathBuffer)))
+                if (ImGui::BeginTable("Animator2DProps", 2, ImGuiTableFlags_SizingStretchProp))
                 {
-                    animator.clipPath = pathBuffer;
-                    animator.loadedPath.clear();
-                    scene->Save();
+                    ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 90.0f);
+                    ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::TextUnformatted("Clip");
+                    ImGui::TableSetColumnIndex(1);
+
+                    const std::filesystem::path clip(animator.clipPath);
+                    const std::string label = animator.clipPath.empty()
+                        ? "None - drop .aanim here" : clip.filename().string();
+                    ImGui::Button(label.c_str(), ImVec2(-1.0f, 0.0f));
+                    if (ImGui::BeginDragDropTarget())
+                    {
+                        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
+                        {
+                            if (payload->Data && payload->DataSize > 1)
+                            {
+                                const char* bytes = static_cast<const char*>(payload->Data);
+                                if (bytes[payload->DataSize - 1] == '\0')
+                                {
+                                    const std::filesystem::path path(bytes);
+                                    std::string ext = path.extension().string();
+                                    std::transform(ext.begin(), ext.end(), ext.begin(),
+                                        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+                                    if (ext == ".aanim" && std::filesystem::is_regular_file(path))
+                                    {
+                                        animator.clipPath = path.string();
+                                        animator.loadedPath.clear();
+                                        animator.Stop();
+                                        scene->Save();
+                                    }
+                                }
+                            }
+                        }
+                        ImGui::EndDragDropTarget();
+                    }
+                    if (!animator.clipPath.empty())
+                    {
+                        if (ImGui::IsItemHovered())
+                            ImGui::SetTooltip("%s", animator.clipPath.c_str());
+                        if (ImGui::SmallButton("Clear Clip"))
+                        {
+                            animator.clipPath.clear();
+                            animator.loadedPath.clear();
+                            animator.Stop();
+                            scene->Save();
+                        }
+                    }
+
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::TextUnformatted("Autoplay");
+                    ImGui::TableSetColumnIndex(1);
+                    if (ImGui::Checkbox("##AnimatorAutoplay", &animator.autoplay))
+                        scene->Save();
+
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::TextUnformatted("Enabled");
+                    ImGui::TableSetColumnIndex(1);
+                    if (ImGui::Checkbox("##AnimatorEnabled", &animator.enabled))
+                        scene->Save();
+                    ImGui::EndTable();
                 }
-                bool changed = ImGui::Checkbox("Autoplay", &animator.autoplay);
-                changed |= ImGui::Checkbox("Enabled##Animator", &animator.enabled);
-                if (changed) scene->Save();
                 ImGui::TextDisabled("Frame %zu", animator.frame);
             });
 
