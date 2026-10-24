@@ -67,6 +67,7 @@ void MainMenu::Draw()
             ImGui::MenuItem("Files", nullptr, &windows.showFiles);
             ImGui::MenuItem("Asset Registry", nullptr, &windows.showAssetRegistry);
             ImGui::MenuItem("Spritesheet Editor", nullptr, &windows.showSpritesheetEditor);
+            ImGui::MenuItem("Sprite Animation Editor", nullptr, &windows.showSpriteAnimationEditor);
             ImGui::MenuItem("Code Editor", nullptr, &windows.showCodeEditor);
             ImGui::MenuItem("Console", nullptr, &windows.showConsole);
             ImGui::MenuItem("Performance Stats", nullptr, &windows.showStats);

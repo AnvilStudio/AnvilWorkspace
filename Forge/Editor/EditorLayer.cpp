@@ -154,6 +154,8 @@ void EditorLayer::OnImGuiRender()
     {
         if (m_Windows.showSpritesheetEditor)
             m_SpritesheetEditor.Draw(&m_Windows.showSpritesheetEditor, scene, m_SelectedEntity);
+        if (m_Windows.showSpriteAnimationEditor)
+            m_SpriteAnimationEditor.Draw(&m_Windows.showSpriteAnimationEditor, scene, m_SelectedEntity);
     }
     {
         ANV_PROFILE_ZONE(ForgeStats);
