@@ -31,6 +31,12 @@ void SceneHierarchy::Draw()
             ImGuiPopupFlags_MouseButtonRight |
                 ImGuiPopupFlags_NoOpenOverItems))
     {
+        if (ImGui::MenuItem("Paste", nullptr, false, !m_Clipboard.Empty()))
+            paste_entities(scene);
+        if (ImGui::MenuItem("Import Prefab..."))
+            m_OpenPrefabLoad = true;
+        ImGui::Separator();
+
         if (ImGui::MenuItem("Create Empty"))
         {
             const auto entity = scene->CreateEntity("New Entity");
@@ -89,6 +95,23 @@ void SceneHierarchy::Draw()
 
     ImGui::Separator();
 
+    // Entity clipboard shortcuts only when the hierarchy owns keyboard focus.
+    // Avoid intercepting typing in rename/text fields.
+    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+        !ImGui::GetIO().WantTextInput &&
+        (ImGui::GetIO().KeyCtrl || ImGui::GetIO().KeySuper))
+    {
+        if (ImGui::IsKeyPressed(ImGuiKey_C, false))
+            copy_entities(scene, EditorLayer::GetInstance()->GetSelectedEntity());
+        if (ImGui::IsKeyPressed(ImGuiKey_V, false))
+            paste_entities(scene);
+        if (ImGui::IsKeyPressed(ImGuiKey_D, false))
+        {
+            copy_entities(scene, EditorLayer::GetInstance()->GetSelectedEntity());
+            paste_entities(scene);
+        }
+    }
+
     const auto selectedEntity =
         EditorLayer::GetInstance()->GetSelectedEntity();
 
@@ -122,6 +145,27 @@ void SceneHierarchy::Draw()
     for (auto entity : roots)
         draw_entity(scene, entity, selectedEntity, 0, children);
 
+    // Accept prefab files dragged from the File Browser onto empty hierarchy space.
+    ImGui::Dummy(ImVec2(-1.0f, 12.0f));
+    if (ImGui::BeginDragDropTarget())
+    {
+        if (const auto* payload = ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
+        {
+            if (payload->Data && payload->DataSize > 1 &&
+                static_cast<const char*>(payload->Data)[payload->DataSize-1] == '\0')
+            {
+                const std::filesystem::path path(static_cast<const char*>(payload->Data));
+                forge::EntityPrefab prefab;
+                if (prefab.Load(path))
+                {
+                    auto roots = prefab.Instantiate(scene);
+                    if (!roots.empty()) EditorLayer::GetInstance()->SetSelectedEntities(roots);
+                }
+            }
+        }
+        ImGui::EndDragDropTarget();
+    }
+
     // Dropping on empty hierarchy space makes an entity a root.
     ImGui::Dummy(ImVec2(-1.0f, 12.0f));
     if (ImGui::BeginDragDropTarget())
@@ -151,6 +195,7 @@ void SceneHierarchy::Draw()
             cancel_rename();
     }
 
+    draw_prefab_dialogs(scene);
     ImGui::End();
 }
 
@@ -227,6 +272,21 @@ void SceneHierarchy::draw_entity(Ref<Scene> scene,
 
     if (ImGui::BeginPopupContextItem())
     {
+        if (ImGui::MenuItem("Copy"))
+            copy_entities(scene, entity);
+        if (ImGui::MenuItem("Paste", nullptr, false, !m_Clipboard.Empty()))
+            paste_entities(scene);
+        if (ImGui::MenuItem("Duplicate"))
+        {
+            copy_entities(scene, entity);
+            paste_entities(scene);
+        }
+        if (ImGui::MenuItem("Save as Prefab..."))
+        {
+            copy_entities(scene, entity);
+            m_OpenPrefabSave = !m_Clipboard.Empty();
+        }
+        ImGui::Separator();
         if (ImGui::MenuItem("Rename"))
         {
             EditorLayer::GetInstance()->SetSelectedEntity(entity);
@@ -437,4 +497,94 @@ void SceneHierarchy::cancel_rename()
     m_RenamedEntity = entt::null;
     m_IsRenaming = false;
     m_FocusRenameInput = false;
+}
+
+std::filesystem::path SceneHierarchy::prefab_path() const
+{
+    const std::filesystem::path input(m_PrefabPath);
+    if (input.empty()) return {};
+    if (input.is_absolute()) return input.lexically_normal();
+    const auto assets = App::GetInstance()->GetFS().GetKeyVal("Assets");
+    const auto it = input.begin();
+    if (it != input.end() && it->string() == "Assets")
+        return (assets / input.lexically_relative("Assets")).lexically_normal();
+    return (assets / input).lexically_normal();
+}
+
+void SceneHierarchy::copy_entities(Ref<Scene> scene, entt::entity fallback)
+{
+    auto* editor = EditorLayer::GetInstance();
+    auto selection = editor->GetSelectedEntities();
+    if (fallback != entt::null &&
+        std::find(selection.begin(), selection.end(), fallback) == selection.end())
+        selection = {fallback};
+    m_Clipboard.Capture(scene, selection);
+}
+
+void SceneHierarchy::paste_entities(Ref<Scene> scene)
+{
+    if (m_Clipboard.Empty()) return;
+    auto roots = m_Clipboard.Instantiate(scene);
+    if (!roots.empty()) EditorLayer::GetInstance()->SetSelectedEntities(roots);
+}
+
+void SceneHierarchy::draw_prefab_dialogs(Ref<Scene> scene)
+{
+    if (m_OpenPrefabSave)
+    {
+        ImGui::OpenPopup("Save Entity Prefab");
+        m_OpenPrefabSave = false;
+        m_PrefabStatus.clear();
+    }
+    if (m_OpenPrefabLoad)
+    {
+        ImGui::OpenPopup("Import Entity Prefab");
+        m_OpenPrefabLoad = false;
+        m_PrefabStatus.clear();
+    }
+    auto dialog = [&](const char* title, bool saving)
+    {
+        if (!ImGui::BeginPopupModal(title, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+            return;
+        ImGui::TextUnformatted("Path relative to project Assets:");
+        ImGui::SetNextItemWidth(380.0f);
+        ImGui::InputText("##PrefabPath", m_PrefabPath, sizeof(m_PrefabPath));
+        if (!m_PrefabStatus.empty())
+            ImGui::TextWrapped("%s", m_PrefabStatus.c_str());
+        if (ImGui::Button(saving ? "Save Prefab" : "Instantiate", ImVec2(130, 0)))
+        {
+            auto path = prefab_path();
+            if (path.extension().empty()) path += ".aprefab";
+            if (path.extension() != ".aprefab")
+                m_PrefabStatus = "Prefab files must use the .aprefab extension.";
+            else if (saving)
+            {
+                if (m_Clipboard.Save(path))
+                {
+                    m_PrefabStatus.clear();
+                    ImGui::CloseCurrentPopup();
+                }
+                else m_PrefabStatus = "Failed to write prefab.";
+            }
+            else
+            {
+                forge::EntityPrefab prefab;
+                if (prefab.Load(path))
+                {
+                    auto roots = prefab.Instantiate(scene);
+                    if (!roots.empty())
+                        EditorLayer::GetInstance()->SetSelectedEntities(roots);
+                    m_PrefabStatus.clear();
+                    ImGui::CloseCurrentPopup();
+                }
+                else m_PrefabStatus = "Failed to load prefab.";
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(130, 0)))
+            ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    };
+    dialog("Save Entity Prefab", true);
+    dialog("Import Entity Prefab", false);
 }
