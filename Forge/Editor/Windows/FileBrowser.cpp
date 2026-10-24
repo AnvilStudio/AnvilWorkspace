@@ -51,6 +51,7 @@ FileBrowser::FileBrowser(std::filesystem::path _rootDirectory)
 void FileBrowser::Draw()
 {
     ImGui::Begin("Files");
+    InitializeIcons();
     DrawToolbar();
     DrawBreadcrumbs();
     ImGui::Separator();
@@ -194,29 +195,60 @@ void FileBrowser::DrawBreadcrumbs()
     }
 }
 
+
+void FileBrowser::InitializeIcons()
+{
+    if (m_IconsInitialized || !ImGui::GetCurrentContext() ||
+        !ImGui::GetIO().BackendRendererUserData) return;
+    const auto base = anv::App::GetInstance()->GetFS().GetExecDir()
+        / "ForgeResources" / "Resources" / "Icons" / "Files";
+    constexpr const char* names[] = {
+        "folder.png", "file.png", "image.png", "python.png",
+        "cpp.png", "header.png", "scene.png"
+    };
+    for (size_t i = 0; i < IconCount; ++i)
+    {
+        const auto path = base / names[i];
+        if (!std::filesystem::exists(path)) continue;
+        auto texture = anv::Texture::Create(path);
+        if (texture && texture->IsGPUReady()) m_Icons[i] = texture;
+    }
+    m_IconsInitialized = true;
+}
+
+size_t FileBrowser::IconIndex(const Entry& e) const
+{
+    if (e.isDirectory) return Folder;
+    const auto ext = ToLower(e.path.extension().string());
+    if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||
+        ext == ".tga" || ext == ".bmp") return Image;
+    if (ext == ".py") return Python;
+    if (ext == ".cpp" || ext == ".cc" || ext == ".cxx") return Cpp;
+    if (ext == ".h" || ext == ".hpp") return Header;
+    if (ext == ".ascn") return Scene;
+    return Generic;
+}
+
 void FileBrowser::DrawEntries()
 {
-    if (ImGui::BeginTable(
-            "FileBrowserTable",
-            3,
-            ImGuiTableFlags_RowBg |
-                ImGuiTableFlags_BordersInnerV |
-                ImGuiTableFlags_Resizable |
-                ImGuiTableFlags_ScrollY,
-            ImVec2(0.0f, 0.0f)))
+    const float tileWidth = 112.0f;
+    const float available = ImGui::GetContentRegionAvail().x;
+    const int columns = std::max(1, (int)(available / (tileWidth + 8.0f)));
+    ImGui::BeginChild("##FileGrid", ImVec2(0, 0));
+    if (ImGui::BeginTable("##FileGridTable", columns, ImGuiTableFlags_SizingFixedFit))
     {
-        ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 100.0f);
-        ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, 90.0f);
-        ImGui::TableHeadersRow();
-
-        for (const Entry& entry : m_Entries)
-            if (MatchesSearch(entry))
-                DrawEntry(entry);
-
+        int i = 0;
+        for (const Entry& e : m_Entries)
+        {
+            if (!MatchesSearch(e)) continue;
+            if (i % columns == 0) ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(i % columns);
+            DrawEntry(e);
+            ++i;
+        }
         ImGui::EndTable();
     }
-
+    ImGui::EndChild();
     if (!m_PendingDirectory.empty())
     {
         const auto directory = m_PendingDirectory;
@@ -225,72 +257,84 @@ void FileBrowser::DrawEntries()
     }
 }
 
-void FileBrowser::DrawEntry(const Entry& _entry)
+void FileBrowser::DrawEntry(const Entry& e)
 {
-    ImGui::TableNextRow();
-    ImGui::TableSetColumnIndex(0);
-
-    const bool selected = m_SelectedPath == _entry.path;
-    const std::string label = GetEntryLabel(_entry);
-
-    ImGui::PushID(_entry.path.string().c_str());
-    if (ImGui::Selectable(
-            label.c_str(),
-            selected,
-            ImGuiSelectableFlags_SpanAllColumns |
-                ImGuiSelectableFlags_AllowDoubleClick))
+    const std::string filename = e.path.filename().string();
+    const bool selected = m_SelectedPath == e.path;
+    const ImVec2 tile(112.0f, 110.0f);
+    ImGui::PushID(e.path.string().c_str());
+    const ImVec2 pos = ImGui::GetCursorScreenPos();
+    ImGui::InvisibleButton("##Tile", tile);
+    const bool hover = ImGui::IsItemHovered();
+    if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
     {
-        m_SelectedPath = _entry.path;
+        m_SelectedPath = e.path;
         if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
         {
-            if (_entry.isDirectory)
-                m_PendingDirectory = _entry.path;
-            else if (m_OpenFileCallback)
-                m_OpenFileCallback(_entry.path);
+            if (e.isDirectory) m_PendingDirectory = e.path;
+            else if (m_OpenFileCallback) m_OpenFileCallback(e.path);
         }
     }
 
-    if (!_entry.isDirectory && ImGui::BeginDragDropSource())
+    ImDrawList* draw = ImGui::GetWindowDrawList();
+    if (selected || hover)
     {
-        const std::string path = _entry.path.string();
+        draw->AddRectFilled(pos, ImVec2(pos.x + tile.x, pos.y + tile.y),
+            selected ? IM_COL32(65, 108, 155, 120) : IM_COL32(110, 120, 140, 35), 5.0f);
+        if (selected) draw->AddRect(pos, ImVec2(pos.x + tile.x, pos.y + tile.y),
+            IM_COL32(100, 180, 250, 255), 5.0f);
+    }
+    const ImVec2 iconMin(pos.x + 30.0f, pos.y + 9.0f);
+    const ImVec2 iconMax(iconMin.x + 52.0f, iconMin.y + 52.0f);
+    auto& icon = m_Icons[IconIndex(e)];
+    void* texture = icon && icon->IsGPUReady() ? icon->GetImGuiTextureID() : nullptr;
+    if (texture)
+        draw->AddImage((ImTextureID)texture, iconMin, iconMax,
+            ImVec2(0, 1), ImVec2(1, 0));
+    else
+    {
+        const ImU32 color = e.isDirectory ? IM_COL32(206, 172, 104, 255)
+                                          : IM_COL32(139, 164, 187, 255);
+        draw->AddRectFilled(ImVec2(iconMin.x + 8, iconMin.y + 10),
+            ImVec2(iconMax.x - 8, iconMax.y - 6), color, 3.0f);
+    }
+    std::string label = filename;
+    while (label.size() > 1 && ImGui::CalcTextSize(label.c_str()).x > tile.x - 12)
+        label.pop_back();
+    if (label != filename)
+    {
+        while (!label.empty() && ImGui::CalcTextSize((label + "...").c_str()).x > tile.x - 12)
+            label.pop_back();
+        label += "...";
+    }
+    const float textWidth = ImGui::CalcTextSize(label.c_str()).x;
+    draw->AddText(ImVec2(pos.x + (tile.x - textWidth) * 0.5f, pos.y + 77),
+        ImGui::GetColorU32(ImGuiCol_Text), label.c_str());
+    if (hover) ImGui::SetTooltip("%s", filename.c_str());
+
+    if (!e.isDirectory && ImGui::BeginDragDropSource())
+    {
+        const std::string path = e.path.string();
         ImGui::SetDragDropPayload("ANV_ASSET_PATH", path.c_str(), path.size() + 1);
-        ImGui::TextUnformatted(_entry.path.filename().string().c_str());
+        ImGui::TextUnformatted(filename.c_str());
         ImGui::EndDragDropSource();
     }
-
     if (ImGui::BeginPopupContextItem())
     {
-        if (_entry.isDirectory)
+        if (e.isDirectory)
         {
-            if (ImGui::MenuItem("Open"))
-                m_PendingDirectory = _entry.path;
+            if (ImGui::MenuItem("Open")) m_PendingDirectory = e.path;
         }
-        else if (ImGui::MenuItem("Open in Code Editor"))
-        {
-            if (m_OpenFileCallback)
-                m_OpenFileCallback(_entry.path);
-        }
-
+        else if (ImGui::MenuItem("Open in Code Editor") && m_OpenFileCallback)
+            m_OpenFileCallback(e.path);
         if (ImGui::MenuItem("Copy Path"))
-            ImGui::SetClipboardText(_entry.path.string().c_str());
+            ImGui::SetClipboardText(e.path.string().c_str());
         if (ImGui::MenuItem("Delete"))
         {
-            m_SelectedPath = _entry.path;
+            m_SelectedPath = e.path;
             m_OpenDeletePopup = true;
         }
         ImGui::EndPopup();
-    }
-
-    ImGui::TableSetColumnIndex(1);
-    ImGui::TextUnformatted(_entry.isDirectory
-        ? "Folder"
-        : _entry.path.extension().string().c_str());
-
-    ImGui::TableSetColumnIndex(2);
-    if (!_entry.isDirectory)
-    {
-        const std::string size = FormatFileSize(_entry.size);
-        ImGui::TextUnformatted(size.c_str());
     }
     ImGui::PopID();
 }

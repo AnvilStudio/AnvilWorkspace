@@ -7,6 +7,7 @@
 #include <cctype>
 #include <filesystem>
 #include <functional>
+#include <array>
 #include <string>
 #include <vector>
 
@@ -46,6 +47,8 @@ private:
     void DrawToolbar();
     void DrawBreadcrumbs();
     void DrawEntries();
+    void InitializeIcons();
+    size_t IconIndex(const Entry&) const;
     void DrawEntry(const Entry& _entry);
     void DrawCreatePopup();
     void DrawDeletePopup();
@@ -64,6 +67,9 @@ private:
     std::filesystem::path m_SelectedPath;
     std::filesystem::path m_PendingDirectory;
 
+    enum IconKind : size_t { Folder, Generic, Image, Python, Cpp, Header, Scene, IconCount };
+    std::array<anv::Ref<anv::Texture>, IconCount> m_Icons{};
+    bool m_IconsInitialized = false;
     std::vector<Entry> m_Entries;
     OpenFileCallback m_OpenFileCallback = [](const std::filesystem::path& _path)
     {
