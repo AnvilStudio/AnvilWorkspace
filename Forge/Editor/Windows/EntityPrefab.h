@@ -152,7 +152,8 @@ namespace forge
             sync(anv::Component::BoxCollider2D{}, n.collider, n.colliderData);
             sync(anv::Component::Script{}, n.script, n.scriptData);
 
-            std::vector<entt::entity> created(nodes.size(), entt::null);
+            std::vector<entt::entity> created(nodes.size());
+            std::fill(created.begin(), created.end(), entt::entity{entt::null});
             created[0] = root;
             for (size_t i = 1; i < nodes.size(); ++i)
             {
