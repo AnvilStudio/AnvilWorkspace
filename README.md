@@ -1,4 +1,4 @@
-![Anvil Banner](AnvilEngine/AnvilBanner.png "Anvil Banner")
+![Anvil Banner](./Misc/DevShot.png "10-21-2026")
 
 >                                 !! WARNING !!
 > Anvil is currently in **heavy active development** and undergoing rapid architectural changes. With one active developer
