@@ -207,7 +207,8 @@ void FileBrowser::InitializeIcons()
         / "ForgeResources" / "Resources" / "Icons" / "FileBrowser";
     constexpr const char* names[] = {
         "FolderIcon.png", "file.png", "image.png", "PyScriptIcon.png",
-        "cpp.png", "header.png", "SceneIcon.png"
+        "cpp.png", "header.png", "SceneIcon.png", "MetaIcon.png", "AnimationIcon.png",
+        "PrefabIcon.png"
     };
     for (size_t i = 0; i < IconCount; ++i)
     {
@@ -229,6 +230,9 @@ size_t FileBrowser::IconIndex(const Entry& e) const
     if (ext == ".cpp" || ext == ".cc" || ext == ".cxx") return Cpp;
     if (ext == ".h" || ext == ".hpp") return Header;
     if (ext == ".ascn") return Scene;
+    if (ext == ".aamta") return Meta;
+    if (ext == ".aanim") return Animation;
+    if (ext == ".aprefab") return Prefab;
     return Generic;
 }
 

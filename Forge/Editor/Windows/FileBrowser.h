@@ -74,7 +74,7 @@ private:
     std::filesystem::path m_SelectedPath;
     std::filesystem::path m_PendingDirectory;
 
-    enum IconKind : size_t { Folder, Generic, Image, Python, Cpp, Header, Scene, IconCount };
+    enum IconKind : size_t { Folder, Generic, Image, Python, Cpp, Header, Scene, Meta, Animation, Prefab, IconCount };
     std::array<anv::Ref<anv::Texture>, IconCount> m_Icons{};
     bool m_IconsInitialized = false;
     float m_TileWidth = 112.0f;
