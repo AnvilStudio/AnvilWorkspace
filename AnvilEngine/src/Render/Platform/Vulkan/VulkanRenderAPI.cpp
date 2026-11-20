@@ -529,6 +529,7 @@ namespace anv
 		auto vkCtx = m_Context->GetAs<VulkanContext>();
 		VkDevice device = vkCtx->GetDevice();
 		m_Frames.resize(m_CreateInfo.swapchainImageCount);
+		m_FrameQuadVBs.resize(m_Frames.size());
 		m_RenderFinishedSemaphores.resize(vkCtx->GetSwapchain()->GetImageCount(), VK_NULL_HANDLE);
 		VkSemaphoreCreateInfo semInfo{};
 		semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -574,6 +575,7 @@ namespace anv
 			fr.cmd = nullptr;
 		}
 		m_Frames.clear();
+		m_FrameQuadVBs.clear();
 		for (auto semaphore : m_RenderFinishedSemaphores)
 			if (semaphore) vkDestroySemaphore(device, semaphore, nullptr);
 		m_RenderFinishedSemaphores.clear();
