@@ -133,7 +133,7 @@ void Viewport::Draw()
 
             set_gizmo_bounds();
             const ImVec2 imageMin = ImGui::GetItemRectMin();
-            ImGui::SetCursorScreenPos(ImVec2(imageMin.x + 10.0f, imageMin.y + 10.0f));
+            //ImGui::SetCursorScreenPos(ImVec2(imageMin.x + 10.0f, imageMin.y + 10.0f));
             draw_toolbar(imageMin);
 
             if (ImGui::BeginDragDropTarget())
@@ -193,7 +193,7 @@ void Viewport::initialize_toolbar_icons()
         return;
 
     const auto base = anv::App::GetInstance()->GetFS().GetExecDir()
-        / "ForgeResources" / "Resources"/ "Icons";
+        / "ForgeResources" / "Icons";
     static const char* filenames[] = {
         "3232Translate.png", "3232Rotate.png",
         "3232Scale.png", "3232viewport_grid.png"

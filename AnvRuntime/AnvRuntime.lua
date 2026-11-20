@@ -76,16 +76,18 @@ filter "system:macosx"
         "-fobjc-arc"
     }
 
-    -- Locate and link the embedded Python interpreter.
-    local pythonIncludes = os.outputof("python3-config --includes")
-    local pythonLinkFlags = os.outputof("python3-config --embed --ldflags")
+    if os.host() == "macosx" then
+        -- Locate and link the embedded Python interpreter.
+        local pythonIncludes = os.outputof("python3-config --includes")
+        local pythonLinkFlags = os.outputof("python3-config --embed --ldflags")
 
-    if not pythonIncludes or not pythonIncludes:match("%S") then
-        error("Failed to retrieve Python include flags on macOS")
-    end
+        if not pythonIncludes or not pythonIncludes:match("%S") then
+            error("Failed to retrieve Python include flags on macOS")
+        end
 
-    if not pythonLinkFlags or not pythonLinkFlags:match("%S") then
-        error("Failed to retrieve Python embedding linker flags on macOS")
+        if not pythonLinkFlags or not pythonLinkFlags:match("%S") then
+            error("Failed to retrieve Python embedding linker flags on macOS")
+        end
     end
 
     -- Keep compiler and linker options separate.

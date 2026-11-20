@@ -494,20 +494,38 @@ namespace anv
         m_ParentIndex.clear();
         m_WorldSnapshot.clear();
 
+        // Build UUID lookup index.
         auto ids = m_Registry.view<uuid::EntityUUID>();
-        m_UUIDIndex.reserve(m_Registry.storage<uuid::EntityUUID>()->size());
-        for (auto entity : ids)
-            m_UUIDIndex.emplace(ids.get<uuid::EntityUUID>(entity).uuid, entity);
 
+        m_UUIDIndex.reserve(ids.size());
+
+        for (auto entity : ids)
+        {
+            const auto& id = ids.get<uuid::EntityUUID>(entity);
+
+            m_UUIDIndex.emplace(id.uuid, entity);
+        }
+
+        // Build parent relationship index.
         auto relationships = m_Registry.view<Component::Relationship>();
-        m_ParentIndex.reserve(m_Registry.storage<Component::Relationship>()->size());
+
+        m_ParentIndex.reserve(relationships.size());
+
         for (auto entity : relationships)
         {
-            const auto& id = relationships.get<Component::Relationship>(entity).parentUUID;
-            auto parent = m_UUIDIndex.find(id);
-            if (parent != m_UUIDIndex.end() && parent->second != entity)
+            const auto& relationship =
+                relationships.get<Component::Relationship>(entity);
+
+            auto parent = m_UUIDIndex.find(relationship.parentUUID);
+
+            if (parent != m_UUIDIndex.end() &&
+                parent->second != entity)
+            {
                 m_ParentIndex.emplace(entity, parent->second);
+            }
         }
+
+        // Mark the snapshot as successfully rebuilt.
         m_SnapshotReady = true;
     }
 
