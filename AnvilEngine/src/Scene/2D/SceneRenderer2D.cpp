@@ -61,8 +61,10 @@ namespace anv
                 sprite.color, 
                 texture, 
                 sprite.drawLayer, 
-                sprite.uvMin, 
-                sprite.uvMax
+                {sprite.flipX ? sprite.uvMax.x : sprite.uvMin.x,
+                 sprite.flipY ? sprite.uvMax.y : sprite.uvMin.y},
+                {sprite.flipX ? sprite.uvMin.x : sprite.uvMax.x,
+                 sprite.flipY ? sprite.uvMin.y : sprite.uvMax.y}
             );
 
             const auto t3 = std::chrono::steady_clock::now();

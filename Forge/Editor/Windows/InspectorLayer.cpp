@@ -247,11 +247,175 @@ void InspectorLayer::Draw(
                         sprite.uvMax = glm::clamp(sprite.uvMax, glm::vec2(0.0f), glm::vec2(1.0f));
                         scene->Save();
                     }
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::TextUnformatted("Flip X");
+                    ImGui::TableSetColumnIndex(1);
+                    if (ImGui::Checkbox("##SpriteFlipX", &sprite.flipX)) scene->Save();
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::TextUnformatted("Flip Y");
+                    ImGui::TableSetColumnIndex(1);
+                    if (ImGui::Checkbox("##SpriteFlipY", &sprite.flipY)) scene->Save();
                     ImGui::EndTable();
                 }
             });
 
-        draw_component<Component::Rigidbody2D>(
+        draw_component<Component::Animator2D>(
+            "Animator 2D", selectedEntity, scene,
+            [&](Component::Animator2D& animator)
+            {
+                ImGui::SeparatorText("Animation States");
+                if (ImGui::BeginTable("AnimatorStates", 2, ImGuiTableFlags_SizingStretchProp))
+                {
+                    ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 110.0f);
+                    ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+
+                    static char newStateName[96]{};
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::AlignTextToFramePadding();
+                    ImGui::TextUnformatted("New State");
+                    ImGui::TableSetColumnIndex(1);
+                    const float addWidth = 100.0f;
+                    ImGui::SetNextItemWidth(std::max(50.0f, ImGui::GetContentRegionAvail().x - addWidth - ImGui::GetStyle().ItemSpacing.x));
+                    ImGui::InputText("##NewAnimatorState", newStateName, sizeof(newStateName));
+                    ImGui::SameLine();
+                    if (ImGui::Button("Add State", ImVec2(addWidth, 0)) && newStateName[0])
+                    {
+                        const std::string name(newStateName);
+                        const bool exists = std::any_of(animator.states.begin(), animator.states.end(),
+                            [&](const auto& state) { return state.name == name; });
+                        if (!exists)
+                        {
+                            animator.states.push_back({name, {}});
+                            if (animator.defaultState.empty()) animator.defaultState = name;
+                            animator.currentState.clear();
+                            animator.loadedPath.clear();
+                            scene->Save();
+                            newStateName[0] = '\0';
+                        }
+                    }
+
+                    int removeIndex = -1;
+                    for (size_t i = 0; i < animator.states.size(); ++i)
+                    {
+                        auto& state = animator.states[i];
+                        ImGui::PushID(static_cast<int>(i));
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::TextUnformatted(state.name.c_str());
+                        ImGui::TableSetColumnIndex(1);
+                        const std::string clipName = state.clip.empty()
+                            ? "Drop .aanim here" : std::filesystem::path(state.clip).filename().string();
+                        const float removeWidth = ImGui::GetFrameHeight();
+                        ImGui::Button(clipName.c_str(), ImVec2(std::max(60.0f, ImGui::GetContentRegionAvail().x - removeWidth - ImGui::GetStyle().ItemSpacing.x), 0));
+                        if (ImGui::BeginDragDropTarget())
+                        {
+                            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ANV_ASSET_PATH"))
+                            {
+                                if (payload->Data && payload->DataSize > 1 &&
+                                    static_cast<const char*>(payload->Data)[payload->DataSize-1] == '\0')
+                                {
+                                    const std::filesystem::path path(static_cast<const char*>(payload->Data));
+                                    if (path.extension() == ".aanim" && std::filesystem::is_regular_file(path))
+                                    {
+                                        state.clip = path.string();
+                                        animator.loadedPath.clear();
+                                        scene->Save();
+                                    }
+                                }
+                            }
+                            ImGui::EndDragDropTarget();
+                        }
+                        if (ImGui::IsItemHovered() && !state.clip.empty())
+                            ImGui::SetTooltip("%s", state.clip.c_str());
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("X")) removeIndex = static_cast<int>(i);
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::TextUnformatted("Loop");
+                        ImGui::TableSetColumnIndex(1);
+                        if (ImGui::Checkbox("##StateLoop", &state.loop)) scene->Save();
+                        ImGui::PopID();
+                    }
+                    if (removeIndex >= 0)
+                    {
+                        const auto removedName = animator.states[removeIndex].name;
+                        animator.states.erase(animator.states.begin() + removeIndex);
+                        if (animator.defaultState == removedName)
+                            animator.defaultState = animator.states.empty() ? "" : animator.states.front().name;
+                        if (animator.currentState == removedName) animator.currentState.clear();
+                        animator.loadedPath.clear();
+                        scene->Save();
+                    }
+
+                    if (!animator.states.empty())
+                    {
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::TextUnformatted("Default State");
+                        ImGui::TableSetColumnIndex(1);
+                        ImGui::SetNextItemWidth(-1);
+                        const std::string preview = animator.defaultState.empty() ? "Select default" : animator.defaultState;
+                        if (ImGui::BeginCombo("##DefaultState", preview.c_str()))
+                        {
+                            for (const auto& state : animator.states)
+                                if (ImGui::Selectable(state.name.c_str(), animator.defaultState == state.name))
+                                {
+                                    animator.defaultState = state.name;
+                                    animator.currentState.clear();
+                                    animator.loadedPath.clear();
+                                    scene->Save();
+                                }
+                            ImGui::EndCombo();
+                        }
+
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::TextUnformatted("Current State");
+                        ImGui::TableSetColumnIndex(1);
+                        ImGui::SetNextItemWidth(-1);
+                        if (ImGui::BeginCombo("##CurrentState", animator.currentState.empty() ? "None" : animator.currentState.c_str()))
+                        {
+                            for (const auto& state : animator.states)
+                                if (ImGui::Selectable(state.name.c_str(), animator.currentState == state.name))
+                                {
+                                    animator.PlayState(state.name);
+                                    scene->Save();
+                                }
+                            ImGui::EndCombo();
+                        }
+                    }
+
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::AlignTextToFramePadding();
+                    ImGui::TextUnformatted("Autoplay");
+                    ImGui::TableSetColumnIndex(1);
+                    if (ImGui::Checkbox("##AnimatorAutoplay", &animator.autoplay)) scene->Save();
+
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::AlignTextToFramePadding();
+                    ImGui::TextUnformatted("Enabled");
+                    ImGui::TableSetColumnIndex(1);
+                    if (ImGui::Checkbox("##AnimatorEnabled", &animator.enabled)) scene->Save();
+
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::TextUnformatted("Frame");
+                    ImGui::TableSetColumnIndex(1);
+                    ImGui::TextDisabled("%zu", animator.frame);
+                    ImGui::EndTable();
+                }
+            });
+
+                draw_component<Component::Rigidbody2D>(
             "Rigidbody 2D",
             selectedEntity,
             scene,
@@ -385,6 +549,14 @@ void InspectorLayer::draw_add_component_menu(
             ImGui::MenuItem("Transform 2D"))
         {
             scene->AddComponent<Component::Transform2D>(entity);
+            ImGui::CloseCurrentPopup();
+        }
+
+        if (!scene->HasComponent<Component::Animator2D>(entity) &&
+            ImGui::MenuItem("Animator 2D"))
+        {
+            scene->AddComponent<Component::Animator2D>(entity);
+            scene->Save();
             ImGui::CloseCurrentPopup();
         }
 

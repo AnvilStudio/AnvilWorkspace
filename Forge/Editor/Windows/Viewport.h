@@ -17,6 +17,7 @@ private:
     void set_gizmo_bounds();
     void draw_gizmo();
     void draw_selection_overlay(const anv::Ref<anv::Scene>& scene);
+    void draw_collider_bounds(const anv::Ref<anv::Scene>& scene);
     void push_billboards(const anv::Ref<anv::Scene>& scene);
     void pick_entity(const anv::Ref<anv::Scene>& scene);
 
@@ -39,6 +40,7 @@ private:
     bool m_ToolbarHovered = false;
 
     // Editor-only gizmo snapping; never changes runtime scene behavior.
+    bool m_ShowColliderBounds = false;
     bool m_SnapEnabled = false;
     float m_TranslationSnap = 1.0f;
     float m_RotationSnap = 15.0f; // degrees

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Anvil.h>
+#include "EntityPrefab.h"
 
 #include <array>
 #include <string>
@@ -38,6 +39,16 @@ private:
     void cancel_rename();
 
 private:
+    forge::EntityPrefab m_Clipboard;
+    char m_PrefabPath[512] = "Prefabs/NewPrefab.aprefab";
+    bool m_OpenPrefabSave = false;
+    bool m_OpenPrefabLoad = false;
+    std::string m_PrefabStatus;
+    std::filesystem::path prefab_path() const;
+    void draw_prefab_dialogs(Ref<Scene> scene);
+    void copy_entities(Ref<Scene> scene, entt::entity fallback);
+    void paste_entities(Ref<Scene> scene);
+
     entt::entity m_EntityToDelete = entt::null;
     entt::entity m_RenamedEntity = entt::null;
 

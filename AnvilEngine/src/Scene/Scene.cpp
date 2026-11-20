@@ -106,10 +106,12 @@ namespace anv
                     DeserializeIfPresent<Component::Transform2D>(m_Registry, entity, ser, "Transform2d");
                     DeserializeIfPresent<Component::Camera2D>(m_Registry, entity, ser, "Camera2D");
                     DeserializeIfPresent<Component::SpriteRenderer>(m_Registry, entity, ser, "SpriteRenderer");
+                     DeserializeIfPresent<Component::Animator2D>(m_Registry, entity, ser, "Animator2D");
                     DeserializeIfPresent<Component::Rigidbody2D>(m_Registry, entity, ser, "Rigidbody2D");
                     DeserializeIfPresent<Component::BoxCollider2D>(m_Registry, entity, ser, "BoxCollider2D");
                     DeserializeIfPresent<Component::Script>(m_Registry, entity, ser, "Script");
                     DeserializeIfPresent<Component::Relationship>(m_Registry, entity, ser, "Relationship");
+                    DeserializeIfPresent<Component::PrefabInstance>(m_Registry, entity, ser, "PrefabInstance");
                 });
             });
         }
@@ -168,10 +170,12 @@ namespace anv
                 SerializeIfPresent<Component::Transform2D>(m_Registry, entity, ser, "Transform2d");
                 SerializeIfPresent<Component::Camera2D>(m_Registry, entity, ser, "Camera2D");
                 SerializeIfPresent<Component::SpriteRenderer>(m_Registry, entity, ser, "SpriteRenderer");
+                 SerializeIfPresent<Component::Animator2D>(m_Registry, entity, ser, "Animator2D");
                 SerializeIfPresent<Component::Rigidbody2D>(m_Registry, entity, ser, "Rigidbody2D");
                 SerializeIfPresent<Component::BoxCollider2D>(m_Registry, entity, ser, "BoxCollider2D");
                 SerializeIfPresent<Component::Script>(m_Registry, entity, ser, "Script");
                 SerializeIfPresent<Component::Relationship>(m_Registry, entity, ser, "Relationship");
+                SerializeIfPresent<Component::PrefabInstance>(m_Registry, entity, ser, "PrefabInstance");
             });
         }
 
@@ -344,6 +348,81 @@ namespace anv
 
         if (m_PhysicsSystem2D && m_PhysicsSystem2D->IsRunning())
             m_PhysicsSystem2D->Step(*this, deltaTime);
+
+        if (m_ScriptExecutionEnabled)
+            UpdateAnimations(deltaTime);
+    }
+
+    void Scene::UpdateAnimations(float deltaTime)
+    {
+        if (!(deltaTime > 0.0f) || !std::isfinite(deltaTime)) return;
+        auto view = m_Registry.view<Component::Animator2D, Component::SpriteRenderer>();
+        for (auto entity : view)
+        {
+            auto& animator = view.get<Component::Animator2D>(entity);
+            auto& sprite = view.get<Component::SpriteRenderer>(entity);
+            if (!animator.enabled) continue;
+            if (!animator.states.empty() && animator.currentState.empty())
+                animator.currentState = animator.defaultState.empty()
+                    ? animator.states.front().name : animator.defaultState;
+            const std::string activePath = animator.ActiveClip();
+            if (activePath.empty()) continue;
+
+            if (animator.loadedPath != activePath)
+            {
+                animator.loadedPath = activePath;
+                animator.frame = 0;
+                animator.elapsed = 0.0f;
+                animator.playing = animator.autoplay || animator.playing;
+            }
+
+            auto it = m_AnimationClips.find(activePath);
+            if (it == m_AnimationClips.end())
+            {
+                SpriteAnimationClip clip;
+                std::filesystem::path path(activePath);
+                if (path.is_relative())
+                    path = std::filesystem::path(m_Path).parent_path() / path;
+                if (!clip.Load(path)) continue;
+                it = m_AnimationClips.emplace(activePath, std::move(clip)).first;
+            }
+
+            const auto& clip = it->second;
+            bool shouldLoop = clip.loop;
+            if (!animator.states.empty())
+                for (const auto& state : animator.states)
+                    if (state.name == animator.currentState)
+                    {
+                        shouldLoop = state.loop;
+                        break;
+                    }
+            if (clip.frames.empty()) continue;
+            if (!clip.textureUUID.empty())
+                sprite.texture.uuid = clip.textureUUID;
+            animator.frame = std::min(animator.frame, clip.frames.size() - 1);
+            if (animator.playing)
+            {
+                animator.elapsed += deltaTime;
+                while (animator.elapsed >= clip.frames[animator.frame].duration)
+                {
+                    animator.elapsed -= clip.frames[animator.frame].duration;
+                    if (animator.frame + 1 < clip.frames.size())
+                        ++animator.frame;
+                    else if (shouldLoop)
+                        animator.frame = 0;
+                    else
+                    {
+                        animator.playing = false;
+                        animator.elapsed = 0.0f;
+                        break;
+                    }
+                }
+            }
+            if (!clip.frames[animator.frame].textureUUID.empty())
+                sprite.texture.uuid = clip.frames[animator.frame].textureUUID;
+            sprite.uvMin = clip.frames[animator.frame].uvMin;
+            sprite.uvMax = clip.frames[animator.frame].uvMax;
+        }
     }
 
     void Scene::Render()
@@ -376,7 +455,11 @@ namespace anv
                 if (!sprite.visibleInGame) continue;
                 Ref<Texture> texture = assetManager && !sprite.texture.uuid.empty()
                     ? assetManager->GetAs<Texture>(sprite.texture) : nullptr;
-                items.push_back({entity, {}, texture, sprite.color, sprite.drawLayer, sprite.uvMin, sprite.uvMax});
+                items.push_back({entity, {}, texture, sprite.color, sprite.drawLayer,
+                    {sprite.flipX ? sprite.uvMax.x : sprite.uvMin.x,
+                     sprite.flipY ? sprite.uvMax.y : sprite.uvMin.y},
+                    {sprite.flipX ? sprite.uvMin.x : sprite.uvMax.x,
+                     sprite.flipY ? sprite.uvMin.y : sprite.uvMax.y}});
             }
         }
 
@@ -496,9 +579,8 @@ namespace anv
 
         // Build UUID lookup index.
         auto ids = m_Registry.view<uuid::EntityUUID>();
-
-        m_UUIDIndex.reserve(ids.size());
-
+        if (const auto* storage = m_Registry.storage<uuid::EntityUUID>())
+            m_UUIDIndex.reserve(storage->size());
         for (auto entity : ids)
         {
             const auto& id = ids.get<uuid::EntityUUID>(entity);
@@ -508,9 +590,8 @@ namespace anv
 
         // Build parent relationship index.
         auto relationships = m_Registry.view<Component::Relationship>();
-
-        m_ParentIndex.reserve(relationships.size());
-
+        if (const auto* storage = m_Registry.storage<Component::Relationship>())
+            m_ParentIndex.reserve(storage->size());
         for (auto entity : relationships)
         {
             const auto& relationship =

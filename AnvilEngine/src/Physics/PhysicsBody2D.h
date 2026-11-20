@@ -29,6 +29,8 @@ namespace anv
         void SetLinearVelocity(float x, float y);
         void SetTransform(float x, float y, float rotationRadians);
         void SetAwake(bool awake);
+        bool GetFixedRotation() const;
+        void SetFixedRotation(bool fixed);
 
         void SetUserData(void* _data);
         void* GetUserData();

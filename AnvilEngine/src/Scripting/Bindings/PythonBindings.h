@@ -12,6 +12,12 @@ namespace anv::python
     PyObject* IsKeyPressed(PyObject* self, PyObject* args);
     PyObject* IsKeyJustPressed(PyObject* self, PyObject* args);
 
+    PyObject* SpriteGetFlip(PyObject* self, PyObject* args);
+    PyObject* SpriteSetFlip(PyObject* self, PyObject* args);
+    PyObject* AnimatorPlayState(PyObject* self, PyObject* args);
+    PyObject* AnimatorPause(PyObject* self, PyObject* args);
+    PyObject* AnimatorStop(PyObject* self, PyObject* args);
+    PyObject* AnimatorCurrentState(PyObject* self, PyObject* args);
     PyObject* HasComponent(PyObject* self, PyObject* args);
     PyObject* FindEntityByName(PyObject* self, PyObject* args);
 
@@ -20,6 +26,8 @@ namespace anv::python
     PyObject* GetRotation(PyObject* self, PyObject* args);
     PyObject* SetRotation(PyObject* self, PyObject* args);
 
+    PyObject* RigidBodyGetFixedRotation(PyObject* self, PyObject* args);
+    PyObject* RigidBodySetFixedRotation(PyObject* self, PyObject* args);
     PyObject* RigidBodyAddForce(PyObject* self, PyObject* args);
     PyObject* RigidBodyApplyImpulse(PyObject* self, PyObject* args);
     PyObject* RigidBodyGetLinearVelocity(PyObject* self, PyObject* args);

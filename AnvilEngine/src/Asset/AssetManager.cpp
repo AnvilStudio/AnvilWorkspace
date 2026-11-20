@@ -171,6 +171,93 @@ namespace anv
         return resourceIt == m_ByResource.end() ? nullptr : Get(resourceIt->second);
     }
 
+    bool AssetManager::MovePath(const std::filesystem::path &source,
+                                const std::filesystem::path &destination,
+                                std::string *errorMessage)
+    {
+        auto fail = [&](const std::string& message)
+        {
+            if (errorMessage) *errorMessage = message;
+            ANV_LOG_WARN("Asset move rejected: %s", message.c_str());
+            return false;
+        };
+        std::error_code ec;
+        const auto from = std::filesystem::weakly_canonical(source, ec);
+        if (ec || !std::filesystem::exists(from))
+            return fail("Source does not exist.");
+        ec.clear();
+        const auto to = std::filesystem::weakly_canonical(destination, ec);
+        if (ec) return fail("Invalid destination.");
+        if (from == to) return true;
+        if (!std::filesystem::is_directory(to.parent_path()))
+            return fail("Destination parent is not a directory.");
+        if (std::filesystem::exists(to))
+            return fail("Destination already exists.");
+
+        const auto within = [](const std::filesystem::path& path,
+                               const std::filesystem::path& base)
+        {
+            auto p = path.begin(), b = base.begin();
+            while (p != path.end() && b != base.end() && *p == *b) { ++p; ++b; }
+            return b == base.end();
+        };
+        const bool isDirectory = std::filesystem::is_directory(from);
+        if (isDirectory && within(to, from))
+            return fail("Cannot move a directory into itself.");
+
+        struct Update
+        {
+            Ref<Asset> asset;
+            std::filesystem::path previous;
+            std::filesystem::path next;
+        };
+        std::vector<Update> updates;
+        for (const auto& [id, asset] : m_AssetReg)
+        {
+            if (!asset || asset->GetResourcePath().empty()) continue;
+            const auto original = std::filesystem::path(asset->GetResourcePath());
+            ec.clear();
+            const auto normalized = std::filesystem::weakly_canonical(
+                std::filesystem::path(NormalizeResource(original)), ec);
+            if (ec) continue;
+            if (normalized != from && !(isDirectory && within(normalized, from)))
+                continue;
+
+            const auto relative = normalized.lexically_relative(from);
+            const auto newPath = normalized == from ? to : to / relative;
+            const auto key = NormalizeResource(newPath);
+            const auto existing = m_ByResource.find(key);
+            if (existing != m_ByResource.end() && existing->second != id)
+                return fail("Asset registry conflict at destination.");
+            if (!asset->HasMetaPath())
+                return fail("Registered asset has no metadata path.");
+            updates.push_back({asset, original, newPath});
+        }
+
+        // Do not move metadata files managed separately by Anvil.
+        const auto metaRoot = m_Fs.GetKeyVal("AssetMeta");
+        if (!metaRoot.empty())
+        {
+            ec.clear();
+            const auto meta = std::filesystem::weakly_canonical(metaRoot, ec);
+            if (!ec && (within(from, meta) || (isDirectory && within(meta, from))))
+                return fail("Cannot move Anvil's metadata directory or files.");
+        }
+
+        std::filesystem::rename(from, to, ec);
+        if (ec) return fail("Filesystem move failed: " + ec.message());
+
+        for (auto& update : updates)
+        {
+            m_ByResource.erase(NormalizeResource(update.previous));
+            update.asset->set_resource(update.next);
+            m_ByResource.insert_or_assign(NormalizeResource(update.next),
+                                          update.asset->GetAssetID());
+            update.asset->Save();
+        }
+        return true;
+    }
+
     Ref<Texture> AssetManager::CreateTexture(
         const std::filesystem::path &resource)
     {

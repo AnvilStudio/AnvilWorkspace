@@ -3,6 +3,8 @@ import _anvil
 from .transform import Transform2D
 from .physics import RigidBody2D
 from .collider import BoxCollider2D
+from .animator import Animator2D
+from .sprite import SpriteRenderer
 
 
 class Entity:
@@ -66,6 +68,14 @@ class Entity:
     @property
     def rigid_body(self):
         return self.get_component(RigidBody2D)
+
+    @property
+    def sprite(self):
+        return self.get_component(SpriteRenderer)
+
+    @property
+    def animator(self):
+        return self.get_component(Animator2D)
 
     @property
     def box_collider(self):

@@ -69,6 +69,14 @@ namespace anv
             void Deserialize(Serializer &ser) { ser.FieldOr<std::string>("Parent", parentUUID, ""); }
         };
 
+        // Root-only reference to a reusable prefab asset.
+        struct PrefabInstance
+        {
+            std::string sourcePath;
+            void Serialize(Serializer& ser) { ser.Field("Source", sourcePath); }
+            void Deserialize(Serializer& ser) { ser.FieldOr<std::string>("Source", sourcePath, ""); }
+        };
+
         struct UID
         {
             uuid::EntityUUID uid;
@@ -107,6 +115,8 @@ namespace anv
             int drawLayer = 0;
             bool visibleInGame = true;
             bool visibleInEditor = true;
+            bool flipX = false;
+            bool flipY = false;
             glm::vec2 uvMin{0.0f, 0.0f};
             glm::vec2 uvMax{1.0f, 1.0f};
 
@@ -123,6 +133,8 @@ namespace anv
 
                 ser.Field("VisibleInGame", visibleInGame);
                 ser.Field("VisibleInEditor", visibleInEditor);
+                ser.Field("FlipX", flipX);
+                ser.Field("FlipY", flipY);
 
                 ser.Field("UVMinX", uvMin.x);
                 ser.Field("UVMinY", uvMin.y);
@@ -144,12 +156,117 @@ namespace anv
 
                 ser.FieldOr<bool>("VisibleInGame", visibleInGame, true);
                 ser.FieldOr<bool>("VisibleInEditor", visibleInEditor, true);
+                ser.FieldOr<bool>("FlipX", flipX, false);
+                ser.FieldOr<bool>("FlipY", flipY, false);
 
                 ser.FieldOr<float>("UVMinX", uvMin.x, 0.f);
                 ser.FieldOr<float>("UVMinY", uvMin.y, 0.f);
 
                 ser.FieldOr<float>("UVMaxX", uvMax.x, 1.f);
                 ser.FieldOr<float>("UVMaxY", uvMax.y, 1.f);
+            }
+        };
+
+        struct Animator2D
+        {
+            struct State
+            {
+                std::string name;
+                std::string clip;
+                bool loop = true;
+            };
+
+            // Legacy clip remains supported for scenes without named states.
+            std::string clipPath;
+            std::vector<State> states;
+            std::string defaultState;
+            std::string currentState;
+            bool autoplay = true;
+            bool enabled = true;
+
+            bool playing = false;
+            size_t frame = 0;
+            float elapsed = 0.0f;
+            std::string loadedPath;
+
+            std::string ActiveClip() const
+            {
+                if (!states.empty())
+                {
+                    for (const auto& state : states)
+                        if (state.name == currentState) return state.clip;
+                    return {};
+                }
+                return clipPath;
+            }
+
+            bool PlayState(const std::string& name)
+            {
+                for (const auto& state : states)
+                    if (state.name == name && !state.clip.empty())
+                    {
+                        if (currentState != name)
+                        {
+                            currentState = name;
+                            loadedPath.clear();
+                            frame = 0;
+                            elapsed = 0.0f;
+                        }
+                        playing = true;
+                        return true;
+                    }
+                return false;
+            }
+
+            void Play() { playing = true; }
+            void Pause() { playing = false; }
+            void Stop()
+            {
+                playing = false;
+                frame = 0;
+                elapsed = 0.0f;
+            }
+            void Serialize(Serializer& ser)
+            {
+                ser.Field("Clip", clipPath);
+                ser.Field("Autoplay", autoplay);
+                ser.Field("Enabled", enabled);
+                ser.Field("DefaultState", defaultState);
+                for (size_t i = 0; i < states.size(); ++i)
+                {
+                    const auto& state = states[i];
+                    const std::string n = std::to_string(i);
+                    const std::string key = std::string(n.size() < 8 ? 8-n.size() : 0, '0') + n;
+                    ser.ObjectKeyed("States", key, [&]
+                    {
+                        std::string name = state.name, clip = state.clip;
+                        ser.Field("Name", name);
+                        ser.Field("Clip", clip);
+                        bool loop = state.loop;
+                        ser.Field("Loop", loop);
+                    });
+                }
+            }
+            void Deserialize(Serializer& ser)
+            {
+                ser.FieldOr<std::string>("Clip", clipPath, "");
+                ser.FieldOr<bool>("Autoplay", autoplay, true);
+                ser.FieldOr<bool>("Enabled", enabled, true);
+                ser.FieldOr<std::string>("DefaultState", defaultState, "");
+                states.clear();
+                ser.ForEachTable("States", [&](const std::string&)
+                {
+                    State state;
+                    ser.FieldOr<std::string>("Name", state.name, "");
+                    ser.FieldOr<std::string>("Clip", state.clip, "");
+                    ser.FieldOr<bool>("Loop", state.loop, true);
+                    if (!state.name.empty()) states.push_back(std::move(state));
+                });
+                currentState = defaultState;
+                playing = false;
+                frame = 0;
+                elapsed = 0.0f;
+                loadedPath.clear();
             }
         };
 

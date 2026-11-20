@@ -62,14 +62,31 @@ namespace anv
             std::error_code ec;
             const auto executable = std::filesystem::weakly_canonical(arg_v[0], ec);
             const auto directory = (ec ? std::filesystem::absolute(arg_v[0]) : executable).parent_path();
-            auto candidate = directory / "Project.anv";
-            if (std::filesystem::is_regular_file(candidate))
-                projectPath = candidate;
+            const auto preferred = directory / (directory.filename().string() + ".anv");
+            if (std::filesystem::is_regular_file(preferred))
+                projectPath = preferred;
+            else
+            {
+                std::filesystem::path found;
+                size_t count = 0;
+                for (std::filesystem::directory_iterator it(directory, ec), end;
+                     !ec && it != end; it.increment(ec))
+                {
+                    if (it->is_regular_file() && it->path().extension() == ".anv")
+                    {
+                        found = it->path();
+                        ++count;
+                    }
+                }
+                if (!ec && count == 1) projectPath = found;
+                else if (count > 1)
+                    ANV_LOG_ERROR("Multiple .anv files beside runtime; pass --projectPath to select one.");
+            }
         }
 
         if (projectPath.empty())
         {
-            ANV_LOG_ERROR("Provide --projectPath <project.anv>, or place Project.anv next to the executable.");
+            ANV_LOG_ERROR("Provide --projectPath <ProjectName>.anv or place one .anv project beside the executable.");
             std::exit(EXIT_FAILURE);
         }
 
