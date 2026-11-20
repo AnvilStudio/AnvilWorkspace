@@ -530,6 +530,7 @@ namespace anv
 		VkDevice device = vkCtx->GetDevice();
 		m_Frames.resize(m_CreateInfo.swapchainImageCount);
 		m_FrameQuadVBs.resize(m_Frames.size());
+		m_FrameVertexOffsets.resize(m_Frames.size(), 0);
 		m_RenderFinishedSemaphores.resize(vkCtx->GetSwapchain()->GetImageCount(), VK_NULL_HANDLE);
 		VkSemaphoreCreateInfo semInfo{};
 		semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -576,6 +577,7 @@ namespace anv
 		}
 		m_Frames.clear();
 		m_FrameQuadVBs.clear();
+		m_FrameVertexOffsets.clear();
 		for (auto semaphore : m_RenderFinishedSemaphores)
 			if (semaphore) vkDestroySemaphore(device, semaphore, nullptr);
 		m_RenderFinishedSemaphores.clear();
