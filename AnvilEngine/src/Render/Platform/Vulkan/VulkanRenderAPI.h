@@ -91,6 +91,7 @@ namespace anv
 
 		// sync //
 		std::vector<VulkanFrameResources> m_Frames;
+		std::vector<VkSemaphore> m_RenderFinishedSemaphores;
 		uint32_t m_FrameIndex = 0;
 
 		// Window Resize //

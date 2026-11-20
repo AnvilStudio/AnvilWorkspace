@@ -8,8 +8,7 @@ namespace anv
     struct VulkanFrameSync
     {
         VkSemaphore imageAvailable = VK_NULL_HANDLE;
-        VkSemaphore renderFinished = VK_NULL_HANDLE;
-        VkFence     inFlightFence = VK_NULL_HANDLE;
+                VkFence     inFlightFence = VK_NULL_HANDLE;
     };
 
     // Holds the Command buffer and sync resources

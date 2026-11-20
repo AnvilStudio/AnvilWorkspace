@@ -90,13 +90,15 @@ namespace anv
 		m_RenderCmdChain->SetActiveFrame(frame);
 		m_RenderCmdChain->SetActiveFrameSyncIndex(m_FrameIndex);
 
+		VkSemaphore renderFinished = m_RenderFinishedSemaphores[imageIndex];
 		uint32_t frameIdx = m_FrameIndex;
-		m_RenderCmdChain->SetSubmitFn([this, frameIdx](Ref<CommandBuffer> cmd)
-									  {
+		m_RenderCmdChain->SetSubmitFn([this, frameIdx, renderFinished](Ref<CommandBuffer> cmd)
+		{
 			auto& fr2 = m_Frames[frameIdx];
 			auto vkCmd = cmd.As<VulkanCommandBuffer>();
 			ANV_ASSERT(vkCmd, "Submit: CommandBuffer cast failed!");
-			vkCmd->Submit(fr2.sync.imageAvailable, fr2.sync.renderFinished, fr2.sync.inFlightFence); });
+			vkCmd->Submit(fr2.sync.imageAvailable, renderFinished, fr2.sync.inFlightFence);
+		});
 
 		if (!m_MainSceneSubmitted)
 		{
@@ -136,10 +138,7 @@ namespace anv
 			}
 		}
 
-		{
-			ANV_PROFILE_ZONE(Present);
-			m_SwapchainTarget->Present(vkCtx->GetPresentQueue(), fr.sync.renderFinished, m_SwapRecreateFlag);
-		}
+		m_SwapchainTarget->Present(vkCtx->GetPresentQueue(), renderFinished, m_SwapRecreateFlag);
 		if (m_SwapRecreateFlag)
 		{
 			recreate_swap();
@@ -530,13 +529,7 @@ namespace anv
 		auto vkCtx = m_Context->GetAs<VulkanContext>();
 		VkDevice device = vkCtx->GetDevice();
 		m_Frames.resize(m_CreateInfo.swapchainImageCount);
-
-		m_FrameQuadVBs.resize(m_CreateInfo.swapchainImageCount);
-
-		m_FrameVertexOffsets.resize(
-			m_CreateInfo.swapchainImageCount,
-			0);
-
+		m_RenderFinishedSemaphores.resize(vkCtx->GetSwapchain()->GetImageCount(), VK_NULL_HANDLE);
 		VkSemaphoreCreateInfo semInfo{};
 		semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 		VkFenceCreateInfo fenceInfo{};
@@ -546,7 +539,6 @@ namespace anv
 		for (uint32_t i = 0; i < m_CreateInfo.swapchainImageCount; i++)
 		{
 			ANV_VK_CHECK_RESULT(vkCreateSemaphore(device, &semInfo, nullptr, &m_Frames[i].sync.imageAvailable), "Failed to create imageAvailable semaphore!");
-			ANV_VK_CHECK_RESULT(vkCreateSemaphore(device, &semInfo, nullptr, &m_Frames[i].sync.renderFinished), "Failed to create renderFinished semaphore!");
 			ANV_VK_CHECK_RESULT(vkCreateFence(device, &fenceInfo, nullptr, &m_Frames[i].sync.inFlightFence), "Failed to create inFlight fence!");
 			m_Frames[i].cmd = Ref<VulkanCommandBuffer>::Create(m_Context);
 
@@ -564,6 +556,8 @@ namespace anv
 				m_FrameQuadVBs[i],
 				"Failed to create frame vertex buffer!");
 		}
+		for (auto& semaphore : m_RenderFinishedSemaphores)
+			ANV_VK_CHECK_RESULT(vkCreateSemaphore(device, &semInfo, nullptr, &semaphore), "Failed to create swapchain renderFinished semaphore!");
 		m_FrameIndex = 0;
 	}
 
@@ -573,20 +567,16 @@ namespace anv
 		VkDevice device = vkCtx->GetDevice();
 		for (auto &fr : m_Frames)
 		{
-			if (fr.sync.imageAvailable)
-				vkDestroySemaphore(device, fr.sync.imageAvailable, nullptr);
-			if (fr.sync.renderFinished)
-				vkDestroySemaphore(device, fr.sync.renderFinished, nullptr);
-			if (fr.sync.inFlightFence)
-				vkDestroyFence(device, fr.sync.inFlightFence, nullptr);
+			if (fr.sync.imageAvailable) vkDestroySemaphore(device, fr.sync.imageAvailable, nullptr);
+			if (fr.sync.inFlightFence) vkDestroyFence(device, fr.sync.inFlightFence, nullptr);
 			fr.sync.imageAvailable = VK_NULL_HANDLE;
-			fr.sync.renderFinished = VK_NULL_HANDLE;
 			fr.sync.inFlightFence = VK_NULL_HANDLE;
 			fr.cmd = nullptr;
 		}
 		m_Frames.clear();
-		m_FrameQuadVBs.clear();
-		m_FrameVertexOffsets.clear();
+		for (auto semaphore : m_RenderFinishedSemaphores)
+			if (semaphore) vkDestroySemaphore(device, semaphore, nullptr);
+		m_RenderFinishedSemaphores.clear();
 	}
 
 	void VulkanRenderAPI::recreate_swap()
@@ -598,6 +588,16 @@ namespace anv
 
 		m_SwapchainTarget->ReleaseFramebuffers();
 		m_Context->GetSwapchain()->ResetSwap();
+
+		// Rebuild presentation semaphores for the new swapchain image count.
+		VkDevice device = vkCtx->GetDevice();
+		for (auto semaphore : m_RenderFinishedSemaphores)
+			if (semaphore) vkDestroySemaphore(device, semaphore, nullptr);
+		m_RenderFinishedSemaphores.assign(vkCtx->GetSwapchain()->GetImageCount(), VK_NULL_HANDLE);
+		VkSemaphoreCreateInfo semInfo{};
+		semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		for (auto& semaphore : m_RenderFinishedSemaphores)
+			ANV_VK_CHECK_RESULT(vkCreateSemaphore(device, &semInfo, nullptr, &semaphore), "Failed to recreate swapchain renderFinished semaphore!");
 
 		auto extent = vkCtx->GetSwapchain()->GetExtent();
 		m_SwapchainTarget->Resize(extent.width, extent.height);
