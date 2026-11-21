@@ -99,8 +99,10 @@ void UIEngine::Render(float width, float height)
                     {x1 - x0, y1 - y0},
                     {1.f, 1.f, 1.f, 1.f},
                     m_FontAtlas,
-                    {glyph->U0, glyph->V0},
-                    {glyph->U1, glyph->V1}
+                    // The UI-to-world quad projection reverses glyph texture X.
+                    // Correct locally without changing regular sprite UVs.
+                    {glyph->U1, glyph->V0},
+                    {glyph->U0, glyph->V1}
                 });
             }
             penX += glyph->AdvanceX * scale;
