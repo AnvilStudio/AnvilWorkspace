@@ -1,3 +1,4 @@
+#include <Render/UI/UIProjection.h>
 #include "VulkanRenderAPI.h"
 #include "Core/App.h"
 #include "Core/Window.h"
@@ -171,6 +172,7 @@ namespace anv
 	void anv::VulkanRenderAPI::BeginScene(Ref<RenderTarget> _renderTarget)
 	{
 		m_QuadQueue.clear();
+        m_UIQueue.clear();
 		m_RenderStats.QuadCount = 0;
 		ANV_ASSERT(_renderTarget, "No RenderTarget specified for Renderer2D!");
 		m_CurrentTarget = _renderTarget;
@@ -217,6 +219,8 @@ namespace anv
 							 return a.priority < b.priority;
 						 });
 		auto sceneQuads = m_QuadQueue;
+        AppendUIQuads(sceneQuads, m_UIQueue, sceneViewProjection, _renderTarget->GetWidth(), _renderTarget->GetHeight());
+        m_UIQueue.clear();
 		auto pipeline = m_PipelineLibrary.Get("Sprite", _renderTarget);
 
 		m_RenderStats.QuadCount = sceneQuads.size();
@@ -484,6 +488,8 @@ namespace anv
 				m_RenderCmdChain->AccumulateSpriteTaskTimings(spriteTimes);
 			});
 	}
+
+	void VulkanRenderAPI::DrawUIRect(const UIRectSubmission& rect) { m_UIQueue.push_back(rect); }
 
 	void VulkanRenderAPI::DrawQuad(
 		const glm::vec2 &position,
