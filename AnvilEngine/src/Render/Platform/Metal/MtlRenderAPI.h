@@ -30,6 +30,7 @@ namespace anv
             glm::vec2 uvMin,
             glm::vec2 uvMax) override;
 
+        void DrawUIRect(const UIRectSubmission& rect) override;
         void EndScene() override;
         void SetMainCamera(_shared<Camera2D> camera) override;
 
@@ -42,6 +43,7 @@ namespace anv
         void* m_SpritePipeline = nullptr;
         void* m_Sampler = nullptr;
         _vec<QuadSubmission> m_QuadQueue{};
+        std::vector<UIRectSubmission> m_UIQueue;
         RendererStats m_Stats{};
         std::unique_ptr<ImGuiLayer> m_ImGuiLayer;
         bool m_HasShutdown = false;
