@@ -1,3 +1,4 @@
+#include <Render/UI/UIProjection.h>
 #include "MtlRenderAPI.h"
 #include "MtlRenderTarget.h"
 #include "MtlTexture.h"
@@ -237,7 +238,15 @@ namespace anv
 
         {
             ANV_PROFILE_ZONE(MetalEncode);
+            const auto count = m_QuadQueue.size();
+            if (m_Camera && drawable.texture.height > 0) {
+                m_Camera->SetAspectRatio((float)drawable.texture.width / drawable.texture.height);
+                m_Camera->Update(0.0f);
+                AppendUIQuads(m_QuadQueue, m_UIQueue, m_Camera->GetCameraUBO().ViewProjection, drawable.texture.width, drawable.texture.height);
+            }
+            m_UIQueue.clear();
             encode_quads(m_CurrentEncoder, m_Camera);
+            m_QuadQueue.resize(count);
             m_ImGuiLayer->Render({
                 .nativeCommandBuffer = (__bridge void*)commandBuffer,
                 .nativeRenderEncoder = (__bridge void*)encoder
@@ -292,6 +301,7 @@ namespace anv
             return;
 
         m_QuadQueue.clear();
+        m_UIQueue.clear();
         m_Stats = {};
         m_MetalContext->CreateSwapchain();
 
@@ -347,11 +357,18 @@ namespace anv
 
         MTLViewport viewport{0.0, 0.0, static_cast<double>(targetTexture.width), static_cast<double>(targetTexture.height), 0.0, 1.0};
         [encoder setViewport:viewport];
+        camera->Update(0.0f);
+        const auto count = m_QuadQueue.size();
+        AppendUIQuads(m_QuadQueue, m_UIQueue, camera->GetCameraUBO().ViewProjection, targetTexture.width, targetTexture.height);
+        m_UIQueue.clear();
         encode_quads((__bridge void*)encoder, camera);
+        m_QuadQueue.resize(count);
         [encoder endEncoding];
         [commandBuffer commit];
         m_Stats.DrawCalls = static_cast<uint32_t>(m_QuadQueue.size());
     }
+
+    void MetalRenderAPI::DrawUIRect(const UIRectSubmission& rect) { m_UIQueue.push_back(rect); }
 
     void MetalRenderAPI::DrawQuad(
             const glm::vec2 &position,
