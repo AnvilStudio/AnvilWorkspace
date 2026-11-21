@@ -87,6 +87,31 @@ namespace anv
         return nullptr;
     }
 
+    Ref<Texture> Texture::CreateRGBA(const unsigned char* pixels, int width, int height, const std::string& name)
+    {
+        if (!pixels || width <= 0 || height <= 0)
+            return nullptr;
+
+        switch (RenderAPI::GetAPI())
+        {
+        case GraphicsAPI::MTL:
+#if defined(PLATFORM_APPLE) && !defined(PLATFORM_APPLE_VK)
+            return Ref<MetalTexture>::Create(pixels, width, height, name).As<Texture>();
+#else
+            break;
+#endif
+        case GraphicsAPI::VK:
+#if defined(PLATFORM_WIN64) || defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE_VK)
+            return Ref<VulkanTexture>::Create(pixels, width, height, name).As<Texture>();
+#else
+            break;
+#endif
+        default: break;
+        }
+        ANV_LOG_ERROR("RGBA texture backend unavailable");
+        return nullptr;
+    }
+
     void Texture::Load()
     {
         Unload();
