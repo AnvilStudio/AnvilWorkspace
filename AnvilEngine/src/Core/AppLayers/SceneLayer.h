@@ -3,6 +3,7 @@
 #include <Scene/Scene.h>
 #include <Util/UMacros.h>
 #include <Layer/Layer.h>
+#include <Render/UI/UI.h>
 
 namespace anv
 {
@@ -20,6 +21,7 @@ namespace anv
         void refresh_active_scene();
 
     private:
+        UIEngine m_UI;
         _shared<SceneManager> m_ScnMgr;
         Ref<Scene> m_Active;
         _shared<Camera2D> m_FallbackCamera = std::make_shared<Camera2D>();
