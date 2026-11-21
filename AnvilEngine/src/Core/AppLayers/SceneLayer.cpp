@@ -33,8 +33,11 @@ namespace anv
             if (App::GetInstance()->RendersToMainWindow())
             {
                 auto camera = m_Active->GetActiveCamera();
-                if (camera)
+                if (camera) {
+                    const auto extent = App::GetInstance()->GetMainWindow()->GetExtent();
+                    m_UI.Render(float(extent.width), float(extent.height));
                     Renderer2D::DrawMainScene(camera);
+                }
             }
         }
     }
