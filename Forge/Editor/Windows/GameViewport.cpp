@@ -1,5 +1,6 @@
 #include "GameViewport.h"
 #include "../EditorLayer.h"
+#include <Render/UI/UI.h>
 
 GameViewport::GameViewport()
 {
@@ -67,6 +68,8 @@ void GameViewport::Draw()
 
         if (validSize && m_GameViewportTarget && sceneCamera)
         {
+            static anv::UIEngine gameUI;
+            gameUI.Render(float(targetWidth), float(targetHeight));
             anv::Renderer2D::DrawScene(m_GameViewportTarget, sceneCamera);
 
 #if defined(PLATFORM_APPLE_VK) || defined(PLATFORM_WIN64)
