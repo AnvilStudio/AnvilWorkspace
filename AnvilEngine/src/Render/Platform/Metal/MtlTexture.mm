@@ -4,6 +4,8 @@
 #include "MtlContext.h"
 
 #import <Metal/Metal.h>
+#include <cstdlib>
+#include <cstring>
 
 namespace anv
 {
@@ -16,6 +18,21 @@ namespace anv
     MetalTexture::MetalTexture(Deserialized& deserialized)
         : Texture(deserialized)
     {
+        Upload();
+    }
+
+    MetalTexture::MetalTexture(const unsigned char* rgbaPixels, int width, int height, const std::string& name)
+        : Texture(name)
+    {
+        if (!rgbaPixels || width <= 0 || height <= 0)
+            return;
+        const size_t bytes = static_cast<size_t>(width) * static_cast<size_t>(height) * 4;
+        m_Data = static_cast<unsigned char*>(std::malloc(bytes));
+        if (!m_Data) return;
+        std::memcpy(m_Data, rgbaPixels, bytes);
+        m_Width = width;
+        m_Height = height;
+        m_Channels = 4;
         Upload();
     }
 
