@@ -29,7 +29,8 @@ project "AnvRuntime"
     links
     {
         "AnvilEngine",
-        "Box2D"
+        "Box2D",
+        "SlateLib"
     }
 
     -- Runtime resources
