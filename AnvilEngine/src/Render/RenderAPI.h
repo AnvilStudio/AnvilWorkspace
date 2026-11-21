@@ -7,6 +7,7 @@
 #include "Camera.h"
 #include "Framebuffer.h"
 #include "RenderStats.h"
+#include "RenderData.h"
 #include "RenderOverlay.h"
 #include <glm/glm.hpp>
 
@@ -60,6 +61,7 @@ namespace anv
             glm::vec2 uvMax = {1.0f, 1.0f}
         ) = 0;
 
+        virtual void DrawUIRect(const UIRectSubmission& rect) = 0;
         virtual void EndScene() = 0;
         virtual void SetMainCamera(_shared<Camera2D> camera) = 0;
 
