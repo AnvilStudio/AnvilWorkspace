@@ -65,6 +65,8 @@ namespace anv
         m_RenderAPI->DrawFrame();
     }
 
+    void Renderer2D::DrawUIRect(const UIRectSubmission& rect) { m_RenderAPI->DrawUIRect(rect); }
+
     void Renderer2D::WaitIdle()
     {
         App::GetInstance()->GetMainWindow()->GetContext()->WaitIdle();
