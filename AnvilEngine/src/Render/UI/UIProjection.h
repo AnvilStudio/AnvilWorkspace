@@ -23,6 +23,9 @@ inline void AppendUIQuads(std::vector<QuadSubmission>& world,
    quad.Rotation=glm::degrees(std::atan2(x.y,x.x));
    quad.Size={glm::length(x),glm::length(y)};
    quad.Color=rect.Color;
+   quad.TextureAsset=rect.TextureAsset;
+   quad.UVMin=rect.UVMin;
+   quad.UVMax=rect.UVMax;
    quad.Layer=std::numeric_limits<int>::max();
    world.push_back(quad);
  }
