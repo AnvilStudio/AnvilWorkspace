@@ -35,36 +35,43 @@ void UIEngine::Render(float width, float height)
 
     slate::ResolveTree(m_Root, {{0.f, 0.f}, {width, height}}, m_Context.pool);
 
-    // ImGui owns the rasterized font atlas; Anvil uploads a copy for its
-    // own sprite pipeline, not for ImGui drawing.
-    ImFont* font = nullptr;
+    // ImGui 1.92+ stores glyph metrics in ImFontBaked, not ImFont.
+    // Bake the test label's characters before copying the atlas pixels.
+    ImFontBaked* baked = nullptr;
     if (ImGui::GetCurrentContext())
     {
         auto* fonts = ImGui::GetIO().Fonts;
         if (fonts && !fonts->Fonts.empty())
         {
-            font = fonts->Fonts[0];
-            if (!m_FontAtlas)
+            ImFont* font = fonts->Fonts[0];
+            const auto& label = m_Context.pool.slots[m_Label.index];
+            baked = font->GetFontBaked(label.font_size);
+            if (baked)
             {
-                unsigned char* pixels = nullptr;
-                int atlasWidth = 0, atlasHeight = 0;
-                fonts->GetTexDataAsRGBA32(&pixels, &atlasWidth, &atlasHeight);
-                if (pixels && atlasWidth > 0 && atlasHeight > 0)
-                    m_FontAtlas = Texture::CreateRGBA(pixels, atlasWidth, atlasHeight, "SlateUI Font Atlas");
+                for (unsigned char c : label.text)
+                    if (c >= 32) baked->FindGlyph(c);
+                if (!m_FontAtlas)
+                {
+                    unsigned char* pixels = nullptr;
+                    int atlasWidth = 0, atlasHeight = 0;
+                    fonts->GetTexDataAsRGBA32(&pixels, &atlasWidth, &atlasHeight);
+                    if (pixels && atlasWidth > 0 && atlasHeight > 0)
+                        m_FontAtlas = Texture::CreateRGBA(pixels, atlasWidth, atlasHeight, "SlateUI Font Atlas");
+                }
             }
         }
     }
 
     auto drawText = [&](const slate::ElementSlot& slot)
     {
-        if (!font || !m_FontAtlas || !m_FontAtlas->IsGPUReady() ||
-            slot.text.empty() || slot.font_size <= 0.f || font->FontSize <= 0.f)
+        if (!baked || !m_FontAtlas || !m_FontAtlas->IsGPUReady() ||
+            slot.text.empty() || slot.font_size <= 0.f || baked->Size <= 0.f)
             return;
 
-        const float scale = slot.font_size / font->FontSize;
+        const float scale = slot.font_size / baked->Size;
         const auto& rect = slot.resolved;
         const float originX = rect.position.x;
-        const float originY = rect.position.y + font->Ascent * scale;
+        const float originY = rect.position.y;
         float penX = originX;
         float baselineY = originY;
 
@@ -74,10 +81,10 @@ void UIEngine::Render(float width, float height)
             if (c == '\n')
             {
                 penX = originX;
-                baselineY += font->FontSize * scale;
+                baselineY += baked->Size * scale;
                 continue;
             }
-            const ImFontGlyph* glyph = font->FindGlyph(c);
+            const ImFontGlyph* glyph = baked->FindGlyph(c);
             if (!glyph) continue;
 
             const float x0 = penX + glyph->X0 * scale;
