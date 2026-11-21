@@ -99,10 +99,11 @@ void UIEngine::Render(float width, float height)
                     {x1 - x0, y1 - y0},
                     {1.f, 1.f, 1.f, 1.f},
                     m_FontAtlas,
-                    // The UI-to-world quad projection reverses glyph texture X.
-                    // Correct locally without changing regular sprite UVs.
-                    {glyph->U1, glyph->V0},
-                    {glyph->U0, glyph->V1}
+                    // SlateUI uses top-left screen coordinates, while the
+                    // sprite quad's local Y axis points upward in world space.
+                    // Flip V for glyphs; preserve their normal horizontal UVs.
+                    {glyph->U0, glyph->V1},
+                    {glyph->U1, glyph->V0}
                 });
             }
             penX += glyph->AdvanceX * scale;
