@@ -42,6 +42,7 @@ namespace anv
             glm::vec2 uvMin = {0.0f, 0.0f},
             glm::vec2 uvMax = {1.0f, 1.0f}) override;
 
+		void DrawUIRect(const UIRectSubmission& rect) override;
 		virtual void EndScene() override;
 
 		virtual void SetMainCamera(_shared<Camera2D> camera) override;
@@ -67,6 +68,7 @@ namespace anv
 	private:
 		Render2DCreateInfo m_CreateInfo{};
 		_vec<QuadSubmission> m_QuadQueue{};
+        std::vector<UIRectSubmission> m_UIQueue;
 		Ref<GraphicsPipeline> m_Pipeline = nullptr;
 
 		PipelineLibrary m_PipelineLibrary;
