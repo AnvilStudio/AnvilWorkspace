@@ -9,6 +9,7 @@ namespace anv
     public:
         explicit MetalTexture(const std::filesystem::path& path);
         explicit MetalTexture(Deserialized& deserialized);
+        MetalTexture(const unsigned char* rgbaPixels, int width, int height, const std::string& name);
         ~MetalTexture() override;
 
         bool IsGPUReady() const override;
