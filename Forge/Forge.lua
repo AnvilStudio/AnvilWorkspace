@@ -22,6 +22,8 @@ project "Forge"
     includedirs 
     {
         "%{ROOTDIR}AnvilEngine/include",
+        "%{ROOTDIR}AnvilEngine/src",
+        "%{ROOTDIR}AnvilEngine/vendor/SlateUI/include",
         "%{ROOTDIR}AnvilEngine/vendor/glm", -- TODO: Remove
     }
 
