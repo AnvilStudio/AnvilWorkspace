@@ -28,7 +28,8 @@ project "Forge"
     links
     {
         "AnvilEngine",
-        "Box2D"
+        "Box2D",
+        "SlateLib"
     }
 
     postbuildcommands

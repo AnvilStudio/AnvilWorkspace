@@ -38,12 +38,14 @@ project "AnvilEngine"
         "./vendor/tomlplusplus/include",
         "./vendor/entt/single_include",
         "./vendor/imgui/",
-        "./vendor/ImGuizmo/src"
+        "./vendor/ImGuizmo/src",
+        "./vendor/SlateUI/include",
     }
 
     links
     {
-        "Box2D"
+        "Box2D",
+        "SlateLib"
     }
 
     filter "system:windows"
