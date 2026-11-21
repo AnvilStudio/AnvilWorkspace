@@ -40,6 +40,8 @@ namespace anv
         glm::vec2 UVMax{1.0f, 1.0f};
     };
 
+    struct UIRectSubmission { glm::vec2 Position{}; glm::vec2 Size{}; glm::vec4 Color{1.f}; };
+
     struct BatchVertex
     {
         glm::vec2 Position;
