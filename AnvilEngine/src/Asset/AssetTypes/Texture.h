@@ -11,6 +11,7 @@ namespace anv
 
         static Ref<Texture> Create(const std::filesystem::path& path);
         static Ref<Texture> Create(Deserialized& deserialized);
+        static Ref<Texture> CreateRGBA(const unsigned char* pixels, int width, int height, const std::string& name);
 
         int Width() const { return m_Width; }
         int Height() const { return m_Height; }
