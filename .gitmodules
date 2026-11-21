@@ -27,3 +27,6 @@
 [submodule "AnvilEngine/vendor/Box2d"]
 	path = AnvilEngine/vendor/Box2d
 	url = https://github.com/Cj0x7c00/box2d.git
+[submodule "/Users/caydenjordan/Desktop/Test/AnvilWorkspace/AnvilEngine/vendor/SlateUI"]
+	path = /Users/caydenjordan/Desktop/Test/AnvilWorkspace/AnvilEngine/vendor/SlateUI
+	url = https://github.com/AnvilStudio/SlateUI.git
